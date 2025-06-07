@@ -1,823 +1,222 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatility 150 (1s) Live Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+import json
+import time
+import requests
+from datetime import datetime
+from flask import Flask, render_template, jsonify, request
+from flask_cors import CORS
+import logging
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-        }
+app = Flask(__name__)
+CORS(app)
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+# Firebase Realtime Database URL
+FIREBASE_URL = "https://fir-8908c-default-rtdb.firebaseio.com"
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+class FirebaseVIXDataManager:
+    def __init__(self):
+        self.cache = {
+            'ticks': [],
+            '1min_candles': [],
+            '5min_candles': [],
+            'last_fetch': None
         }
-
-        .subtitle {
-            font-size: 1.2em;
-            color: #4ecdc4;
-            margin-bottom: 15px;
-        }
-
-        .connection-status {
-            display: inline-flex;
-            align-items: center;
-            padding: 10px 20px;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-live {
-            background: #4ecdc4;
-            animation: pulse 2s infinite;
-        }
-
-        .status-offline {
-            background: #ff6b6b;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .btn.primary {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            border-color: #4ecdc4;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #4ecdc4;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .charts-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-        }
-
-        .chart-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .chart-title {
-            font-size: 1.4em;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #4ecdc4;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
-        }
-
-        .no-data-message {
-            text-align: center;
-            padding: 60px 20px;
-            color: #ff6b6b;
-            font-size: 1.3em;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            border: 2px dashed rgba(255, 107, 107, 0.3);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: #4ecdc4;
-            font-size: 1.3em;
-        }
-
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 10px;
-            z-index: 1000;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            max-width: 300px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification.success {
-            border-left: 4px solid #4ecdc4;
-        }
-
-        .notification.error {
-            border-left: 4px solid #ff6b6b;
-        }
-
-        .data-source {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            font-size: 0.9em;
-        }
-
-        .firebase-indicator {
-            color: #ffa726;
-        }
-
-        .live-indicator {
-            color: #4ecdc4;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
+        
+    def fetch_firebase_data(self):
+        """Fetch data from Firebase and return structured data"""
+        try:
+            # Fetch ticks data
+            ticks_url = f"{FIREBASE_URL}/ticks.json"
+            ticks_response = requests.get(ticks_url, timeout=10)
             
-            .header h1 {
-                font-size: 2em;
-            }
+            # Fetch 1min candles
+            candles_1min_url = f"{FIREBASE_URL}/1minVix25.json"
+            candles_1min_response = requests.get(candles_1min_url, timeout=10)
             
-            .chart-wrapper {
-                height: 300px;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            }
-
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .btn {
-                width: 100%;
-                max-width: 200px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Volatility 150 (1s) Dashboard</h1>
-            <p class="subtitle">Real-time data from Deriv WebSocket with Firebase storage</p>
-            <div class="connection-status" id="connectionStatus">
-                <span class="status-indicator status-live"></span>
-                Connecting to WebSocket...
-            </div>
-        </div>
-
-        <div class="controls">
-            <button class="btn primary" onclick="toggleDataSource()">
-                <span id="dataSourceBtn">Switch to Firebase Data</span>
-            </button>
-            <button class="btn" onclick="toggleAutoRefresh()">
-                <span id="autoRefreshBtn">Pause Auto Refresh</span>
-            </button>
-            <button class="btn" onclick="syncFirebase()">Sync to Firebase</button>
-            <button class="btn" onclick="clearCharts()">Clear Charts</button>
-            <button class="btn" onclick="exportData()">Export Data</button>
-        </div>
-
-        <div class="data-source" id="dataSourceIndicator">
-            <span class="live-indicator">📡 Live Data Source</span>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="currentPrice">--</div>
-                <div class="stat-label">Current Price</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalTicks">--</div>
-                <div class="stat-label">Total Ticks</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="candles1min">--</div>
-                <div class="stat-label">1min Candles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="candles5min">--</div>
-                <div class="stat-label">5min Candles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="lastUpdate">--</div>
-                <div class="stat-label">Last Update</div>
-            </div>
-        </div>
-
-        <div class="charts-container" id="chartsContainer">
-            <div class="loading" id="loadingMessage">
-                Loading Volatility 150 (1s) data...
-            </div>
-        </div>
-    </div>
-
-    <!-- Notification container -->
-    <div id="notification" class="notification"></div>
-
-    <script>
-        // Global variables
-        let tickChart, candle1minChart, candle5minChart;
-        let autoRefresh = true;
-        let refreshInterval;
-        let lastDataUpdate = null;
-        let useFirebaseData = false;
-
-        // Initialize application
-        document.addEventListener('DOMContentLoaded', function() {
-            initCharts();
-            startAutoRefresh();
-            checkWebSocketStatus();
-            fetchData();
-        });
-
-        // Initialize charts
-        function initCharts() {
-            const container = document.getElementById('chartsContainer');
-            container.innerHTML = `
-                <div class="chart-card">
-                    <div class="chart-title">Live Ticks (Real-time Price Movement)</div>
-                    <div class="chart-wrapper">
-                        <canvas id="tickChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">1-Minute Candlesticks (OHLC)</div>
-                    <div class="chart-wrapper">
-                        <canvas id="candle1minChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">5-Minute Candlesticks (OHLC)</div>
-                    <div class="chart-wrapper">
-                        <canvas id="candle5minChart"></canvas>
-                    </div>
-                </div>
-            `;
-
-            // Initialize tick chart
-            const tickCtx = document.getElementById('tickChart').getContext('2d');
-            tickChart = new Chart(tickCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Price',
-                        data: [],
-                        borderColor: '#4ecdc4',
-                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 4
-                    }]
-                },
-                options: getLineChartOptions('Time', 'Price')
-            });
-
-            // Initialize 1min candle chart
-            const candle1minCtx = document.getElementById('candle1minChart').getContext('2d');
-            candle1minChart = new Chart(candle1minCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'High',
-                            data: [],
-                            borderColor: '#ff6b6b',
-                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Low',
-                            data: [],
-                            borderColor: '#4ecdc4',
-                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Open',
-                            data: [],
-                            borderColor: '#ffa726',
-                            backgroundColor: 'rgba(255, 167, 38, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Close',
-                            data: [],
-                            borderColor: '#e91e63',
-                            backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2
-                        }
-                    ]
-                },
-                options: getLineChartOptions('Time', 'Price')
-            });
-
-            // Initialize 5min candle chart
-            const candle5minCtx = document.getElementById('candle5minChart').getContext('2d');
-            candle5minChart = new Chart(candle5minCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'High',
-                            data: [],
-                            borderColor: '#ff6b6b',
-                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Low',
-                            data: [],
-                            borderColor: '#4ecdc4',
-                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Open',
-                            data: [],
-                            borderColor: '#ffa726',
-                            backgroundColor: 'rgba(255, 167, 38, 0.1)',
-                            borderWidth: 1,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 1
-                        },
-                        {
-                            label: 'Close',
-                            data: [],
-                            borderColor: '#e91e63',
-                            backgroundColor: 'rgba(233, 30, 99, 0.1)',
-                            borderWidth: 2,
-                            fill: false,
-                            tension: 0.1,
-                            pointRadius: 2
-                        }
-                    ]
-                },
-                options: getLineChartOptions('Time', 'Price')
-            });
-        }
-
-        // Get chart options
-        function getLineChartOptions(xLabel, yLabel) {
-            return {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: xLabel,
-                            color: 'white'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.8)',
-                            maxTicksLimit: 10
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: yLabel,
-                            color: 'white'
-                        },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.8)'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'white'
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        titleColor: 'white',
-                        bodyColor: 'white',
-                        borderColor: '#4ecdc4',
-                        borderWidth: 1
-                    }
-                },
-                elements: {
-                    point: {
-                        hoverBackgroundColor: '#4ecdc4'
-                    }
-                }
-            };
-        }
-
-        // Fetch data from API
-        async function fetchData() {
-            try {
-                const endpoint = useFirebaseData ? '/api/firebase-data' : '/api/data';
-                const response = await fetch(endpoint);
+            # Fetch 5min candles  
+            candles_5min_url = f"{FIREBASE_URL}/5minVix25.json"
+            candles_5min_response = requests.get(candles_5min_url, timeout=10)
+            
+            # Process ticks data
+            ticks_data = []
+            if ticks_response.status_code == 200 and ticks_response.json():
+                raw_ticks = ticks_response.json()
+                # Get R_25 data from ticks
+                if 'R_25' in raw_ticks:
+                    r25_data = raw_ticks['R_25']
+                    # Convert to list and sort by epoch
+                    tick_list = []
+                    for key, tick in r25_data.items():
+                        if isinstance(tick, dict) and 'epoch' in tick and 'quote' in tick:
+                            tick_list.append({
+                                'price': float(tick['quote']),
+                                'timestamp': datetime.fromtimestamp(tick['epoch']).isoformat(),
+                                'epoch': tick['epoch'],
+                                'symbol': tick.get('symbol', 'R_25')
+                            })
+                    
+                    # Sort by epoch and get latest 100
+                    tick_list.sort(key=lambda x: x['epoch'], reverse=True)
+                    ticks_data = tick_list[:100]
+            
+            # Process 1min candles
+            candles_1min_data = []
+            if candles_1min_response.status_code == 200 and candles_1min_response.json():
+                raw_candles = candles_1min_response.json()
+                candle_list = []
+                for key, candle in raw_candles.items():
+                    if isinstance(candle, dict) and all(k in candle for k in ['open', 'high', 'low', 'close', 'epoch']):
+                        candle_list.append({
+                            'timestamp': datetime.fromtimestamp(candle['epoch']).isoformat(),
+                            'open': float(candle['open']),
+                            'high': float(candle['high']),
+                            'low': float(candle['low']),
+                            'close': float(candle['close']),
+                            'epoch': candle['epoch']
+                        })
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
+                # Sort by epoch and get latest 100
+                candle_list.sort(key=lambda x: x['epoch'], reverse=True)
+                candles_1min_data = candle_list[:100]
+            
+            # Process 5min candles
+            candles_5min_data = []
+            if candles_5min_response.status_code == 200 and candles_5min_response.json():
+                raw_candles = candles_5min_response.json()
+                candle_list = []
+                for key, candle in raw_candles.items():
+                    if isinstance(candle, dict) and all(k in candle for k in ['open', 'high', 'low', 'close', 'epoch']):
+                        candle_list.append({
+                            'timestamp': datetime.fromtimestamp(candle['epoch']).isoformat(),
+                            'open': float(candle['open']),
+                            'high': float(candle['high']),
+                            'low': float(candle['low']),
+                            'close': float(candle['close']),
+                            'epoch': candle['epoch']
+                        })
                 
-                const data = await response.json();
-                updateUI(data);
-                
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                showNotification('Failed to fetch data: ' + error.message, 'error');
-            }
-        }
-
-        // Update UI with new data
-        function updateUI(data) {
-            if (!data) {
-                showNoData();
-                return;
-            }
-
-            // Update stats
-            document.getElementById('currentPrice').textContent = data.current_price ? data.current_price.toFixed(4) : '--';
-            document.getElementById('totalTicks').textContent = data.total_ticks || '--';
-            document.getElementById('candles1min').textContent = data.total_1min_candles || '--';
-            document.getElementById('candles5min').textContent = data.total_5min_candles || '--';
+                # Sort by epoch and get latest 100
+                candle_list.sort(key=lambda x: x['epoch'], reverse=True)
+                candles_5min_data = candle_list[:100]
             
-            if (data.last_update) {
-                const updateTime = new Date(data.last_update).toLocaleTimeString();
-                document.getElementById('lastUpdate').textContent = updateTime;
-            }
-
-            // Update charts
-            updateTickChart(data.live_ticks || []);
-            updateCandleChart(candle1minChart, data.candles_1min || []);
-            updateCandleChart(candle5minChart, data.candles_5min || []);
-
-            lastDataUpdate = new Date();
-        }
-
-        // Update tick chart
-        function updateTickChart(ticks) {
-            if (!ticks || ticks.length === 0) return;
-
-            const labels = ticks.map(tick => {
-                const date = new Date(tick.timestamp);
-                return date.toLocaleTimeString();
-            });
-            const prices = ticks.map(tick => tick.price);
-
-            tickChart.data.labels = labels;
-            tickChart.data.datasets[0].data = prices;
-            tickChart.update('none');
-        }
-
-        // Update candle chart
-        function updateCandleChart(chart, candles) {
-            if (!candles || candles.length === 0) return;
-
-            const labels = candles.map(candle => {
-                const date = new Date(candle.timestamp);
-                return date.toLocaleTimeString();
-            });
-
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = candles.map(c => c.high);  // High
-            chart.data.datasets[1].data = candles.map(c => c.low);   // Low
-            chart.data.datasets[2].data = candles.map(c => c.open);  // Open
-            chart.data.datasets[3].data = candles.map(c => c.close); // Close
-            
-            chart.update('none');
-        }
-
-        // Show no data message
-        function showNoData() {
-            const container = document.getElementById('chartsContainer');
-            container.innerHTML = `
-                <div class="no-data-message">
-                    <h3>No Data Available</h3>
-                    <p>Waiting for Volatility 150 (1s) data...</p>
-                    <p>Make sure the WebSocket connection is active.</p>
-                </div>
-            `;
-        }
-
-        // Check WebSocket status
-        async function checkWebSocketStatus() {
-            try {
-                const response = await fetch('/api/websocket-status');
-                const status = await response.json();
-                
-                const statusElement = document.getElementById('connectionStatus');
-                const indicator = statusElement.querySelector('.status-indicator');
-                
-                if (status.connected) {
-                    indicator.className = 'status-indicator status-live';
-                    statusElement.innerHTML = `
-                        <span class="status-indicator status-live"></span>
-                        Connected to ${status.name}
-                    `;
-                } else {
-                    indicator.className = 'status-indicator status-offline';
-                    statusElement.innerHTML = `
-                        <span class="status-indicator status-offline"></span>
-                        WebSocket Disconnected
-                    `;
-                }
-            } catch (error) {
-                console.error('Error checking WebSocket status:', error);
-            }
-        }
-
-        // Toggle data source
-        function toggleDataSource() {
-            useFirebaseData = !useFirebaseData;
-            const btn = document.getElementById('dataSourceBtn');
-            const indicator = document.getElementById('dataSourceIndicator');
-            
-            if (useFirebaseData) {
-                btn.textContent = 'Switch to Live Data';
-                indicator.innerHTML = '<span class="firebase-indicator">🔥 Firebase Data Source</span>';
-            } else {
-                btn.textContent = 'Switch to Firebase Data';
-                indicator.innerHTML = '<span class="live-indicator">📡 Live Data Source</span>';
+            # Update cache
+            self.cache = {
+                'ticks': ticks_data,
+                '1min_candles': candles_1min_data,
+                '5min_candles': candles_5min_data,
+                'last_fetch': datetime.now().isoformat()
             }
             
-            fetchData();
-            showNotification(`Switched to ${useFirebaseData ? 'Firebase' : 'Live'} data source`, 'success');
-        }
-
-        // Toggle auto refresh
-        function toggleAutoRefresh() {
-            autoRefresh = !autoRefresh;
-            const btn = document.getElementById('autoRefreshBtn');
+            logger.info(f"Fetched {len(ticks_data)} ticks, {len(candles_1min_data)} 1min candles, {len(candles_5min_data)} 5min candles")
             
-            if (autoRefresh) {
-                btn.textContent = 'Pause Auto Refresh';
-                startAutoRefresh();
-                showNotification('Auto refresh enabled', 'success');
-            } else {
-                btn.textContent = 'Resume Auto Refresh';
-                stopAutoRefresh();
-                showNotification('Auto refresh paused', 'success');
-            }
-        }
-
-        // Start auto refresh
-        function startAutoRefresh() {
-            if (refreshInterval) clearInterval(refreshInterval);
+            return self.get_formatted_data()
             
-            refreshInterval = setInterval(() => {
-                if (autoRefresh) {
-                    fetchData();
-                    checkWebSocketStatus();
-                }
-            }, 2000); // Refresh every 2 seconds
+        except Exception as e:
+            logger.error(f"Firebase fetch error: {e}")
+            return None
+    
+    def get_formatted_data(self):
+        """Return formatted data for frontend"""
+        current_price = 0
+        last_update = None
+        
+        # Get current price from latest tick
+        if self.cache['ticks']:
+            current_price = self.cache['ticks'][0]['price']
+            last_update = self.cache['ticks'][0]['timestamp']
+        
+        return {
+            'symbol': 'R_25',
+            'name': 'Volatility 10 (1s) Index',
+            'live_ticks': list(reversed(self.cache['ticks'])),  # Reverse to show chronological order
+            'candles_1min': list(reversed(self.cache['1min_candles'])),
+            'candles_5min': list(reversed(self.cache['5min_candles'])),
+            'current_price': current_price,
+            'last_update': last_update,
+            'total_ticks': len(self.cache['ticks']),
+            'total_1min_candles': len(self.cache['1min_candles']),
+            'total_5min_candles': len(self.cache['5min_candles']),
+            'data_source': 'firebase',
+            'last_fetch': self.cache['last_fetch']
         }
 
-        // Stop auto refresh
-        function stopAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-                refreshInterval = null;
-            }
+# Initialize data manager
+data_manager = FirebaseVIXDataManager()
+
+@app.route('/')
+def index():
+    """Serve the main HTML page"""
+    return render_template('index.html')
+
+@app.route('/api/data')
+def get_data():
+    """Get current data from Firebase"""
+    data = data_manager.fetch_firebase_data()
+    if data:
+        return jsonify(data)
+    else:
+        return jsonify({'error': 'Failed to fetch Firebase data'}), 500
+
+@app.route('/api/refresh')
+def refresh_data():
+    """Manually refresh data from Firebase"""
+    try:
+        data = data_manager.fetch_firebase_data()
+        if data:
+            return jsonify({
+                'success': True,
+                'data': data,
+                'refreshed_at': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to fetch data'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stats')
+def get_stats():
+    """Get basic statistics"""
+    try:
+        if not data_manager.cache['ticks']:
+            data_manager.fetch_firebase_data()
+        
+        stats = {
+            'total_ticks': len(data_manager.cache['ticks']),
+            'total_1min_candles': len(data_manager.cache['1min_candles']),
+            'total_5min_candles': len(data_manager.cache['5min_candles']),
+            'last_fetch': data_manager.cache['last_fetch'],
+            'firebase_url': FIREBASE_URL
         }
+        
+        # Calculate price statistics if we have tick data
+        if data_manager.cache['ticks']:
+            prices = [tick['price'] for tick in data_manager.cache['ticks']]
+            stats.update({
+                'current_price': prices[0] if prices else 0,
+                'min_price': min(prices),
+                'max_price': max(prices),
+                'avg_price': sum(prices) / len(prices)
+            })
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-        // Sync to Firebase
-        async function syncFirebase() {
-            try {
-                showNotification('Syncing to Firebase...', 'success');
-                const response = await fetch('/api/firebase-sync');
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification('Successfully synced to Firebase', 'success');
-                } else {
-                    showNotification('Failed to sync to Firebase', 'error');
-                }
-            } catch (error) {
-                console.error('Error syncing to Firebase:', error);
-                showNotification('Error syncing to Firebase: ' + error.message, 'error');
-            }
-        }
-
-        // Clear charts
-        function clearCharts() {
-            if (tickChart) {
-                tickChart.data.labels = [];
-                tickChart.data.datasets[0].data = [];
-                tickChart.update();
-            }
-            
-            if (candle1minChart) {
-                candle1minChart.data.labels = [];
-                candle1minChart.data.datasets.forEach(dataset => dataset.data = []);
-                candle1minChart.update();
-            }
-            
-            if (candle5minChart) {
-                candle5minChart.data.labels = [];
-                candle5minChart.data.datasets.forEach(dataset => dataset.data = []);
-                candle5minChart.update();
-            }
-            
-            showNotification('Charts cleared', 'success');
-        }
-
-        // Export data
-        function exportData() {
-            try {
-                const endpoint = useFirebaseData ? '/api/firebase-data' : '/api/data';
-                fetch(endpoint)
-                    .then(response => response.json())
-                    .then(data => {
-                        const jsonString = JSON.stringify(data, null, 2);
-                        const blob = new Blob([jsonString], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `volatility_150_data_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        
-                        showNotification('Data exported successfully', 'success');
-                    })
-                    .catch(error => {
-                        console.error('Export error:', error);
-                        showNotification('Failed to export data', 'error');
-                    });
-            } catch (error) {
-                console.error('Export error:', error);
-                showNotification('Failed to export data', 'error');
-            }
-        }
-
-        // Show notification
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type} show`;
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        // Handle page visibility change
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Page is hidden, reduce refresh rate
-                stopAutoRefresh();
-            } else {
-                // Page is visible again, resume normal refresh rate
-                if (autoRefresh) {
-                    startAutoRefresh();
-                    fetchData(); // Immediate refresh when page becomes visible
-                }
-            }
-        });
-
-        // Handle page unload
-        window.addEventListener('beforeunload', function() {
-            stopAutoRefresh();
-        });
-    </script>
-</body>
-</html>
+if __name__ == '__main__':
+    logger.info("Starting Firebase VIX Data Dashboard...")
+    logger.info(f"Firebase URL: {FIREBASE_URL}")
+    logger.info("Fetching initial data...")
+    
+    # Fetch initial data
+    initial_data = data_manager.fetch_firebase_data()
+    if initial_data:
+        logger.info("Initial data fetch successful")
+    else:
+        logger.warning("Initial data fetch failed")
+    
+    logger.info("Server starting on port 5000...")
+    app.run(host='0.0.0.0', port=5000, debug=True)
