@@ -1,5 +1,7 @@
 Flask==2.3.3
 Flask-CORS==4.0.0
 requests==2.31.0
-schedule==1.2.0
+websocket-client==1.6.4
+rel==0.4.9
 gunicorn==21.2.0
+python-dotenv==1.0.0
