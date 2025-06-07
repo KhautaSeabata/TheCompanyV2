@@ -3,42 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Volatility Index Charts</title>
+  <title>Volatility 25 Charts</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 10px;
+      background: #121212;
+      color: white;
+      margin: 0;
+      padding: 0;
     }
     canvas {
+      background: #1e1e1e;
+      margin: 10px auto;
+      display: block;
       max-width: 100%;
     }
-    select {
-      padding: 5px;
-      font-size: 16px;
-      margin-bottom: 20px;
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px;
+    }
+    button {
+      padding: 8px 16px;
+      background: #333;
+      border: 1px solid #888;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #555;
     }
   </style>
 </head>
 <body>
-  <h2>Volatility Index Charts</h2>
-  <label for="indexSelect">Select Index:</label>
-  <select id="indexSelect">
-    <option value="R_10">Volatility 10 Index</option>
-    <option value="R_25" selected>Volatility 25 Index</option>
-    <option value="R_75">Volatility 75 Index</option>
-    <option value="R_100">Volatility 100 Index</option>
-    <option value="1HZ75V">Volatility 75 (1s)</option>
-    <option value="1HZ10V">Volatility 10 (1s)</option>
-    <option value="1HZ100V">Volatility 100 (1s)</option>
-    <option value="1HZ150V">Volatility 150 (1s)</option>
-  </select>
+  <h2 style="text-align: center;">Volatility 25 Charts</h2>
+  <div class="controls">
+    <button onclick="scrollToLatest()">Scroll to Latest</button>
+    <button onclick="toggleAutoScroll()">
+      <span id="autoScrollStatus">Pause Auto-Scroll</span>
+    </button>
+  </div>
 
-  <canvas id="tickChart" height="100"></canvas>
-  <canvas id="min1Chart" height="100"></canvas>
-  <canvas id="min5Chart" height="100"></canvas>
+  <canvas id="tickChart" height="150"></canvas>
+  <canvas id="oneMinChart" height="200"></canvas>
+  <canvas id="fiveMinChart" height="200"></canvas>
 
   <script>
     const firebaseConfig = {
@@ -50,122 +63,100 @@
       messagingSenderId: "YOUR_MSG_ID",
       appId: "YOUR_APP_ID"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const tickCtx = document.getElementById("tickChart").getContext("2d");
-    const min1Ctx = document.getElementById("min1Chart").getContext("2d");
-    const min5Ctx = document.getElementById("min5Chart").getContext("2d");
+    const maxPoints = 100;
+    let autoScroll = true;
 
-    let tickChart, min1Chart, min5Chart;
-
-    function createLineChart(ctx, label) {
-      return new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [{
-            label,
-            data: [],
-            borderColor: 'blue',
-            backgroundColor: 'rgba(0,0,255,0.1)',
-            tension: 0.3,
-            pointRadius: 0
-          }]
-        },
-        options: {
-          animation: false,
-          scales: {
-            x: { display: false },
-            y: { beginAtZero: false }
-          }
-        }
-      });
-    }
-
-    function createCandleChart(ctx, label) {
-      return new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: [],
-          datasets: [{
-            label,
-            data: [],
-            borderColor: 'green',
-            backgroundColor: data => {
-              return data.raw.close >= data.raw.open ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)';
-            },
-            parsing: {
-              yAxisKey: 'close'
-            }
-          }]
-        },
-        options: {
-          animation: false,
-          scales: {
-            x: { display: false },
-            y: { beginAtZero: false }
-          }
-        }
-      });
-    }
-
-    function updateChart(chart, labels, values) {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = values;
-      chart.update();
-    }
-
-    function updateCandleChart(chart, candles) {
-      chart.data.labels = candles.map(c => new Date(c.epoch * 1000).toLocaleTimeString());
-      chart.data.datasets[0].data = candles;
-      chart.update();
-    }
-
-    function listenToData(symbol) {
-      if (tickChart) tickChart.destroy();
-      if (min1Chart) min1Chart.destroy();
-      if (min5Chart) min5Chart.destroy();
-
-      tickChart = createLineChart(tickCtx, "Live Tick");
-      min1Chart = createCandleChart(min1Ctx, "1 Minute Candle");
-      min5Chart = createCandleChart(min5Ctx, "5 Minute Candle");
-
-      // Listen to live ticks
-      firebase.database().ref("/ticks/" + symbol).limitToLast(100).on("value", snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
-        const labels = sorted.map(d => new Date(d.epoch * 1000).toLocaleTimeString());
-        const values = sorted.map(d => d.quote);
-        updateChart(tickChart, labels, values);
-      });
-
-      // Listen to 1min
-      firebase.database().ref("/1min" + symbol).limitToLast(50).on("value", snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
-        updateCandleChart(min1Chart, sorted);
-      });
-
-      // Listen to 5min
-      firebase.database().ref("/5min" + symbol).limitToLast(50).on("value", snapshot => {
-        const data = snapshot.val();
-        if (!data) return;
-        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
-        updateCandleChart(min5Chart, sorted);
-      });
-    }
-
-    document.getElementById("indexSelect").addEventListener("change", (e) => {
-      const symbol = e.target.value;
-      listenToData(symbol);
+    // Create charts
+    const tickChart = new Chart(document.getElementById("tickChart"), {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "Tick", data: [], borderColor: "#00ffcc", tension: 0.3 }] },
+      options: { animation: false, responsive: true, scales: { x: { ticks: { color: "#ccc" } }, y: { ticks: { color: "#ccc" } } } }
     });
 
-    // Initial
-    listenToData(document.getElementById("indexSelect").value);
+    const oneMinChart = new Chart(document.getElementById("oneMinChart"), {
+      type: "candlestick",
+      data: { datasets: [{ label: "1-Min Candles", data: [], borderColor: "#1aff1a", borderWidth: 1 }] },
+      options: { animation: false, responsive: true, scales: { x: { ticks: { color: "#ccc" } }, y: { ticks: { color: "#ccc" } } } }
+    });
+
+    const fiveMinChart = new Chart(document.getElementById("fiveMinChart"), {
+      type: "candlestick",
+      data: { datasets: [{ label: "5-Min Candles", data: [], borderColor: "#ffcc00", borderWidth: 1 }] },
+      options: { animation: false, responsive: true, scales: { x: { ticks: { color: "#ccc" } }, y: { ticks: { color: "#ccc" } } } }
+    });
+
+    function scrollToLatest() {
+      autoScroll = true;
+      document.getElementById("autoScrollStatus").innerText = "Pause Auto-Scroll";
+    }
+
+    function toggleAutoScroll() {
+      autoScroll = !autoScroll;
+      document.getElementById("autoScrollStatus").innerText = autoScroll ? "Pause Auto-Scroll" : "Resume Auto-Scroll";
+    }
+
+    function toTimeLabel(epoch) {
+      const date = new Date(epoch * 1000);
+      return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    }
+
+    function toCandle(time, o, h, l, c) {
+      return { x: time * 1000, o, h, l, c };
+    }
+
+    // Fetch live tick data
+    db.ref("ticks/R_25").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-maxPoints);
+
+      tickChart.data.labels = sorted.map(item => toTimeLabel(item.epoch));
+      tickChart.data.datasets[0].data = sorted.map(item => item.quote);
+      tickChart.update();
+
+      if (autoScroll) {
+        tickChart.canvas.parentNode.scrollTop = tickChart.canvas.parentNode.scrollHeight;
+      }
+    });
+
+    // Fetch 1-min candles
+    db.ref("1minVix25").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-maxPoints);
+      oneMinChart.data.datasets[0].data = sorted.map(c =>
+        toCandle(c.epoch, c.open, c.high, c.low, c.close)
+      );
+      oneMinChart.update();
+    });
+
+    // Fetch 5-min candles
+    db.ref("5minVix25").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-maxPoints);
+      fiveMinChart.data.datasets[0].data = sorted.map(c =>
+        toCandle(c.epoch, c.open, c.high, c.low, c.close)
+      );
+      fiveMinChart.update();
+    });
+
+    // Add candlestick chart type (since Chart.js core doesn't support it directly)
+    Chart.register({
+      id: 'candlestick',
+      beforeInit(chart) {
+        chart.config.type = 'bar';
+        chart.config.data.datasets.forEach(ds => {
+          ds.barPercentage = 1.0;
+          ds.categoryPercentage = 1.0;
+        });
+      }
+    });
+
+    Chart.defaults.candlestick = Chart.defaults.bar;
   </script>
 </body>
 </html>
