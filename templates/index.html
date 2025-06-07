@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatility Indices Live Dashboard</title>
+    <title>Volatility 150 (1s) Live Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
@@ -14,13 +14,13 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
         }
 
         .container {
-            max-width: 1600px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -43,128 +43,19 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .index-selector {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .index-selector h3 {
-            margin-bottom: 15px;
-            text-align: center;
+        .subtitle {
+            font-size: 1.2em;
             color: #4ecdc4;
+            margin-bottom: 15px;
         }
 
-        .index-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-
-        .index-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 15px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .index-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .index-btn.active {
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            border-color: #4ecdc4;
-            font-weight: bold;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
+        .connection-status {
+            display: inline-flex;
+            align-items: center;
             padding: 10px 20px;
             border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
             background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-        }
-
-        .chart-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .chart-title {
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
         .status-indicator {
@@ -190,26 +81,110 @@
             100% { opacity: 1; }
         }
 
-        .connection-status {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            border-radius: 10px;
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn.primary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            border-color: #4ecdc4;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
             background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #4ecdc4;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
         }
 
         .no-data-message {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #ff6b6b;
-            font-size: 1.2em;
+            font-size: 1.3em;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 2px dashed rgba(255, 107, 107, 0.3);
         }
 
         .loading {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #4ecdc4;
-            font-size: 1.2em;
+            font-size: 1.3em;
         }
 
         .notification {
@@ -218,11 +193,13 @@
             right: 20px;
             background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 15px 20px;
+            padding: 15px 25px;
             border-radius: 10px;
             z-index: 1000;
             transform: translateX(100%);
             transition: transform 0.3s ease;
+            max-width: 300px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .notification.show {
@@ -237,9 +214,26 @@
             border-left: 4px solid #ff6b6b;
         }
 
+        .data-source {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .firebase-indicator {
+            color: #ffa726;
+        }
+
+        .live-indicator {
+            color: #4ecdc4;
+        }
+
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
+                padding: 15px;
             }
             
             .header h1 {
@@ -250,8 +244,18 @@
                 height: 300px;
             }
 
-            .index-buttons {
-                grid-template-columns: 1fr;
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 200px;
             }
         }
     </style>
@@ -259,38 +263,34 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Volatility Indices Live Dashboard</h1>
-            <p>Real-time data from Deriv WebSocket with Firebase integration</p>
+            <h1>Volatility 150 (1s) Dashboard</h1>
+            <p class="subtitle">Real-time data from Deriv WebSocket with Firebase storage</p>
             <div class="connection-status" id="connectionStatus">
                 <span class="status-indicator status-live"></span>
-                Connecting to Deriv WebSocket...
-            </div>
-        </div>
-
-        <div class="index-selector">
-            <h3>Select Volatility Index</h3>
-            <div class="index-buttons" id="indexButtons">
-                <!-- Index buttons will be populated by JavaScript -->
+                Connecting to WebSocket...
             </div>
         </div>
 
         <div class="controls">
+            <button class="btn primary" onclick="toggleDataSource()">
+                <span id="dataSourceBtn">Switch to Firebase Data</span>
+            </button>
             <button class="btn" onclick="toggleAutoRefresh()">
                 <span id="autoRefreshBtn">Pause Auto Refresh</span>
             </button>
-            <button class="btn" onclick="syncFirebase()">Sync Firebase</button>
+            <button class="btn" onclick="syncFirebase()">Sync to Firebase</button>
             <button class="btn" onclick="clearCharts()">Clear Charts</button>
             <button class="btn" onclick="exportData()">Export Data</button>
+        </div>
+
+        <div class="data-source" id="dataSourceIndicator">
+            <span class="live-indicator">📡 Live Data Source</span>
         </div>
 
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value" id="currentPrice">--</div>
                 <div class="stat-label">Current Price</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="selectedIndex">--</div>
-                <div class="stat-label">Selected Index</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="totalTicks">--</div>
@@ -310,9 +310,9 @@
             </div>
         </div>
 
-        <div class="charts-grid" id="chartsContainer">
+        <div class="charts-container" id="chartsContainer">
             <div class="loading" id="loadingMessage">
-                Select a volatility index to view live data...
+                Loading Volatility 150 (1s) data...
             </div>
         </div>
     </div>
@@ -325,93 +325,35 @@
         let tickChart, candle1minChart, candle5minChart;
         let autoRefresh = true;
         let refreshInterval;
-        let currentSelectedIndex = null;
-        let availableIndices = {};
         let lastDataUpdate = null;
+        let useFirebaseData = false;
 
         // Initialize application
         document.addEventListener('DOMContentLoaded', function() {
-            loadAvailableIndices();
+            initCharts();
             startAutoRefresh();
             checkWebSocketStatus();
+            fetchData();
         });
-
-        // Load available volatility indices
-        async function loadAvailableIndices() {
-            try {
-                const response = await fetch('/api/indices');
-                const data = await response.json();
-                
-                if (data.indices && Array.isArray(data.indices)) {
-                    availableIndices = data.indices;
-                    populateIndexButtons(data.indices);
-                } else {
-                    console.error('Invalid indices data:', data);
-                    showNotification('Failed to load indices', 'error');
-                }
-                
-            } catch (error) {
-                console.error('Error loading indices:', error);
-                showNotification('Failed to connect to server', 'error');
-                updateConnectionStatus(false);
-            }
-        }
-
-        // Populate index selection buttons
-        function populateIndexButtons(indices) {
-            const container = document.getElementById('indexButtons');
-            container.innerHTML = '';
-            
-            indices.forEach(index => {
-                const button = document.createElement('button');
-                button.className = 'index-btn';
-                button.textContent = `${index.name} ${index.has_data ? '●' : '○'}`;
-                button.onclick = () => selectIndex(index.symbol, index.name);
-                container.appendChild(button);
-            });
-        }
-
-        // Select a volatility index
-        function selectIndex(indexSymbol, indexName) {
-            currentSelectedIndex = indexSymbol;
-            
-            // Update button states
-            document.querySelectorAll('.index-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Update selected index display
-            document.getElementById('selectedIndex').textContent = indexName;
-            
-            // Initialize charts
-            initCharts();
-            
-            // Load data for selected index
-            fetchDataForIndex(indexSymbol);
-            
-            showNotification(`Selected ${indexName}`, 'success');
-        }
 
         // Initialize charts
         function initCharts() {
-            // Clear existing charts
             const container = document.getElementById('chartsContainer');
             container.innerHTML = `
-                <div class="chart-container">
-                    <div class="chart-title">Live Ticks (Last 100 Points)</div>
+                <div class="chart-card">
+                    <div class="chart-title">Live Ticks (Real-time Price Movement)</div>
                     <div class="chart-wrapper">
                         <canvas id="tickChart"></canvas>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <div class="chart-title">1-Minute Candles (Close Prices)</div>
+                <div class="chart-card">
+                    <div class="chart-title">1-Minute Candlesticks (OHLC)</div>
                     <div class="chart-wrapper">
                         <canvas id="candle1minChart"></canvas>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <div class="chart-title">5-Minute Candles (Close Prices)</div>
+                <div class="chart-card">
+                    <div class="chart-title">5-Minute Candlesticks (OHLC)</div>
                     <div class="chart-wrapper">
                         <canvas id="candle5minChart"></canvas>
                     </div>
@@ -432,11 +374,11 @@
                         borderWidth: 2,
                         fill: true,
                         tension: 0.4,
-                        pointRadius: 1,
-                        pointHoverRadius: 5
+                        pointRadius: 0,
+                        pointHoverRadius: 4
                     }]
                 },
-                options: getChartOptions('Time', 'Price')
+                options: getLineChartOptions('Time', 'Price')
             });
 
             // Initialize 1min candle chart
@@ -445,375 +387,13 @@
                 type: 'line',
                 data: {
                     labels: [],
-                    datasets: [{
-                        label: 'Close Price',
-                        data: [],
-                        borderColor: '#ff6b6b',
-                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.2,
-                        pointRadius: 2,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: getChartOptions('Time', 'Price')
-            });
-
-            // Initialize 5min candle chart
-            const candle5minCtx = document.getElementById('candle5minChart').getContext('2d');
-            candle5minChart = new Chart(candle5minCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Close Price',
-                        data: [],
-                        borderColor: '#ffeaa7',
-                        backgroundColor: 'rgba(255, 234, 167, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.2,
-                        pointRadius: 2,
-                        pointHoverRadius: 6
-                    }]
-                },
-                options: getChartOptions('Time', 'Price')
-            });
-        }
-
-        // Get chart options
-        function getChartOptions(xTitle, yTitle) {
-            return {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                scales: {
-                    x: {
-                        display: true,
-                        title: { display: true, text: xTitle, color: 'white' },
-                        ticks: { 
-                            color: 'white',
-                            maxTicksLimit: 10,
-                            callback: function(value, index, values) {
-                                const label = this.getLabelForValue(value);
-                                if (label && label.includes('T')) {
-                                    return new Date(label).toLocaleTimeString();
-                                }
-                                return label;
-                            }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    },
-                    y: {
-                        display: true,
-                        title: { display: true, text: yTitle, color: 'white' },
-                        ticks: { 
-                            color: 'white',
-                            callback: function(value) {
-                                return parseFloat(value).toFixed(4);
-                            }
-                        },
-                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                    }
-                },
-                plugins: {
-                    legend: { 
-                        labels: { color: 'white' },
-                        display: true
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: 'white',
-                        bodyColor: 'white',
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${parseFloat(context.parsed.y).toFixed(4)}`;
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    duration: 0 // Disable animations for better performance
-                }
-            };
-        }
-
-        // Fetch data for selected index
-        async function fetchDataForIndex(indexSymbol) {
-            if (!indexSymbol) return;
-            
-            try {
-                const response = await fetch(`/api/data/${indexSymbol}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error('Error fetching data:', data.error);
-                    showNotification(`Error: ${data.error}`, 'error');
-                    return;
-                }
-                
-                updateDashboard(data);
-                
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                showNotification('Failed to fetch data', 'error');
-                updateConnectionStatus(false);
-            }
-        }
-
-        // Update dashboard with new data
-        function updateDashboard(data) {
-            if (!data) return;
-
-            // Update stats
-            document.getElementById('currentPrice').textContent = 
-                data.current_price ? parseFloat(data.current_price).toFixed(4) : '--';
-            document.getElementById('totalTicks').textContent = data.total_ticks || 0;
-            document.getElementById('candles1min').textContent = data.total_1min_candles || 0;
-            document.getElementById('candles5min').textContent = data.total_5min_candles || 0;
-            
-            if (data.last_update) {
-                const lastUpdate = new Date(data.last_update);
-                const now = new Date();
-                const timeDiff = Math.floor((now - lastUpdate) / 1000);
-                document.getElementById('lastUpdate').textContent = 
-                    timeDiff < 60 ? `${timeDiff}s ago` : `${Math.floor(timeDiff/60)}m ago`;
-            } else {
-                document.getElementById('lastUpdate').textContent = '--';
-            }
-
-            // Update charts
-            updateTickChart(data.live_ticks || []);
-            updateCandleChart(candle1minChart, data.candles_1min || []);
-            updateCandleChart(candle5minChart, data.candles_5min || []);
-
-            lastDataUpdate = new Date();
-        }
-
-        // Update tick chart
-        function updateTickChart(ticks) {
-            if (!tickChart || !ticks.length) return;
-
-            const labels = ticks.map(tick => new Date(tick.timestamp).toLocaleTimeString());
-            const prices = ticks.map(tick => parseFloat(tick.price));
-
-            tickChart.data.labels = labels;
-            tickChart.data.datasets[0].data = prices;
-            tickChart.update('none');
-        }
-
-        // Update candle chart
-        function updateCandleChart(chart, candles) {
-            if (!chart || !candles.length) return;
-
-            const labels = candles.map(candle => new Date(candle.timestamp).toLocaleTimeString());
-            const prices = candles.map(candle => parseFloat(candle.close));
-
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = prices;
-            chart.update('none');
-        }
-
-        // Check WebSocket status
-        async function checkWebSocketStatus() {
-            try {
-                const response = await fetch('/api/websocket-status');
-                const data = await response.json();
-                updateConnectionStatus(data.connected);
-            } catch (error) {
-                console.error('Error checking WebSocket status:', error);
-                updateConnectionStatus(false);
-            }
-        }
-
-        // Update connection status
-        function updateConnectionStatus(connected) {
-            const statusElement = document.getElementById('connectionStatus');
-            const indicator = statusElement.querySelector('.status-indicator');
-            
-            if (connected) {
-                indicator.className = 'status-indicator status-live';
-                statusElement.innerHTML = `
-                    <span class="status-indicator status-live"></span>
-                    Connected to Deriv WebSocket - Live Data
-                `;
-            } else {
-                indicator.className = 'status-indicator status-offline';
-                statusElement.innerHTML = `
-                    <span class="status-indicator status-offline"></span>
-                    WebSocket Disconnected - Attempting to reconnect...
-                `;
-            }
-        }
-
-        // Start auto refresh
-        function startAutoRefresh() {
-            if (refreshInterval) clearInterval(refreshInterval);
-            
-            refreshInterval = setInterval(() => {
-                if (autoRefresh && currentSelectedIndex) {
-                    fetchDataForIndex(currentSelectedIndex);
-                }
-                checkWebSocketStatus();
-            }, 2000); // Refresh every 2 seconds
-        }
-
-        // Toggle auto refresh
-        function toggleAutoRefresh() {
-            autoRefresh = !autoRefresh;
-            const btn = document.getElementById('autoRefreshBtn');
-            btn.textContent = autoRefresh ? 'Pause Auto Refresh' : 'Resume Auto Refresh';
-            
-            if (autoRefresh) {
-                startAutoRefresh();
-                showNotification('Auto refresh enabled', 'success');
-            } else {
-                clearInterval(refreshInterval);
-                showNotification('Auto refresh paused', 'success');
-            }
-        }
-
-        // Sync with Firebase
-        async function syncFirebase() {
-            if (!currentSelectedIndex) {
-                showNotification('Please select an index first', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/firebase-sync/${currentSelectedIndex}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    showNotification('Firebase sync successful', 'success');
-                } else {
-                    showNotification('Firebase sync failed', 'error');
-                }
-            } catch (error) {
-                console.error('Firebase sync error:', error);
-                showNotification('Firebase sync failed', 'error');
-            }
-        }
-
-        // Clear charts
-        function clearCharts() {
-            if (tickChart) {
-                tickChart.data.labels = [];
-                tickChart.data.datasets[0].data = [];
-                tickChart.update();
-            }
-            
-            if (candle1minChart) {
-                candle1minChart.data.labels = [];
-                candle1minChart.data.datasets[0].data = [];
-                candle1minChart.update();
-            }
-            
-            if (candle5minChart) {
-                candle5minChart.data.labels = [];
-                candle5minChart.data.datasets[0].data = [];
-                candle5minChart.update();
-            }
-            
-            showNotification('Charts cleared', 'success');
-        }
-
-        // Export data
-        async function exportData() {
-            if (!currentSelectedIndex) {
-                showNotification('Please select an index first', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/data/${currentSelectedIndex}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    showNotification('No data to export', 'error');
-                    return;
-                }
-
-                const exportData = {
-                    symbol: data.symbol,
-                    name: data.name,
-                    exported_at: new Date().toISOString(),
-                    live_ticks: data.live_ticks,
-                    candles_1min: data.candles_1min,
-                    candles_5min: data.candles_5min,
-                    stats: {
-                        current_price: data.current_price,
-                        total_ticks: data.total_ticks,
-                        total_1min_candles: data.total_1min_candles,
-                        total_5min_candles: data.total_5min_candles,
-                        last_update: data.last_update
-                    }
-                };
-
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-                    type: 'application/json'
-                });
-                
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${data.symbol}_data_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                showNotification('Data exported successfully', 'success');
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                showNotification('Export failed', 'error');
-            }
-        }
-
-        // Show notification
-        function showNotification(message, type = 'success') {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-
-        // Handle page visibility change
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Page is hidden, pause auto refresh to save resources
-                if (autoRefresh) {
-                    clearInterval(refreshInterval);
-                }
-            } else {
-                // Page is visible, resume auto refresh
-                if (autoRefresh) {
-                    startAutoRefresh();
-                }
-            }
-        });
-
-        // Handle connection errors
-        window.addEventListener('online', function() {
-            showNotification('Connection restored', 'success');
-            if (autoRefresh) {
-                startAutoRefresh();
-            }
-        });
-
-        window.addEventListener('offline', function() {
-            showNotification('Connection lost', 'error');
-            updateConnectionStatus(false);
-        });
-    </script>
-</body>
-</html>
+                    datasets: [
+                        {
+                            label: 'High',
+                            data: [],
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
