@@ -7,10 +7,14 @@ from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 import requests
 import websocket
-import rel
+import logging
 
 app = Flask(__name__)
 CORS(app)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Firebase Realtime Database URL
 FIREBASE_URL = "https://vix25-486b9-default-rtdb.firebaseio.com"
@@ -71,7 +75,7 @@ class VolatilityDataManager:
         # Update candles
         self.update_candles(symbol, float(price), datetime.fromisoformat(timestamp.replace('Z', '+00:00')))
         
-        print(f"{symbol}: {price} at {timestamp}")
+        logger.info(f"{symbol}: {price} at {timestamp}")
         
     def update_candles(self, symbol, price, timestamp):
         """Update 1min and 5min candles for a symbol"""
@@ -169,11 +173,17 @@ class DerivWebSocket:
     def __init__(self):
         self.ws = None
         self.connected = False
+        self.connection_thread = None
+        self.should_reconnect = True
+        self.reconnect_delay = 5
+        self.max_reconnect_delay = 60
+        self.last_ping = None
         
     def on_open(self, ws):
         """WebSocket connection opened"""
-        print("Deriv WebSocket connected")
+        logger.info("Deriv WebSocket connected successfully")
         self.connected = True
+        self.reconnect_delay = 5  # Reset reconnect delay on successful connection
         
         # Subscribe to all volatility indices
         for symbol in VOLATILITY_INDICES:
@@ -200,50 +210,83 @@ class DerivWebSocket:
                     data_manager.add_tick(symbol, price, iso_timestamp)
                     
                     # Send to Firebase periodically
-                    if int(timestamp) % 10 == 0:  # Every 10 seconds
+                    if int(timestamp) % 30 == 0:  # Every 30 seconds
                         self.sync_to_firebase(symbol)
-                        
-        except json.JSONDecodeError:
-            print(f"Invalid JSON received: {message}")
+            
+            # Handle subscription confirmation
+            elif 'subscription' in data:
+                logger.info(f"Subscription confirmed: {data}")
+                
+            # Handle ping/pong
+            elif 'ping' in data:
+                self.send_pong()
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON received: {message}")
         except Exception as e:
-            print(f"Error processing message: {e}")
+            logger.error(f"Error processing message: {e}")
             
     def on_error(self, ws, error):
         """Handle WebSocket errors"""
-        print(f"Deriv WebSocket error: {error}")
+        logger.error(f"Deriv WebSocket error: {error}")
         self.connected = False
         
     def on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket close"""
-        print("Deriv WebSocket connection closed")
+        logger.warning(f"Deriv WebSocket connection closed: {close_status_code} - {close_msg}")
         self.connected = False
         
+        # Attempt to reconnect if should_reconnect is True
+        if self.should_reconnect:
+            logger.info(f"Attempting to reconnect in {self.reconnect_delay} seconds...")
+            time.sleep(self.reconnect_delay)
+            
+            # Exponential backoff for reconnection attempts
+            self.reconnect_delay = min(self.reconnect_delay * 2, self.max_reconnect_delay)
+            
+            # Reconnect in a separate thread to avoid blocking
+            threading.Thread(target=self.connect, daemon=True).start()
+            
     def subscribe_to_ticks(self, symbol):
         """Subscribe to tick data for a symbol"""
         if self.ws and self.connected:
-            subscribe_message = {
-                "ticks": symbol,
-                "subscribe": 1
-            }
-            self.ws.send(json.dumps(subscribe_message))
-            print(f"Subscribed to {symbol}")
-            
+            try:
+                subscribe_message = {
+                    "ticks": symbol,
+                    "subscribe": 1
+                }
+                self.ws.send(json.dumps(subscribe_message))
+                logger.info(f"Subscribed to {symbol}")
+            except Exception as e:
+                logger.error(f"Error subscribing to {symbol}: {e}")
+    
+    def send_pong(self):
+        """Send pong response to ping"""
+        if self.ws and self.connected:
+            try:
+                pong_message = {"pong": 1}
+                self.ws.send(json.dumps(pong_message))
+            except Exception as e:
+                logger.error(f"Error sending pong: {e}")
+                
     def sync_to_firebase(self, symbol):
         """Sync symbol data to Firebase"""
         try:
             symbol_data = data_manager.get_symbol_data(symbol)
             if symbol_data:
-                firebase_data = {
-                    f'{symbol}_data': symbol_data,
-                    'last_sync': datetime.now().isoformat()
-                }
                 send_to_firebase(f'volatility_indices/{symbol}', symbol_data)
         except Exception as e:
-            print(f"Firebase sync error for {symbol}: {e}")
+            logger.error(f"Firebase sync error for {symbol}: {e}")
             
     def connect(self):
         """Connect to Deriv WebSocket"""
         try:
+            logger.info(f"Connecting to Deriv WebSocket: {DERIV_WS_URL}")
+            
+            # Close existing connection if any
+            if self.ws:
+                self.ws.close()
+                
             self.ws = websocket.WebSocketApp(
                 DERIV_WS_URL,
                 on_open=self.on_open,
@@ -252,18 +295,35 @@ class DerivWebSocket:
                 on_close=self.on_close
             )
             
-            # Run WebSocket in a separate thread
-            def run_websocket():
-                self.ws.run_forever(dispatcher=rel, reconnect=5)
-                rel.signal(2, rel.abort)
-                rel.dispatch()
-                
-            ws_thread = threading.Thread(target=run_websocket)
-            ws_thread.daemon = True
-            ws_thread.start()
+            # Run WebSocket connection
+            self.ws.run_forever(
+                ping_interval=30,  # Send ping every 30 seconds
+                ping_timeout=10    # Wait 10 seconds for pong response
+            )
             
         except Exception as e:
-            print(f"WebSocket connection error: {e}")
+            logger.error(f"WebSocket connection error: {e}")
+            self.connected = False
+            
+            # Attempt to reconnect after delay
+            if self.should_reconnect:
+                time.sleep(self.reconnect_delay)
+                threading.Thread(target=self.connect, daemon=True).start()
+    
+    def start_connection(self):
+        """Start WebSocket connection in a separate thread"""
+        if self.connection_thread is None or not self.connection_thread.is_alive():
+            self.connection_thread = threading.Thread(target=self.connect, daemon=True)
+            self.connection_thread.start()
+            logger.info("WebSocket connection thread started")
+    
+    def stop_connection(self):
+        """Stop WebSocket connection"""
+        self.should_reconnect = False
+        if self.ws:
+            self.ws.close()
+        self.connected = False
+        logger.info("WebSocket connection stopped")
 
 # Initialize WebSocket connection
 deriv_ws = DerivWebSocket()
@@ -272,10 +332,15 @@ def send_to_firebase(path, data):
     """Send data to Firebase Realtime Database"""
     try:
         url = f"{FIREBASE_URL}/{path}.json"
-        response = requests.put(url, json=data, timeout=5)
-        return response.status_code == 200
+        response = requests.put(url, json=data, timeout=10)
+        if response.status_code == 200:
+            logger.info(f"Firebase sync successful for {path}")
+            return True
+        else:
+            logger.error(f"Firebase sync failed for {path}: {response.status_code}")
+            return False
     except Exception as e:
-        print(f"Firebase error: {e}")
+        logger.error(f"Firebase error: {e}")
         return False
 
 @app.route('/')
@@ -367,22 +432,43 @@ def websocket_status():
     return jsonify({
         'connected': deriv_ws.connected,
         'active_subscriptions': len(VOLATILITY_INDICES),
-        'indices': list(VOLATILITY_INDICES.keys())
+        'indices': list(VOLATILITY_INDICES.keys()),
+        'connection_url': DERIV_WS_URL
     })
 
+@app.route('/api/websocket-reconnect')
+def websocket_reconnect():
+    """Manually trigger WebSocket reconnection"""
+    try:
+        deriv_ws.stop_connection()
+        time.sleep(2)
+        deriv_ws.should_reconnect = True
+        deriv_ws.start_connection()
+        
+        return jsonify({
+            'success': True,
+            'message': 'WebSocket reconnection initiated',
+            'initiated_at': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
-    print("Starting Deriv Volatility Indices Data Server...")
-    print(f"Firebase URL: {FIREBASE_URL}")
-    print(f"Deriv WebSocket URL: {DERIV_WS_URL}")
-    print("Available Indices:")
+    logger.info("Starting Deriv Volatility Indices Data Server...")
+    logger.info(f"Firebase URL: {FIREBASE_URL}")
+    logger.info(f"Deriv WebSocket URL: {DERIV_WS_URL}")
+    logger.info("Available Indices:")
     for symbol, info in VOLATILITY_INDICES.items():
-        print(f"  - {symbol}: {info['name']}")
+        logger.info(f"  - {symbol}: {info['name']}")
     
-    # Connect to Deriv WebSocket
-    deriv_ws.connect()
+    # Start WebSocket connection
+    deriv_ws.start_connection()
     
-    # Wait a moment for WebSocket to connect
-    time.sleep(2)
+    # Wait a moment for WebSocket to attempt connection
+    time.sleep(3)
     
-    print("Server starting on port 5000...")
+    logger.info("Server starting on port 5000...")
     app.run(host='0.0.0.0', port=5000, debug=False)
