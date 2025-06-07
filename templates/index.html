@@ -397,3 +397,427 @@
                             fill: false,
                             tension: 0.1,
                             pointRadius: 1
+                        },
+                        {
+                            label: 'Low',
+                            data: [],
+                            borderColor: '#4ecdc4',
+                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Open',
+                            data: [],
+                            borderColor: '#ffa726',
+                            backgroundColor: 'rgba(255, 167, 38, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Close',
+                            data: [],
+                            borderColor: '#e91e63',
+                            backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: getLineChartOptions('Time', 'Price')
+            });
+
+            // Initialize 5min candle chart
+            const candle5minCtx = document.getElementById('candle5minChart').getContext('2d');
+            candle5minChart = new Chart(candle5minCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'High',
+                            data: [],
+                            borderColor: '#ff6b6b',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Low',
+                            data: [],
+                            borderColor: '#4ecdc4',
+                            backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Open',
+                            data: [],
+                            borderColor: '#ffa726',
+                            backgroundColor: 'rgba(255, 167, 38, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1
+                        },
+                        {
+                            label: 'Close',
+                            data: [],
+                            borderColor: '#e91e63',
+                            backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 2
+                        }
+                    ]
+                },
+                options: getLineChartOptions('Time', 'Price')
+            });
+        }
+
+        // Get chart options
+        function getLineChartOptions(xLabel, yLabel) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: xLabel,
+                            color: 'white'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            maxTicksLimit: 10
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: yLabel,
+                            color: 'white'
+                        },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.8)'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'white'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: '#4ecdc4',
+                        borderWidth: 1
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverBackgroundColor: '#4ecdc4'
+                    }
+                }
+            };
+        }
+
+        // Fetch data from API
+        async function fetchData() {
+            try {
+                const endpoint = useFirebaseData ? '/api/firebase-data' : '/api/data';
+                const response = await fetch(endpoint);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                updateUI(data);
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showNotification('Failed to fetch data: ' + error.message, 'error');
+            }
+        }
+
+        // Update UI with new data
+        function updateUI(data) {
+            if (!data) {
+                showNoData();
+                return;
+            }
+
+            // Update stats
+            document.getElementById('currentPrice').textContent = data.current_price ? data.current_price.toFixed(4) : '--';
+            document.getElementById('totalTicks').textContent = data.total_ticks || '--';
+            document.getElementById('candles1min').textContent = data.total_1min_candles || '--';
+            document.getElementById('candles5min').textContent = data.total_5min_candles || '--';
+            
+            if (data.last_update) {
+                const updateTime = new Date(data.last_update).toLocaleTimeString();
+                document.getElementById('lastUpdate').textContent = updateTime;
+            }
+
+            // Update charts
+            updateTickChart(data.live_ticks || []);
+            updateCandleChart(candle1minChart, data.candles_1min || []);
+            updateCandleChart(candle5minChart, data.candles_5min || []);
+
+            lastDataUpdate = new Date();
+        }
+
+        // Update tick chart
+        function updateTickChart(ticks) {
+            if (!ticks || ticks.length === 0) return;
+
+            const labels = ticks.map(tick => {
+                const date = new Date(tick.timestamp);
+                return date.toLocaleTimeString();
+            });
+            const prices = ticks.map(tick => tick.price);
+
+            tickChart.data.labels = labels;
+            tickChart.data.datasets[0].data = prices;
+            tickChart.update('none');
+        }
+
+        // Update candle chart
+        function updateCandleChart(chart, candles) {
+            if (!candles || candles.length === 0) return;
+
+            const labels = candles.map(candle => {
+                const date = new Date(candle.timestamp);
+                return date.toLocaleTimeString();
+            });
+
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = candles.map(c => c.high);  // High
+            chart.data.datasets[1].data = candles.map(c => c.low);   // Low
+            chart.data.datasets[2].data = candles.map(c => c.open);  // Open
+            chart.data.datasets[3].data = candles.map(c => c.close); // Close
+            
+            chart.update('none');
+        }
+
+        // Show no data message
+        function showNoData() {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = `
+                <div class="no-data-message">
+                    <h3>No Data Available</h3>
+                    <p>Waiting for Volatility 150 (1s) data...</p>
+                    <p>Make sure the WebSocket connection is active.</p>
+                </div>
+            `;
+        }
+
+        // Check WebSocket status
+        async function checkWebSocketStatus() {
+            try {
+                const response = await fetch('/api/websocket-status');
+                const status = await response.json();
+                
+                const statusElement = document.getElementById('connectionStatus');
+                const indicator = statusElement.querySelector('.status-indicator');
+                
+                if (status.connected) {
+                    indicator.className = 'status-indicator status-live';
+                    statusElement.innerHTML = `
+                        <span class="status-indicator status-live"></span>
+                        Connected to ${status.name}
+                    `;
+                } else {
+                    indicator.className = 'status-indicator status-offline';
+                    statusElement.innerHTML = `
+                        <span class="status-indicator status-offline"></span>
+                        WebSocket Disconnected
+                    `;
+                }
+            } catch (error) {
+                console.error('Error checking WebSocket status:', error);
+            }
+        }
+
+        // Toggle data source
+        function toggleDataSource() {
+            useFirebaseData = !useFirebaseData;
+            const btn = document.getElementById('dataSourceBtn');
+            const indicator = document.getElementById('dataSourceIndicator');
+            
+            if (useFirebaseData) {
+                btn.textContent = 'Switch to Live Data';
+                indicator.innerHTML = '<span class="firebase-indicator">🔥 Firebase Data Source</span>';
+            } else {
+                btn.textContent = 'Switch to Firebase Data';
+                indicator.innerHTML = '<span class="live-indicator">📡 Live Data Source</span>';
+            }
+            
+            fetchData();
+            showNotification(`Switched to ${useFirebaseData ? 'Firebase' : 'Live'} data source`, 'success');
+        }
+
+        // Toggle auto refresh
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefresh) {
+                btn.textContent = 'Pause Auto Refresh';
+                startAutoRefresh();
+                showNotification('Auto refresh enabled', 'success');
+            } else {
+                btn.textContent = 'Resume Auto Refresh';
+                stopAutoRefresh();
+                showNotification('Auto refresh paused', 'success');
+            }
+        }
+
+        // Start auto refresh
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            
+            refreshInterval = setInterval(() => {
+                if (autoRefresh) {
+                    fetchData();
+                    checkWebSocketStatus();
+                }
+            }, 2000); // Refresh every 2 seconds
+        }
+
+        // Stop auto refresh
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        // Sync to Firebase
+        async function syncFirebase() {
+            try {
+                showNotification('Syncing to Firebase...', 'success');
+                const response = await fetch('/api/firebase-sync');
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Successfully synced to Firebase', 'success');
+                } else {
+                    showNotification('Failed to sync to Firebase', 'error');
+                }
+            } catch (error) {
+                console.error('Error syncing to Firebase:', error);
+                showNotification('Error syncing to Firebase: ' + error.message, 'error');
+            }
+        }
+
+        // Clear charts
+        function clearCharts() {
+            if (tickChart) {
+                tickChart.data.labels = [];
+                tickChart.data.datasets[0].data = [];
+                tickChart.update();
+            }
+            
+            if (candle1minChart) {
+                candle1minChart.data.labels = [];
+                candle1minChart.data.datasets.forEach(dataset => dataset.data = []);
+                candle1minChart.update();
+            }
+            
+            if (candle5minChart) {
+                candle5minChart.data.labels = [];
+                candle5minChart.data.datasets.forEach(dataset => dataset.data = []);
+                candle5minChart.update();
+            }
+            
+            showNotification('Charts cleared', 'success');
+        }
+
+        // Export data
+        function exportData() {
+            try {
+                const endpoint = useFirebaseData ? '/api/firebase-data' : '/api/data';
+                fetch(endpoint)
+                    .then(response => response.json())
+                    .then(data => {
+                        const jsonString = JSON.stringify(data, null, 2);
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `volatility_150_data_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        showNotification('Data exported successfully', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Export error:', error);
+                        showNotification('Failed to export data', 'error');
+                    });
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Failed to export data', 'error');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Handle page visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is hidden, reduce refresh rate
+                stopAutoRefresh();
+            } else {
+                // Page is visible again, resume normal refresh rate
+                if (autoRefresh) {
+                    startAutoRefresh();
+                    fetchData(); // Immediate refresh when page becomes visible
+                }
+            }
+        });
+
+        // Handle page unload
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>
