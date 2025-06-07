@@ -1,521 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VIX Live Data Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.8;
-        }
-
-        .charts-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-        }
-
-        .chart-container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .chart-title {
-            font-size: 1.5em;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-live {
-            background: #4ecdc4;
-            animation: pulse 2s infinite;
-        }
-
-        .status-offline {
-            background: #ff6b6b;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .firebase-status {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 10px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .chart-wrapper {
-                height: 300px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Volatility Index Charts</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+    }
+    canvas {
+      max-width: 100%;
+    }
+    select {
+      padding: 5px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>VIX Live Data Dashboard</h1>
-            <p>Real-time VIX volatility index with Firebase integration</p>
-            <div class="firebase-status" id="firebaseStatus">
-                <span class="status-indicator status-live"></span>
-                Firebase Connected
-            </div>
-        </div>
+  <h2>Volatility Index Charts</h2>
+  <label for="indexSelect">Select Index:</label>
+  <select id="indexSelect">
+    <option value="R_10">Volatility 10 Index</option>
+    <option value="R_25" selected>Volatility 25 Index</option>
+    <option value="R_75">Volatility 75 Index</option>
+    <option value="R_100">Volatility 100 Index</option>
+    <option value="1HZ75V">Volatility 75 (1s)</option>
+    <option value="1HZ10V">Volatility 10 (1s)</option>
+    <option value="1HZ100V">Volatility 100 (1s)</option>
+    <option value="1HZ150V">Volatility 150 (1s)</option>
+  </select>
 
-        <div class="controls">
-            <button class="btn" onclick="toggleAutoRefresh()">
-                <span id="autoRefreshBtn">Pause Auto Refresh</span>
-            </button>
-            <button class="btn" onclick="syncFirebase()">Sync Firebase</button>
-            <button class="btn" onclick="clearCharts()">Clear Charts</button>
-            <button class="btn" onclick="exportData()">Export Data</button>
-        </div>
+  <canvas id="tickChart" height="100"></canvas>
+  <canvas id="min1Chart" height="100"></canvas>
+  <canvas id="min5Chart" height="100"></canvas>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" id="currentPrice">--</div>
-                <div class="stat-label">Current VIX</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalTicks">--</div>
-                <div class="stat-label">Total Ticks</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="candles1min">--</div>
-                <div class="stat-label">1min Candles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="candles5min">--</div>
-                <div class="stat-label">5min Candles</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="lastUpdate">--</div>
-                <div class="stat-label">Last Update</div>
-            </div>
-        </div>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "vix75-f6684.firebaseapp.com",
+      databaseURL: "https://vix75-f6684-default-rtdb.firebaseio.com",
+      projectId: "vix75-f6684",
+      storageBucket: "vix75-f6684.appspot.com",
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-        <div class="charts-grid">
-            <div class="chart-container">
-                <div class="chart-title">Live VIX Ticks</div>
-                <div class="chart-wrapper">
-                    <canvas id="tickChart"></canvas>
-                </div>
-            </div>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-            <div class="chart-container">
-                <div class="chart-title">1-Minute Candles</div>
-                <div class="chart-wrapper">
-                    <canvas id="candle1minChart"></canvas>
-                </div>
-            </div>
+    const tickCtx = document.getElementById("tickChart").getContext("2d");
+    const min1Ctx = document.getElementById("min1Chart").getContext("2d");
+    const min5Ctx = document.getElementById("min5Chart").getContext("2d");
 
-            <div class="chart-container">
-                <div class="chart-title">5-Minute Candles</div>
-                <div class="chart-wrapper">
-                    <canvas id="candle5minChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+    let tickChart, min1Chart, min5Chart;
 
-    <script>
-        // Global variables
-        let tickChart, candle1minChart, candle5minChart;
-        let autoRefresh = true;
-        let refreshInterval;
-
-        // Initialize charts
-        function initCharts() {
-            // Tick chart
-            const tickCtx = document.getElementById('tickChart').getContext('2d');
-            tickChart = new Chart(tickCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'VIX Price',
-                        data: [],
-                        borderColor: '#4ecdc4',
-                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            display: true,
-                            title: { display: true, text: 'Time', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            display: true,
-                            title: { display: true, text: 'VIX Level', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { labels: { color: 'white' } }
-                    }
-                }
-            });
-
-            // 1min candle chart
-            const candle1minCtx = document.getElementById('candle1minChart').getContext('2d');
-            candle1minChart = new Chart(candle1minCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Close Price',
-                        data: [],
-                        borderColor: '#ff6b6b',
-                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                        borderWidth: 2,
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            display: true,
-                            title: { display: true, text: 'Time', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            display: true,
-                            title: { display: true, text: 'VIX Level', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { labels: { color: 'white' } }
-                    }
-                }
-            });
-
-            // 5min candle chart
-            const candle5minCtx = document.getElementById('candle5minChart').getContext('2d');
-            candle5minChart = new Chart(candle5minCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Close Price',
-                        data: [],
-                        borderColor: '#ffeaa7',
-                        backgroundColor: 'rgba(255, 234, 167, 0.1)',
-                        borderWidth: 2,
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            display: true,
-                            title: { display: true, text: 'Time', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            display: true,
-                            title: { display: true, text: 'VIX Level', color: 'white' },
-                            ticks: { color: 'white' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    },
-                    plugins: {
-                        legend: { labels: { color: 'white' } }
-                    }
-                }
-            });
+    function createLineChart(ctx, label) {
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label,
+            data: [],
+            borderColor: 'blue',
+            backgroundColor: 'rgba(0,0,255,0.1)',
+            tension: 0.3,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: { beginAtZero: false }
+          }
         }
+      });
+    }
 
-        // Fetch data from server
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/data');
-                const data = await response.json();
-                updateDashboard(data);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                document.getElementById('firebaseStatus').innerHTML = 
-                    '<span class="status-indicator status-offline"></span>Connection Error';
+    function createCandleChart(ctx, label) {
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label,
+            data: [],
+            borderColor: 'green',
+            backgroundColor: data => {
+              return data.raw.close >= data.raw.open ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)';
+            },
+            parsing: {
+              yAxisKey: 'close'
             }
+          }]
+        },
+        options: {
+          animation: false,
+          scales: {
+            x: { display: false },
+            y: { beginAtZero: false }
+          }
         }
+      });
+    }
 
-        // Update dashboard with new data
-        function updateDashboard(data) {
-            // Update stats
-            document.getElementById('currentPrice').textContent = data.current_price.toFixed(2);
-            document.getElementById('totalTicks').textContent = data.total_ticks;
-            document.getElementById('candles1min').textContent = data.total_1min_candles;
-            document.getElementById('candles5min').textContent = data.total_5min_candles;
-            
-            const lastUpdate = new Date(data.last_update);
-            document.getElementById('lastUpdate').textContent = 
-                lastUpdate.toLocaleTimeString();
+    function updateChart(chart, labels, values) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.update();
+    }
 
-            // Update tick chart
-            if (data.live_ticks && data.live_ticks.length > 0) {
-                const tickLabels = data.live_ticks.map(tick => 
-                    new Date(tick.timestamp).toLocaleTimeString()
-                );
-                const tickPrices = data.live_ticks.map(tick => tick.price);
+    function updateCandleChart(chart, candles) {
+      chart.data.labels = candles.map(c => new Date(c.epoch * 1000).toLocaleTimeString());
+      chart.data.datasets[0].data = candles;
+      chart.update();
+    }
 
-                tickChart.data.labels = tickLabels;
-                tickChart.data.datasets[0].data = tickPrices;
-                tickChart.update('none');
-            }
+    function listenToData(symbol) {
+      if (tickChart) tickChart.destroy();
+      if (min1Chart) min1Chart.destroy();
+      if (min5Chart) min5Chart.destroy();
 
-            // Update 1min candle chart
-            if (data.candles_1min && data.candles_1min.length > 0) {
-                const candle1minLabels = data.candles_1min.map(candle => 
-                    new Date(candle.timestamp).toLocaleTimeString()
-                );
-                const candle1minPrices = data.candles_1min.map(candle => candle.close);
+      tickChart = createLineChart(tickCtx, "Live Tick");
+      min1Chart = createCandleChart(min1Ctx, "1 Minute Candle");
+      min5Chart = createCandleChart(min5Ctx, "5 Minute Candle");
 
-                candle1minChart.data.labels = candle1minLabels;
-                candle1minChart.data.datasets[0].data = candle1minPrices;
-                candle1minChart.update('none');
-            }
+      // Listen to live ticks
+      firebase.database().ref("/ticks/" + symbol).limitToLast(100).on("value", snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
+        const labels = sorted.map(d => new Date(d.epoch * 1000).toLocaleTimeString());
+        const values = sorted.map(d => d.quote);
+        updateChart(tickChart, labels, values);
+      });
 
-            // Update 5min candle chart
-            if (data.candles_5min && data.candles_5min.length > 0) {
-                const candle5minLabels = data.candles_5min.map(candle => 
-                    new Date(candle.timestamp).toLocaleTimeString()
-                );
-                const candle5minPrices = data.candles_5min.map(candle => candle.close);
+      // Listen to 1min
+      firebase.database().ref("/1min" + symbol).limitToLast(50).on("value", snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
+        updateCandleChart(min1Chart, sorted);
+      });
 
-                candle5minChart.data.labels = candle5minLabels;
-                candle5minChart.data.datasets[0].data = candle5minPrices;
-                candle5minChart.update('none');
-            }
+      // Listen to 5min
+      firebase.database().ref("/5min" + symbol).limitToLast(50).on("value", snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        const sorted = Object.values(data).sort((a, b) => a.epoch - b.epoch);
+        updateCandleChart(min5Chart, sorted);
+      });
+    }
 
-            // Update Firebase status
-            document.getElementById('firebaseStatus').innerHTML = 
-                '<span class="status-indicator status-live"></span>Firebase Connected';
-        }
+    document.getElementById("indexSelect").addEventListener("change", (e) => {
+      const symbol = e.target.value;
+      listenToData(symbol);
+    });
 
-        // Toggle auto refresh
-        function toggleAutoRefresh() {
-            autoRefresh = !autoRefresh;
-            const btn = document.getElementById('autoRefreshBtn');
-            
-            if (autoRefresh) {
-                btn.textContent = 'Pause Auto Refresh';
-                startAutoRefresh();
-            } else {
-                btn.textContent = 'Resume Auto Refresh';
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                }
-            }
-        }
-
-        // Start auto refresh
-        function startAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-            }
-            
-            refreshInterval = setInterval(() => {
-                if (autoRefresh) {
-                    fetchData();
-                }
-            }, 2000); // Update every 2 seconds
-        }
-
-        // Sync Firebase
-        async function syncFirebase() {
-            try {
-                const response = await fetch('/api/firebase-sync');
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('Firebase sync successful!');
-                } else {
-                    alert('Firebase sync failed!');
-                }
-            } catch (error) {
-                console.error('Sync error:', error);
-                alert('Firebase sync error!');
-            }
-        }
-
-        // Clear charts
-        function clearCharts() {
-            if (confirm('Clear all chart data?')) {
-                tickChart.data.labels = [];
-                tickChart.data.datasets[0].data = [];
-                tickChart.update();
-
-                candle1minChart.data.labels = [];
-                candle1minChart.data.datasets[0].data = [];
-                candle1minChart.update();
-
-                candle5minChart.data.labels = [];
-                candle5minChart.data.datasets[0].data = [];
-                candle5minChart.update();
-            }
-        }
-
-        // Export data
-        function exportData() {
-            fetchData().then(() => {
-                const dataStr = JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    current_price: document.getElementById('currentPrice').textContent,
-                    total_ticks: document.getElementById('totalTicks').textContent,
-                    candles_1min: document.getElementById('candles1min').textContent,
-                    candles_5min: document.getElementById('candles5min').textContent
-                }, null, 2);
-                
-                const dataBlob = new Blob([dataStr], {type:'application/json'});
-                const url = URL.createObjectURL(dataBlob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `vix_data_${new Date().toISOString().slice(0,19)}.json`;
-                link.click();
-            });
-        }
-
-        // Initialize application
-        document.addEventListener('DOMContentLoaded', function() {
-            initCharts();
-            fetchData();
-            startAutoRefresh();
-        });
-    </script>
+    // Initial
+    listenToData(document.getElementById("indexSelect").value);
+  </script>
 </body>
 </html>
