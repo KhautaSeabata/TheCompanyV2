@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase VIX Data Dashboard</title>
+    <title>Volatility 150 Data Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/2.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
@@ -101,6 +101,14 @@
 
         .refresh-btn {
             background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .firebase-btn {
+            background: linear-gradient(45deg, #ffa500, #ff8c00);
+        }
+
+        .websocket-btn {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
         }
 
         .dashboard-grid {
@@ -227,16 +235,16 @@
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .status-bar {
                 flex-direction: column;
                 align-items: stretch;
             }
-            
+
             .status-item {
                 text-align: center;
             }
-            
+
             .controls {
                 justify-content: center;
             }
@@ -260,22 +268,32 @@
         .disconnected {
             background: linear-gradient(45deg, #e74c3c, #c0392b);
         }
+
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
     </style>
 </head>
 <body>
     <div class="connection-status" id="connectionStatus">
-        <span id="connectionText">Connecting...</span>
+        <span id="connectionText">Checking...</span>
     </div>
 
     <div class="container">
         <div class="header">
-            <h1>🔥 Firebase VIX Data Dashboard</h1>
+            <h1>📊 Volatility 150 (1s) Dashboard</h1>
             <div class="status-bar">
                 <div class="status-item current-price">
                     Current Price: $<span id="currentPrice">0.00</span>
                 </div>
                 <div class="status-item">
-                    Symbol: <span id="symbolName">R_25</span>
+                    Symbol: <span id="symbolName">1HZ150V</span>
                 </div>
                 <div class="status-item">
                     Last Update: <span id="lastUpdate">Never</span>
@@ -289,10 +307,14 @@
         <div class="controls">
             <button class="btn refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
             <button class="btn" onclick="toggleAutoRefresh()" id="autoRefreshBtn">▶️ Start Auto Refresh</button>
+            <button class="btn firebase-btn" onclick="loadFirebaseData()">🔥 Load Firebase Data</button>
+            <button class="btn firebase-btn" onclick="syncToFirebase()">☁️ Sync to Firebase</button>
+            <button class="btn websocket-btn" onclick="reconnectWebSocket()">🔌 Reconnect WebSocket</button>
             <button class="btn" onclick="exportData()">📊 Export Data</button>
         </div>
 
         <div class="error" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
         <div class="loading" id="loading">Loading data...</div>
 
         <div class="dashboard-grid">
@@ -315,7 +337,7 @@
                         <th>Time</th>
                         <th>Price</th>
                         <th>Change</th>
-                        <th>Symbol</th>
+                        <th>Epoch</th>
                     </tr>
                 </thead>
                 <tbody id="ticksBody">
@@ -361,6 +383,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
             loadData();
+            checkWebSocketStatus();
         });
 
         function initializeCharts() {
@@ -447,23 +470,114 @@
 
         async function loadData() {
             showLoading(true);
-            hideError();
-            
+            hideMessages();
+
             try {
                 const response = await fetch('/api/data');
                 const data = await response.json();
-                
+
                 if (!response.ok) {
                     throw new Error(data.error || 'Failed to fetch data');
                 }
-                
+
                 updateDashboard(data);
-                updateConnectionStatus(true);
-                
+                document.getElementById('lastFetch').textContent = new Date().toLocaleString();
+
             } catch (error) {
                 console.error('Error loading data:', error);
                 showError('Failed to load data: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadFirebaseData() {
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch('/api/firebase-data');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch Firebase data');
+                }
+
+                updateDashboard(data);
+                showSuccess('Firebase data loaded successfully!');
+                document.getElementById('lastFetch').textContent = new Date().toLocaleString();
+
+            } catch (error) {
+                console.error('Error loading Firebase data:', error);
+                showError('Failed to load Firebase data: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function syncToFirebase() {
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch('/api/firebase-sync');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to sync to Firebase');
+                }
+
+                if (data.success) {
+                    showSuccess('Data synced to Firebase successfully!');
+                } else {
+                    showError('Firebase sync failed');
+                }
+
+            } catch (error) {
+                console.error('Error syncing to Firebase:', error);
+                showError('Failed to sync to Firebase: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function checkWebSocketStatus() {
+            try {
+                const response = await fetch('/api/websocket-status');
+                const data = await response.json();
+                
+                updateConnectionStatus(data.connected);
+                
+            } catch (error) {
+                console.error('Error checking WebSocket status:', error);
                 updateConnectionStatus(false);
+            }
+        }
+
+        async function reconnectWebSocket() {
+            showLoading(true);
+            hideMessages();
+
+            try {
+                const response = await fetch('/api/websocket-reconnect');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to reconnect WebSocket');
+                }
+
+                if (data.success) {
+                    showSuccess('WebSocket reconnection initiated!');
+                    setTimeout(() => {
+                        checkWebSocketStatus();
+                    }, 3000);
+                } else {
+                    showError('WebSocket reconnection failed');
+                }
+
+            } catch (error) {
+                console.error('Error reconnecting WebSocket:', error);
+                showError('Failed to reconnect WebSocket: ' + error.message);
             } finally {
                 showLoading(false);
             }
@@ -475,7 +589,6 @@
             document.getElementById('symbolName').textContent = data.symbol;
             document.getElementById('totalTicks').textContent = data.total_ticks;
             document.getElementById('lastUpdate').textContent = formatTime(data.last_update);
-            document.getElementById('lastFetch').textContent = formatTime(data.last_fetch);
 
             // Update charts
             updateChart(chart1min, data.candles_1min);
@@ -510,7 +623,7 @@
 
             ticks.slice(0, 50).forEach((tick, index) => {
                 const row = document.createElement('tr');
-                
+
                 // Calculate price change
                 let changeClass = '';
                 let changeSymbol = '';
@@ -529,9 +642,9 @@
                     <td>${formatTime(tick.timestamp)}</td>
                     <td class="price-cell ${changeClass}">$${tick.price.toFixed(4)}</td>
                     <td>${changeSymbol}</td>
-                    <td>${tick.symbol}</td>
+                    <td>${tick.epoch || 'N/A'}</td>
                 `;
-                
+
                 tbody.appendChild(row);
             });
         }
@@ -554,18 +667,22 @@
 
         function refreshData() {
             loadData();
+            checkWebSocketStatus();
         }
 
         function toggleAutoRefresh() {
             const btn = document.getElementById('autoRefreshBtn');
-            
+
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
                 autoRefreshInterval = null;
                 btn.textContent = '▶️ Start Auto Refresh';
                 btn.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
             } else {
-                autoRefreshInterval = setInterval(loadData, 10000); // Refresh every 10 seconds
+                autoRefreshInterval = setInterval(() => {
+                    loadData();
+                    checkWebSocketStatus();
+                }, 10000); // Refresh every 10 seconds
                 btn.textContent = '⏸️ Stop Auto Refresh';
                 btn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)';
             }
@@ -573,8 +690,8 @@
 
         function exportData() {
             // Simple CSV export of current tick data
-            const rows = [['Timestamp', 'Price', 'Symbol']];
-            
+            const rows = [['Timestamp', 'Price', 'Epoch']];
+
             const ticksBody = document.getElementById('ticksBody');
             Array.from(ticksBody.rows).forEach(row => {
                 const cells = Array.from(row.cells);
@@ -590,10 +707,10 @@
             const csvContent = rows.map(row => row.join(',')).join('\n');
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
-            a.download = `vix_data_${new Date().toISOString().split('T')[0]}.csv`;
+            a.download = `volatility_150_data_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -613,10 +730,40 @@
             const errorDiv = document.getElementById('errorMessage');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
         }
 
-        function hideError() {
+        function showSuccess(message) {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        function hideMessages() {
             document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('successMessage').style.display = 'none';
         }
 
-        function updateConnectionStatus(connected
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+            
+            if (connected) {
+                statusDiv.className = 'connection-status connected';
+                statusText.textContent = 'WebSocket Connected';
+            } else {
+                statusDiv.className = 'connection-status disconnected';
+                statusText.textContent = 'WebSocket Disconnected';
+            }
+        }
+
+        // Auto-check WebSocket status every 30 seconds
+        setInterval(checkWebSocketStatus, 30000);
+    </script>
+</body>
+</html>
