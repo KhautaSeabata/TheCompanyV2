@@ -279,10 +279,10 @@
                 allTicks.shift();
             }
             
-            const time = new Date(tick.timestamp * 1000);
+            const time = new Date(tick.epoch * 1000);
             
             chart.data.labels.push(time);
-            chart.data.datasets[0].data.push(tick.price);
+            chart.data.datasets[0].data.push(tick.quote);
             
             // Keep chart responsive by limiting displayed points
             if (chart.data.labels.length > 500) {
@@ -297,9 +297,9 @@
             if (allTicks.length === 0) return;
             
             const latest = allTicks[allTicks.length - 1];
-            const prices = allTicks.map(t => t.price);
+            const prices = allTicks.map(t => t.quote);
             
-            document.getElementById('currentPrice').textContent = latest.price.toFixed(4);
+            document.getElementById('currentPrice').textContent = latest.quote.toFixed(4);
             document.getElementById('totalTicks').textContent = allTicks.length;
             document.getElementById('minPrice').textContent = Math.min(...prices).toFixed(4);
             document.getElementById('maxPrice').textContent = Math.max(...prices).toFixed(4);
@@ -310,10 +310,10 @@
             const recent = allTicks.slice(-10).reverse();
             
             recentContainer.innerHTML = recent.map(tick => {
-                const time = new Date(tick.timestamp * 1000).toLocaleTimeString();
+                const time = new Date(tick.epoch * 1000).toLocaleTimeString();
                 return `
                     <div class="tick-item">
-                        <span>${tick.price.toFixed(4)}</span>
+                        <span>${tick.quote.toFixed(4)}</span>
                         <span>${time}</span>
                     </div>
                 `;
@@ -333,9 +333,9 @@
                     // Add all ticks to chart (limit to last 500 for performance)
                     const displayTicks = ticks.slice(-500);
                     displayTicks.forEach(tick => {
-                        const time = new Date(tick.timestamp * 1000);
+                        const time = new Date(tick.epoch * 1000);
                         chart.data.labels.push(time);
-                        chart.data.datasets[0].data.push(tick.price);
+                        chart.data.datasets[0].data.push(tick.quote);
                     });
                     
                     chart.update();
