@@ -15,7 +15,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Firebase configuration
 FIREBASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
-TICKS_NODE = "volatility25_ticks"
+TICKS_NODE = "ticks/R_25"
 
 # Global variables
 latest_ticks = []
@@ -50,26 +50,33 @@ class DerivWebSocket:
                     data = json.loads(message)
                     
                     if 'tick' in data:
+                        # Structure exactly like your Firebase example
                         tick_data = {
-                            'price': data['tick']['quote'],
-                            'timestamp': data['tick']['epoch'],
-                            'datetime': datetime.fromtimestamp(data['tick']['epoch']).isoformat(),
+                            'epoch': data['tick']['epoch'],
+                            'quote': data['tick']['quote'],
                             'symbol': data['tick']['symbol']
                         }
                         
-                        # Store in Firebase
-                        self.store_tick_in_firebase(tick_data)
+                        # Store in Firebase with auto-generated key
+                        firebase_key = self.store_tick_in_firebase(tick_data)
                         
-                        # Update local cache
-                        global latest_ticks
-                        latest_ticks.append(tick_data)
-                        if len(latest_ticks) > MAX_TICKS:
-                            latest_ticks.pop(0)
-                        
-                        # Emit to frontend
-                        socketio.emit('new_tick', tick_data)
-                        
-                        print(f"Tick: {tick_data['price']} at {tick_data['datetime']}")
+                        if firebase_key:
+                            # Immediately fetch and emit the stored data
+                            stored_tick = self.get_tick_from_firebase(firebase_key)
+                            if stored_tick:
+                                # Add the Firebase key for reference
+                                stored_tick['firebase_key'] = firebase_key
+                                
+                                # Update local cache
+                                global latest_ticks
+                                latest_ticks.append(stored_tick)
+                                if len(latest_ticks) > MAX_TICKS:
+                                    latest_ticks.pop(0)
+                                
+                                # Emit to frontend
+                                socketio.emit('new_tick', stored_tick)
+                                
+                                print(f"Tick: {stored_tick['quote']} at epoch {stored_tick['epoch']} (Key: {firebase_key})")
                         
         except Exception as e:
             print(f"WebSocket error: {e}")
@@ -80,19 +87,39 @@ class DerivWebSocket:
     
     def store_tick_in_firebase(self, tick_data):
         try:
-            # Use timestamp as key to avoid duplicates
-            tick_key = str(tick_data['timestamp'])
-            url = f"{FIREBASE_URL}/{TICKS_NODE}/{tick_key}.json"
+            # Post to Firebase to get auto-generated key (like -OSKoc6xIkYxCtFUUzPr)
+            url = f"{FIREBASE_URL}/{TICKS_NODE}.json"
             
-            response = requests.put(url, json=tick_data, timeout=5)
+            response = requests.post(url, json=tick_data, timeout=5)
             
             if response.status_code == 200:
-                print(f"Stored tick in Firebase: {tick_key}")
+                result = response.json()
+                firebase_key = result.get('name')  # This is the auto-generated key
+                print(f"Stored tick in Firebase with key: {firebase_key}")
+                return firebase_key
             else:
                 print(f"Failed to store tick in Firebase: {response.status_code}")
+                return None
                 
         except Exception as e:
             print(f"Firebase storage error: {e}")
+            return None
+    
+    def get_tick_from_firebase(self, firebase_key):
+        try:
+            # Get the specific tick that was just stored
+            url = f"{FIREBASE_URL}/{TICKS_NODE}/{firebase_key}.json"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Failed to get tick from Firebase: {response.status_code}")
+                return None
+                
+        except Exception as e:
+            print(f"Firebase get error: {e}")
+            return None
     
     def stop(self):
         self.running = False
@@ -112,20 +139,21 @@ def index():
 @app.route('/api/ticks')
 def get_ticks():
     try:
-        # Get ticks from Firebase
+        # Get ticks from Firebase with the correct structure
         url = f"{FIREBASE_URL}/{TICKS_NODE}.json"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
             firebase_data = response.json()
             if firebase_data:
-                # Convert to list and sort by timestamp
+                # Convert to list and sort by epoch
                 ticks = []
                 for key, tick in firebase_data.items():
+                    tick['firebase_key'] = key  # Add the Firebase key
                     ticks.append(tick)
                 
-                # Sort by timestamp and get latest 950
-                ticks.sort(key=lambda x: x['timestamp'])
+                # Sort by epoch and get latest 950
+                ticks.sort(key=lambda x: x['epoch'])
                 ticks = ticks[-MAX_TICKS:]
                 
                 return jsonify(ticks)
