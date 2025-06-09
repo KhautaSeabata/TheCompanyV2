@@ -17,17 +17,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Firebase Realtime Database URL
-FIREBASE_URL = "https://vix25-486b9-default-rtdb.firebaseio.com"
+FIREBASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
 
 # Deriv WebSocket URL
 DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=1089"
 
-# Focus on Volatility 150 (1s) only
-VOLATILITY_SYMBOL = '1HZ150V'
-VOLATILITY_NAME = 'Volatility 150 (1s)'
+# Focus on R_25 (Volatility 25) only
+VOLATILITY_SYMBOL = 'R_25'
+VOLATILITY_NAME = 'Volatility 25'
 
-# Data storage limits
-MAX_DATA_POINTS = 900
+# Data storage limits - exactly 950 as requested
+MAX_DATA_POINTS = 950
 
 class VolatilityDataManager:
     def __init__(self):
@@ -51,7 +51,7 @@ class VolatilityDataManager:
         self.data['current_price'] = float(price)
         self.data['last_update'] = timestamp
         
-        # Prune to keep only MAX_DATA_POINTS
+        # Prune to keep only MAX_DATA_POINTS (950)
         if len(self.data['live_ticks']) > MAX_DATA_POINTS:
             self.data['live_ticks'] = self.data['live_ticks'][-MAX_DATA_POINTS:]
             
@@ -93,7 +93,7 @@ class VolatilityDataManager:
             current_candle['close'] = price
             current_candle['volume'] += 1
             
-        # Prune to keep only MAX_DATA_POINTS candles
+        # Prune to keep only MAX_DATA_POINTS (950) candles
         if len(self.data['candles_1min']) > MAX_DATA_POINTS:
             self.data['candles_1min'] = self.data['candles_1min'][-MAX_DATA_POINTS:]
             
@@ -127,7 +127,7 @@ class VolatilityDataManager:
             current_candle['close'] = price
             current_candle['volume'] += 1
             
-        # Prune to keep only MAX_DATA_POINTS candles
+        # Prune to keep only MAX_DATA_POINTS (950) candles
         if len(self.data['candles_5min']) > MAX_DATA_POINTS:
             self.data['candles_5min'] = self.data['candles_5min'][-MAX_DATA_POINTS:]
 
@@ -147,24 +147,26 @@ class VolatilityDataManager:
         }
 
     def sync_to_firebase(self):
-        """Sync data to Firebase with pruning"""
+        """Sync data to Firebase with pruning to exactly 950 items"""
         try:
-            # Prepare data for Firebase with pruning
+            # Prepare data for Firebase with pruning to exactly 950 items
             firebase_data = {
                 'live_ticks': self.data['live_ticks'][-MAX_DATA_POINTS:],
                 'candles_1min': self.data['candles_1min'][-MAX_DATA_POINTS:],
                 'candles_5min': self.data['candles_5min'][-MAX_DATA_POINTS:],
                 'current_price': self.data['current_price'],
                 'last_update': self.data['last_update'],
-                'updated_at': datetime.now().isoformat()
+                'updated_at': datetime.now().isoformat(),
+                'symbol': VOLATILITY_SYMBOL,
+                'name': VOLATILITY_NAME
             }
             
-            # Send to Firebase
-            url = f"{FIREBASE_URL}/volatility_150.json"
+            # Send to Firebase - store under r25_volatility node
+            url = f"{FIREBASE_URL}/r25_volatility.json"
             response = requests.put(url, json=firebase_data, timeout=10)
             
             if response.status_code == 200:
-                logger.info("Firebase sync successful")
+                logger.info(f"Firebase sync successful - Ticks: {len(firebase_data['live_ticks'])}, 1min: {len(firebase_data['candles_1min'])}, 5min: {len(firebase_data['candles_5min'])}")
                 return True
             else:
                 logger.error(f"Firebase sync failed: {response.status_code}")
@@ -193,7 +195,7 @@ class DerivWebSocket:
         self.connected = True
         self.reconnect_delay = 5  # Reset reconnect delay on successful connection
         
-        # Subscribe to Volatility 150 (1s)
+        # Subscribe to R_25 (Volatility 25)
         self.subscribe_to_ticks()
             
     def on_message(self, ws, message):
@@ -216,9 +218,9 @@ class DerivWebSocket:
                     # Add tick to data manager
                     data_manager.add_tick(price, iso_timestamp)
                     
-                    # Sync to Firebase every 10 ticks to reduce load
+                    # Sync to Firebase every 5 ticks to ensure data persistence
                     self.sync_counter += 1
-                    if self.sync_counter >= 10:
+                    if self.sync_counter >= 5:
                         self.sync_counter = 0
                         threading.Thread(target=data_manager.sync_to_firebase, daemon=True).start()
             
@@ -257,7 +259,7 @@ class DerivWebSocket:
             threading.Thread(target=self.connect, daemon=True).start()
             
     def subscribe_to_ticks(self):
-        """Subscribe to tick data for Volatility 150 (1s)"""
+        """Subscribe to tick data for R_25 (Volatility 25)"""
         if self.ws and self.connected:
             try:
                 subscribe_message = {
@@ -265,7 +267,7 @@ class DerivWebSocket:
                     "subscribe": 1
                 }
                 self.ws.send(json.dumps(subscribe_message))
-                logger.info(f"Subscribed to {VOLATILITY_SYMBOL}")
+                logger.info(f"Subscribed to {VOLATILITY_SYMBOL} - {VOLATILITY_NAME}")
             except Exception as e:
                 logger.error(f"Error subscribing to {VOLATILITY_SYMBOL}: {e}")
     
@@ -342,7 +344,7 @@ def get_data():
 def get_firebase_data():
     """Get data from Firebase"""
     try:
-        url = f"{FIREBASE_URL}/volatility_150.json"
+        url = f"{FIREBASE_URL}/r25_volatility.json"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
@@ -356,13 +358,14 @@ def get_firebase_data():
                     'candles_5min': firebase_data.get('candles_5min', [])[-50:],
                     'current_price': firebase_data.get('current_price', 0),
                     'last_update': firebase_data.get('last_update'),
+                    'updated_at': firebase_data.get('updated_at'),
                     'total_ticks': len(firebase_data.get('live_ticks', [])),
                     'total_1min_candles': len(firebase_data.get('candles_1min', [])),
                     'total_5min_candles': len(firebase_data.get('candles_5min', [])),
                     'source': 'firebase'
                 })
             else:
-                return jsonify({'error': 'No data in Firebase'}), 404
+                return jsonify({'error': 'No R_25 data in Firebase'}), 404
         else:
             return jsonify({'error': 'Firebase request failed'}), 500
             
@@ -377,7 +380,9 @@ def sync_firebase():
         success = data_manager.sync_to_firebase()
         return jsonify({
             'success': success,
-            'synced_at': datetime.now().isoformat()
+            'synced_at': datetime.now().isoformat(),
+            'symbol': VOLATILITY_SYMBOL,
+            'name': VOLATILITY_NAME
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -389,7 +394,8 @@ def websocket_status():
         'connected': deriv_ws.connected,
         'symbol': VOLATILITY_SYMBOL,
         'name': VOLATILITY_NAME,
-        'connection_url': DERIV_WS_URL
+        'connection_url': DERIV_WS_URL,
+        'firebase_url': FIREBASE_URL
     })
 
 @app.route('/api/websocket-reconnect')
@@ -403,7 +409,7 @@ def websocket_reconnect():
         
         return jsonify({
             'success': True,
-            'message': 'WebSocket reconnection initiated',
+            'message': f'WebSocket reconnection initiated for {VOLATILITY_SYMBOL}',
             'initiated_at': datetime.now().isoformat()
         })
     except Exception as e:
@@ -412,11 +418,30 @@ def websocket_reconnect():
             'error': str(e)
         }), 500
 
+@app.route('/api/stats')
+def get_stats():
+    """Get detailed statistics"""
+    return jsonify({
+        'symbol': VOLATILITY_SYMBOL,
+        'name': VOLATILITY_NAME,
+        'max_data_points': MAX_DATA_POINTS,
+        'current_stats': {
+            'live_ticks_count': len(data_manager.data['live_ticks']),
+            'candles_1min_count': len(data_manager.data['candles_1min']),
+            'candles_5min_count': len(data_manager.data['candles_5min']),
+            'current_price': data_manager.data['current_price'],
+            'last_update': data_manager.data['last_update']
+        },
+        'websocket_connected': deriv_ws.connected,
+        'firebase_url': f"{FIREBASE_URL}/r25_volatility.json"
+    })
+
 if __name__ == '__main__':
-    logger.info("Starting Volatility 150 (1s) Data Server...")
+    logger.info("Starting R_25 (Volatility 25) Data Server...")
     logger.info(f"Firebase URL: {FIREBASE_URL}")
     logger.info(f"Deriv WebSocket URL: {DERIV_WS_URL}")
     logger.info(f"Tracking: {VOLATILITY_SYMBOL} - {VOLATILITY_NAME}")
+    logger.info(f"Data limit per node: {MAX_DATA_POINTS} items")
     
     # Start WebSocket connection
     deriv_ws.start_connection()
