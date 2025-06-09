@@ -252,24 +252,51 @@
         let allTicks = [];
 
         socket.on('connect', function() {
-            console.log('Connected to server');
+            console.log('✅ Connected to SocketIO server');
             document.getElementById('status').className = 'status connected';
-            document.getElementById('status').textContent = '✅ Connected to WebSocket';
+            document.getElementById('status').textContent = '✅ Connected to SocketIO - Checking WebSocket...';
+            
+            // Check WebSocket status
+            checkWebSocketStatus();
         });
 
         socket.on('disconnect', function() {
-            console.log('Disconnected from server');
+            console.log('❌ Disconnected from SocketIO server');
             document.getElementById('status').className = 'status disconnected';
-            document.getElementById('status').textContent = '❌ Disconnected from WebSocket';
+            document.getElementById('status').textContent = '❌ Disconnected from SocketIO';
         });
 
         socket.on('new_tick', function(tick) {
+            console.log('📈 New tick received:', tick);
             if (realtimeUpdates) {
                 addTickToChart(tick);
                 updateStats();
                 updateRecentTicks();
             }
         });
+
+        function checkWebSocketStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('WebSocket Status:', data);
+                    const statusEl = document.getElementById('status');
+                    
+                    if (data.websocket_connected) {
+                        statusEl.className = 'status connected';
+                        statusEl.textContent = `✅ WebSocket Connected - ${data.total_ticks} ticks received`;
+                    } else if (data.websocket_running) {
+                        statusEl.className = 'status disconnected';
+                        statusEl.textContent = '🔄 WebSocket Connecting...';
+                    } else {
+                        statusEl.className = 'status disconnected';
+                        statusEl.textContent = '❌ WebSocket Not Running';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                });
+        }
 
         function addTickToChart(tick) {
             allTicks.push(tick);
@@ -373,6 +400,9 @@
         // Load initial data when page loads
         document.addEventListener('DOMContentLoaded', function() {
             refreshData();
+            
+            // Check WebSocket status every 10 seconds
+            setInterval(checkWebSocketStatus, 10000);
         });
 
         // Auto-refresh every 30 seconds to sync with Firebase
