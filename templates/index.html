@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatility 25 Live Ticks</title>
+    <title>Deriv Live Ticks</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
         }
         
         .header {
@@ -30,387 +32,304 @@
         
         .header h1 {
             color: #333;
-            margin-bottom: 10px;
+            margin: 0;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .status {
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
             text-align: center;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
         }
         
         .status.connected {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
         }
         
         .status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: linear-gradient(45deg, #f44336, #da190b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
         }
         
         .stats {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
             margin-bottom: 30px;
-            flex-wrap: wrap;
         }
         
-        .stat-box {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 15px;
             text-align: center;
-            min-width: 150px;
-            margin: 5px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
         }
         
-        .stat-box h3 {
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
             margin: 0 0 10px 0;
             color: #666;
             font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        .stat-box .value {
-            font-size: 24px;
+        .stat-card .value {
+            font-size: 2em;
             font-weight: bold;
             color: #333;
+            margin: 0;
         }
         
         .chart-container {
             position: relative;
             height: 500px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         
-        .controls {
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+        
+        .loading {
             text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .btn {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 0 5px;
-        }
-        
-        .btn:hover {
-            background: #0056b3;
-        }
-        
-        .btn.danger {
-            background: #dc3545;
-        }
-        
-        .btn.danger:hover {
-            background: #c82333;
-        }
-
-        .recent-ticks {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-            background: #f8f9fa;
-        }
-        
-        .tick-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .tick-item:last-child {
-            border-bottom: none;
+            color: #666;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📈 Volatility 25 Live Ticks</h1>
-            <p>Real-time data from Deriv WebSocket stored in Firebase</p>
+            <h1>📈 Deriv Live Ticks</h1>
+            <p style="color: #666; margin: 0;">Real-time R_25 price data</p>
         </div>
         
         <div id="status" class="status disconnected">
-            Connecting to WebSocket...
+            🔄 Connecting...
         </div>
         
         <div class="stats">
-            <div class="stat-box">
+            <div class="stat-card">
                 <h3>Current Price</h3>
                 <div class="value" id="currentPrice">--</div>
             </div>
-            <div class="stat-box">
+            <div class="stat-card">
                 <h3>Total Ticks</h3>
                 <div class="value" id="totalTicks">0</div>
             </div>
-            <div class="stat-box">
-                <h3>Min Price (24h)</h3>
-                <div class="value" id="minPrice">--</div>
+            <div class="stat-card">
+                <h3>Price Change</h3>
+                <div class="value" id="priceChange">--</div>
             </div>
-            <div class="stat-box">
-                <h3>Max Price (24h)</h3>
-                <div class="value" id="maxPrice">--</div>
+            <div class="stat-card">
+                <h3>Last Update</h3>
+                <div class="value" id="lastUpdate" style="font-size: 1.2em;">--</div>
             </div>
-        </div>
-        
-        <div class="controls">
-            <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
-            <button class="btn" onclick="clearChart()">🗑️ Clear Chart</button>
-            <button class="btn" onclick="toggleRealtime()" id="realtimeBtn">⏸️ Pause Updates</button>
         </div>
         
         <div class="chart-container">
-            <canvas id="priceChart"></canvas>
-        </div>
-        
-        <h3>Recent Ticks</h3>
-        <div class="recent-ticks" id="recentTicks">
-            Loading recent ticks...
+            <canvas id="liveChart"></canvas>
         </div>
     </div>
 
     <script>
-        // Chart.js configuration
-        const ctx = document.getElementById('priceChart').getContext('2d');
+        // Chart setup
+        const ctx = document.getElementById('liveChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
                 datasets: [{
-                    label: 'Volatility 25 Price',
+                    label: 'R_25 Price',
                     data: [],
-                    borderColor: '#007bff',
-                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                    borderWidth: 2,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
                     fill: true,
-                    tension: 0.1,
-                    pointRadius: 1,
-                    pointHoverRadius: 4
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
                 },
                 scales: {
                     x: {
-                        type: 'time',
-                        time: {
-                            displayFormats: {
-                                second: 'HH:mm:ss',
-                                minute: 'HH:mm',
-                                hour: 'HH:mm'
-                            }
-                        },
+                        display: true,
                         title: {
                             display: true,
-                            text: 'Time'
+                            text: 'Time',
+                            color: '#666'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
                         }
                     },
                     y: {
+                        display: true,
                         title: {
                             display: true,
-                            text: 'Price'
+                            text: 'Price',
+                            color: '#666'
                         },
-                        beginAtZero: false
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
                     }
                 },
                 plugins: {
                     legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
+                        display: false
                     }
-                },
-                animation: {
-                    duration: 0
                 }
             }
         });
 
-        // Socket.IO connection
+        // WebSocket connection
         const socket = io();
-        let realtimeUpdates = true;
-        let allTicks = [];
+        let tickData = [];
+        let previousPrice = null;
 
         socket.on('connect', function() {
-            console.log('✅ Connected to SocketIO server');
-            document.getElementById('status').className = 'status connected';
-            document.getElementById('status').textContent = '✅ Connected to SocketIO - Checking WebSocket...';
-            
-            // Check WebSocket status
-            checkWebSocketStatus();
+            console.log('✅ Connected to server');
+            updateStatus('connected', '✅ Connected - Receiving live data');
+            loadRecentTicks();
         });
 
         socket.on('disconnect', function() {
-            console.log('❌ Disconnected from SocketIO server');
-            document.getElementById('status').className = 'status disconnected';
-            document.getElementById('status').textContent = '❌ Disconnected from SocketIO';
+            console.log('❌ Disconnected from server');
+            updateStatus('disconnected', '❌ Disconnected');
         });
 
         socket.on('new_tick', function(tick) {
-            console.log('📈 New tick received:', tick);
-            if (realtimeUpdates) {
-                addTickToChart(tick);
-                updateStats();
-                updateRecentTicks();
-            }
+            console.log('📈 New tick:', tick);
+            addTick(tick);
+            updateStats();
         });
 
-        function checkWebSocketStatus() {
-            fetch('/api/status')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('WebSocket Status:', data);
-                    const statusEl = document.getElementById('status');
-                    
-                    if (data.websocket_connected) {
-                        statusEl.className = 'status connected';
-                        statusEl.textContent = `✅ WebSocket Connected - ${data.total_ticks} ticks received`;
-                    } else if (data.websocket_running) {
-                        statusEl.className = 'status disconnected';
-                        statusEl.textContent = '🔄 WebSocket Connecting...';
-                    } else {
-                        statusEl.className = 'status disconnected';
-                        statusEl.textContent = '❌ WebSocket Not Running';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error checking status:', error);
-                });
+        function updateStatus(status, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message;
+            
+            if (status === 'connected') {
+                statusEl.classList.add('pulse');
+            } else {
+                statusEl.classList.remove('pulse');
+            }
         }
 
-        function addTickToChart(tick) {
-            allTicks.push(tick);
+        function addTick(tick) {
+            // Add to data array
+            tickData.push(tick);
             
-            // Keep only last 950 ticks
-            if (allTicks.length > 950) {
-                allTicks.shift();
+            // Keep only last 100 points for smooth performance
+            if (tickData.length > 100) {
+                tickData.shift();
             }
             
-            const time = new Date(tick.epoch * 1000);
-            
+            // Update chart
+            const time = new Date(tick.time * 1000).toLocaleTimeString();
             chart.data.labels.push(time);
-            chart.data.datasets[0].data.push(tick.quote);
+            chart.data.datasets[0].data.push(tick.price);
             
-            // Keep chart responsive by limiting displayed points
-            if (chart.data.labels.length > 500) {
+            // Keep chart data in sync
+            if (chart.data.labels.length > 100) {
                 chart.data.labels.shift();
                 chart.data.datasets[0].data.shift();
             }
             
-            chart.update('none');
+            chart.update('active');
         }
 
         function updateStats() {
-            if (allTicks.length === 0) return;
+            if (tickData.length === 0) return;
             
-            const latest = allTicks[allTicks.length - 1];
-            const prices = allTicks.map(t => t.quote);
+            const latest = tickData[tickData.length - 1];
+            const currentPrice = latest.price;
             
-            document.getElementById('currentPrice').textContent = latest.quote.toFixed(4);
-            document.getElementById('totalTicks').textContent = allTicks.length;
-            document.getElementById('minPrice').textContent = Math.min(...prices).toFixed(4);
-            document.getElementById('maxPrice').textContent = Math.max(...prices).toFixed(4);
+            // Update current price
+            document.getElementById('currentPrice').textContent = currentPrice.toFixed(4);
+            
+            // Update total ticks
+            document.getElementById('totalTicks').textContent = tickData.length;
+            
+            // Update price change
+            if (previousPrice !== null) {
+                const change = currentPrice - previousPrice;
+                const changeEl = document.getElementById('priceChange');
+                changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(4);
+                changeEl.style.color = change >= 0 ? '#4CAF50' : '#f44336';
+            }
+            previousPrice = currentPrice;
+            
+            // Update last update time
+            const lastTime = new Date(latest.time * 1000).toLocaleTimeString();
+            document.getElementById('lastUpdate').textContent = lastTime;
         }
 
-        function updateRecentTicks() {
-            const recentContainer = document.getElementById('recentTicks');
-            const recent = allTicks.slice(-10).reverse();
-            
-            recentContainer.innerHTML = recent.map(tick => {
-                const time = new Date(tick.epoch * 1000).toLocaleTimeString();
-                return `
-                    <div class="tick-item">
-                        <span>${tick.quote.toFixed(4)}</span>
-                        <span>${time}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function refreshData() {
-            fetch('/api/ticks')
+        function loadRecentTicks() {
+            fetch('/api/recent-ticks')
                 .then(response => response.json())
                 .then(ticks => {
-                    allTicks = ticks;
+                    console.log(`📊 Loaded ${ticks.length} recent ticks`);
                     
-                    // Clear and rebuild chart
+                    // Clear existing data
+                    tickData = [];
                     chart.data.labels = [];
                     chart.data.datasets[0].data = [];
                     
-                    // Add all ticks to chart (limit to last 500 for performance)
-                    const displayTicks = ticks.slice(-500);
-                    displayTicks.forEach(tick => {
-                        const time = new Date(tick.epoch * 1000);
-                        chart.data.labels.push(time);
-                        chart.data.datasets[0].data.push(tick.quote);
+                    // Add recent ticks
+                    ticks.forEach(tick => {
+                        addTick(tick);
                     });
                     
-                    chart.update();
                     updateStats();
-                    updateRecentTicks();
                 })
                 .catch(error => {
-                    console.error('Error fetching ticks:', error);
+                    console.error('❌ Error loading recent ticks:', error);
                 });
         }
 
-        function clearChart() {
-            if (confirm('Are you sure you want to clear the chart?')) {
-                chart.data.labels = [];
-                chart.data.datasets[0].data = [];
-                chart.update();
-                allTicks = [];
-                updateStats();
-                updateRecentTicks();
-            }
-        }
-
-        function toggleRealtime() {
-            realtimeUpdates = !realtimeUpdates;
-            const btn = document.getElementById('realtimeBtn');
-            if (realtimeUpdates) {
-                btn.textContent = '⏸️ Pause Updates';
-                btn.className = 'btn';
-            } else {
-                btn.textContent = '▶️ Resume Updates';
-                btn.className = 'btn danger';
-            }
-        }
-
-        // Load initial data when page loads
+        // Load initial data
         document.addEventListener('DOMContentLoaded', function() {
-            refreshData();
-            
-            // Check WebSocket status every 10 seconds
-            setInterval(checkWebSocketStatus, 10000);
+            updateStatus('disconnected', '🔄 Connecting...');
         });
-
-        // Auto-refresh every 30 seconds to sync with Firebase
-        setInterval(function() {
-            if (realtimeUpdates) {
-                refreshData();
-            }
-        }, 30000);
     </script>
 </body>
 </html>
