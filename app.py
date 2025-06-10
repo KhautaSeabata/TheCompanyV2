@@ -2,250 +2,132 @@ import asyncio
 import websockets
 import json
 import threading
-import time
-from datetime import datetime
+import requests
 from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO
-import requests
-import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = 'deriv-live-ticks'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Firebase configuration
 FIREBASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
-TICKS_NODE = "ticks/R_25"
+TICKS_NODE = "live_ticks"
 
-# Global variables
-latest_ticks = []
-MAX_TICKS = 950
-
-class DerivWebSocket:
+class DerivTicker:
     def __init__(self):
         self.websocket = None
         self.running = False
         self.connected = False
         
-    async def connect_and_subscribe(self):
-        max_retries = 10
-        retry_count = 0
+    async def start(self):
+        self.running = True
         
-        while retry_count < max_retries and self.running:
+        while self.running:
             try:
-                uri = "wss://ws.binaryws.com/websockets/v3?app_id=1089"
-                print(f"Attempting to connect to Deriv WebSocket... (Attempt {retry_count + 1})")
+                # Connect to Deriv WebSocket
+                uri = "wss://ws.deriv.com/websockets/v3?app_id=1089"
+                print("🔗 Connecting to Deriv...")
                 
-                async with websockets.connect(
-                    uri,
-                    ping_interval=20,
-                    ping_timeout=10,
-                    close_timeout=10
-                ) as websocket:
+                async with websockets.connect(uri) as websocket:
                     self.websocket = websocket
                     self.connected = True
-                    print("✅ Connected to Deriv WebSocket!")
+                    print("✅ Connected to Deriv!")
                     
-                    # Subscribe to Volatility 25 ticks
-                    subscribe_message = {
+                    # Subscribe to R_25 ticks
+                    await websocket.send(json.dumps({
                         "ticks": "R_25",
                         "subscribe": 1
-                    }
+                    }))
+                    print("📡 Subscribed to R_25 ticks")
                     
-                    await websocket.send(json.dumps(subscribe_message))
-                    print("📡 Subscribed to Volatility 25 (R_25) ticks")
-                    
-                    # Reset retry count on successful connection
-                    retry_count = 0
-                    
-                    # Listen for messages
+                    # Listen for ticks
                     async for message in websocket:
-                        try:
-                            data = json.loads(message)
-                            print(f"📨 Received message: {data}")
+                        data = json.loads(message)
+                        
+                        # Process tick data
+                        if 'tick' in data:
+                            tick = {
+                                'price': data['tick']['quote'],
+                                'time': data['tick']['epoch'],
+                                'symbol': data['tick']['symbol']
+                            }
                             
-                            # Handle subscription confirmation
-                            if 'echo_req' in data and data.get('msg_type') == 'ticks':
-                                print("✅ Subscription confirmed!")
-                                continue
+                            # Store in Firebase and emit to frontend
+                            self.process_tick(tick)
                             
-                            # Handle tick data
-                            if 'tick' in data:
-                                print(f"📈 New tick received: {data['tick']}")
-                                
-                                # Structure exactly like your Firebase example
-                                tick_data = {
-                                    'epoch': data['tick']['epoch'],
-                                    'quote': data['tick']['quote'],
-                                    'symbol': data['tick']['symbol']
-                                }
-                                
-                                # Store in Firebase with auto-generated key
-                                firebase_key = self.store_tick_in_firebase(tick_data)
-                                
-                                if firebase_key:
-                                    # Immediately fetch and emit the stored data
-                                    stored_tick = self.get_tick_from_firebase(firebase_key)
-                                    if stored_tick:
-                                        # Add the Firebase key for reference
-                                        stored_tick['firebase_key'] = firebase_key
-                                        
-                                        # Update local cache
-                                        global latest_ticks
-                                        latest_ticks.append(stored_tick)
-                                        if len(latest_ticks) > MAX_TICKS:
-                                            latest_ticks.pop(0)
-                                        
-                                        # Emit to frontend
-                                        socketio.emit('new_tick', stored_tick)
-                                        
-                                        print(f"✅ Tick processed: {stored_tick['quote']} at epoch {stored_tick['epoch']} (Key: {firebase_key})")
-                            
-                            # Handle errors
-                            elif 'error' in data:
-                                print(f"❌ WebSocket error received: {data['error']}")
-                                
-                        except json.JSONDecodeError as e:
-                            print(f"❌ JSON decode error: {e}")
-                            continue
-                        except Exception as e:
-                            print(f"❌ Error processing message: {e}")
-                            continue
-                            
-            except websockets.exceptions.ConnectionClosed as e:
-                self.connected = False
-                print(f"🔌 WebSocket connection closed: {e}")
-            except websockets.exceptions.WebSocketException as e:
-                self.connected = False
-                print(f"❌ WebSocket exception: {e}")
             except Exception as e:
                 self.connected = False
-                print(f"❌ Unexpected error: {e}")
-            
-            if self.running:
-                retry_count += 1
-                wait_time = min(5 * retry_count, 30)  # Progressive backoff, max 30 seconds
-                print(f"⏳ Retrying connection in {wait_time} seconds... (Attempt {retry_count}/{max_retries})")
-                await asyncio.sleep(wait_time)
-        
-        if retry_count >= max_retries:
-            print(f"❌ Failed to connect after {max_retries} attempts. Stopping...")
-        
-        self.connected = False
+                print(f"❌ Connection error: {e}")
+                await asyncio.sleep(5)  # Wait before retry
     
-    def store_tick_in_firebase(self, tick_data):
+    def process_tick(self, tick):
+        """Store tick in Firebase and emit to frontend"""
         try:
-            # Post to Firebase to get auto-generated key (like -OSKoc6xIkYxCtFUUzPr)
+            # Store in Firebase
             url = f"{FIREBASE_URL}/{TICKS_NODE}.json"
-            
-            response = requests.post(url, json=tick_data, timeout=5)
-            
-            if response.status_code == 200:
-                result = response.json()
-                firebase_key = result.get('name')  # This is the auto-generated key
-                print(f"Stored tick in Firebase with key: {firebase_key}")
-                return firebase_key
-            else:
-                print(f"Failed to store tick in Firebase: {response.status_code}")
-                return None
-                
-        except Exception as e:
-            print(f"Firebase storage error: {e}")
-            return None
-    
-    def get_tick_from_firebase(self, firebase_key):
-        try:
-            # Get the specific tick that was just stored
-            url = f"{FIREBASE_URL}/{TICKS_NODE}/{firebase_key}.json"
-            response = requests.get(url, timeout=5)
+            response = requests.post(url, json=tick, timeout=3)
             
             if response.status_code == 200:
-                return response.json()
-            else:
-                print(f"Failed to get tick from Firebase: {response.status_code}")
-                return None
-                
+                # Emit to frontend immediately
+                socketio.emit('new_tick', tick)
+                print(f"📈 Tick: {tick['price']} at {tick['time']}")
+            
         except Exception as e:
-            print(f"Firebase get error: {e}")
-            return None
+            print(f"❌ Error processing tick: {e}")
     
     def stop(self):
         self.running = False
 
-# Global WebSocket instance
-ws_client = DerivWebSocket()
+# Global ticker instance
+ticker = DerivTicker()
 
-def run_websocket():
+def run_ticker():
+    """Run ticker in separate thread"""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
-    # Set running flag before starting
-    ws_client.running = True
-    
-    try:
-        print("🚀 Starting WebSocket client...")
-        loop.run_until_complete(ws_client.connect_and_subscribe())
-    except Exception as e:
-        print(f"❌ WebSocket thread error: {e}")
-    finally:
-        loop.close()
-        print("🔚 WebSocket thread ended")
+    loop.run_until_complete(ticker.start())
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('live_chart.html')
 
-@app.route('/api/ticks')
-def get_ticks():
+@app.route('/api/recent-ticks')
+def get_recent_ticks():
+    """Get recent ticks from Firebase"""
     try:
-        # Get ticks from Firebase with the correct structure
-        url = f"{FIREBASE_URL}/{TICKS_NODE}.json"
-        response = requests.get(url, timeout=10)
+        url = f"{FIREBASE_URL}/{TICKS_NODE}.json?orderBy=\"time\"&limitToLast=100"
+        response = requests.get(url, timeout=5)
         
         if response.status_code == 200:
-            firebase_data = response.json()
-            if firebase_data:
-                # Convert to list and sort by epoch
-                ticks = []
-                for key, tick in firebase_data.items():
-                    tick['firebase_key'] = key  # Add the Firebase key
-                    ticks.append(tick)
-                
-                # Sort by epoch and get latest 950
-                ticks.sort(key=lambda x: x['epoch'])
-                ticks = ticks[-MAX_TICKS:]
-                
+            data = response.json()
+            if data:
+                # Convert to list and sort by time
+                ticks = list(data.values())
+                ticks.sort(key=lambda x: x['time'])
                 return jsonify(ticks)
         
-        return jsonify(latest_ticks)
+        return jsonify([])
         
     except Exception as e:
-        print(f"Error getting ticks: {e}")
-        return jsonify(latest_ticks)
+        print(f"❌ Error fetching ticks: {e}")
+        return jsonify([])
 
 @app.route('/api/status')
 def get_status():
     return jsonify({
-        'websocket_connected': ws_client.connected,
-        'websocket_running': ws_client.running,
-        'total_ticks': len(latest_ticks)
+        'connected': ticker.connected,
+        'running': ticker.running
     })
 
 @socketio.on('connect')
 def handle_connect():
-    print('🌐 Client connected to SocketIO')
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    print('🔌 Client disconnected from SocketIO')
+    print('🌐 Client connected')
 
 if __name__ == '__main__':
-    # Start WebSocket client in a separate thread
-    ws_thread = threading.Thread(target=run_websocket, daemon=True)
-    ws_thread.start()
-    
-    # Get port from environment (for Render deployment)
-    port = int(os.environ.get('PORT', 5000))
+    # Start ticker in background
+    ticker_thread = threading.Thread(target=run_ticker, daemon=True)
+    ticker_thread.start()
     
     # Run Flask app
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
