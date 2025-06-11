@@ -122,6 +122,7 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
+            justify-content: flex-start; /* Align buttons to the start */
         }
         
         .btn {
@@ -270,8 +271,7 @@
         <div class="controls">
             <button class="btn btn-primary" onclick="loadAllTicks()">Load All Ticks</button>
             <button class="btn btn-success" onclick="refreshLatestTick()">Refresh Latest</button>
-            <button class="btn btn-primary" onclick="load1MinCandles()">Load 1Min Candles</button>
-            <button class="btn btn-primary" onclick="load5MinCandles()">Load 5Min Candles</button>
+            <a href="/charts" class="btn btn-primary">View Charts</a>
             <a href="/api/all-ticks" class="btn btn-primary" target="_blank">View Raw Ticks</a>
             <a href="/api/1min-candles" class="btn btn-success" target="_blank">View 1Min Data</a>
             <a href="/api/5min-candles" class="btn btn-success" target="_blank">View 5Min Data</a>
@@ -334,11 +334,19 @@
             document.getElementById(tabName + 'View').style.display = 'block';
             
             // Update tab buttons
-            document.querySelectorAll('.controls button').forEach(btn => {
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-primary');
-            });
-            
+            // You can enhance this part to highlight the active tab button
+            document.getElementById('ticksTab').classList.remove('btn-success');
+            document.getElementById('1minTab').classList.remove('btn-success');
+            document.getElementById('5minTab').classList.remove('btn-success');
+
+            document.getElementById('ticksTab').classList.add('btn-primary');
+            document.getElementById('1minTab').classList.add('btn-primary');
+            document.getElementById('5minTab').classList.add('btn-primary');
+
+            document.getElementById(tabName + 'Tab').classList.remove('btn-primary');
+            document.getElementById(tabName + 'Tab').classList.add('btn-success');
+
+
             // Load data for the selected tab
             if (tabName === 'ticks') {
                 loadAllTicks();
@@ -523,3 +531,4 @@
     </script>
 </body>
 </html>
+
