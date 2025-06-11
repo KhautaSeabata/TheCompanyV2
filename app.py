@@ -248,6 +248,11 @@ def index():
     """Main page"""
     return render_template('index.html')
 
+@app.route('/charts')
+def charts():
+    """Charts page"""
+    return render_template('charts.html')
+
 @app.route('/api/latest-tick')
 def get_latest_tick():
     """API endpoint to get the latest tick data"""
@@ -324,3 +329,4 @@ start_tick_collector()
 if __name__ == '__main__':
     # Start Flask app (for local development)
     app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+
