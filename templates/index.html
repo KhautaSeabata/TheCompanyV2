@@ -270,13 +270,45 @@
         <div class="controls">
             <button class="btn btn-primary" onclick="loadAllTicks()">Load All Ticks</button>
             <button class="btn btn-success" onclick="refreshLatestTick()">Refresh Latest</button>
-            <a href="/api/all-ticks" class="btn btn-primary" target="_blank">View Raw Data</a>
+            <button class="btn btn-primary" onclick="load1MinCandles()">Load 1Min Candles</button>
+            <button class="btn btn-primary" onclick="load5MinCandles()">Load 5Min Candles</button>
+            <a href="/api/all-ticks" class="btn btn-primary" target="_blank">View Raw Ticks</a>
+            <a href="/api/1min-candles" class="btn btn-success" target="_blank">View 1Min Data</a>
+            <a href="/api/5min-candles" class="btn btn-success" target="_blank">View 5Min Data</a>
         </div>
         
         <div class="ticks-table-container">
-            <h3 style="margin-bottom: 20px; color: #343a40;">Recent Ticks History</h3>
-            <div id="ticksTableContainer">
-                <div class="loading">Loading ticks data...</div>
+            <h3 style="margin-bottom: 20px; color: #343a40;">Data Views</h3>
+            
+            <!-- Tab Navigation -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="showTab('ticks')" id="ticksTab">Recent Ticks</button>
+                <button class="btn btn-primary" onclick="showTab('1min')" id="1minTab">1Min Candles</button>
+                <button class="btn btn-primary" onclick="showTab('5min')" id="5minTab">5Min Candles</button>
+            </div>
+            
+            <!-- Ticks Table -->
+            <div id="ticksView" class="data-view">
+                <h4 style="margin-bottom: 15px; color: #343a40;">Recent Ticks History</h4>
+                <div id="ticksTableContainer">
+                    <div class="loading">Loading ticks data...</div>
+                </div>
+            </div>
+            
+            <!-- 1Min Candles Table -->
+            <div id="1minView" class="data-view" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: #343a40;">1-Minute Candlesticks</h4>
+                <div id="1minTableContainer">
+                    <div class="loading">Loading 1-minute candles...</div>
+                </div>
+            </div>
+            
+            <!-- 5Min Candles Table -->
+            <div id="5minView" class="data-view" style="display: none;">
+                <h4 style="margin-bottom: 15px; color: #343a40;">5-Minute Candlesticks</h4>
+                <div id="5minTableContainer">
+                    <div class="loading">Loading 5-minute candles...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -285,11 +317,37 @@
         // Auto-refresh latest tick every 2 seconds
         setInterval(refreshLatestTick, 2000);
         
-        // Load all ticks on page load
+        // Load all data on page load
         window.onload = function() {
             refreshLatestTick();
             loadAllTicks();
+            showTab('ticks'); // Show ticks by default
         };
+        
+        function showTab(tabName) {
+            // Hide all views
+            document.querySelectorAll('.data-view').forEach(view => {
+                view.style.display = 'none';
+            });
+            
+            // Show selected view
+            document.getElementById(tabName + 'View').style.display = 'block';
+            
+            // Update tab buttons
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+            });
+            
+            // Load data for the selected tab
+            if (tabName === 'ticks') {
+                loadAllTicks();
+            } else if (tabName === '1min') {
+                load1MinCandles();
+            } else if (tabName === '5min') {
+                load5MinCandles();
+            }
+        }
         
         async function refreshLatestTick() {
             try {
@@ -351,6 +409,106 @@
             } catch (error) {
                 console.error('Error loading ticks:', error);
                 container.innerHTML = '<div class="error">Error loading ticks data</div>';
+            }
+        }
+        
+        async function load1MinCandles() {
+            const container = document.getElementById('1minTableContainer');
+            container.innerHTML = '<div class="loading">Loading 1-minute candles...</div>';
+            
+            try {
+                const response = await fetch('/api/1min-candles');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const candles = Object.values(data).sort((a, b) => b.epoch - a.epoch);
+                    
+                    let tableHTML = `
+                        <table class="ticks-table">
+                            <thead>
+                                <tr>
+                                    <th>Epoch</th>
+                                    <th>Open</th>
+                                    <th>High</th>
+                                    <th>Low</th>
+                                    <th>Close</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    candles.slice(0, 50).forEach(candle => {
+                        tableHTML += `
+                            <tr>
+                                <td>${candle.epoch || '--'}</td>
+                                <td>${Number(candle.open).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.high).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.low).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.close).toFixed(3) || '--'}</td>
+                                <td>${formatTimestamp(candle.timestamp) || '--'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    container.innerHTML = tableHTML;
+                } else {
+                    container.innerHTML = '<div class="loading">No 1-minute candles available</div>';
+                }
+            } catch (error) {
+                console.error('Error loading 1min candles:', error);
+                container.innerHTML = '<div class="error">Error loading 1-minute candles</div>';
+            }
+        }
+        
+        async function load5MinCandles() {
+            const container = document.getElementById('5minTableContainer');
+            container.innerHTML = '<div class="loading">Loading 5-minute candles...</div>';
+            
+            try {
+                const response = await fetch('/api/5min-candles');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const candles = Object.values(data).sort((a, b) => b.epoch - a.epoch);
+                    
+                    let tableHTML = `
+                        <table class="ticks-table">
+                            <thead>
+                                <tr>
+                                    <th>Epoch</th>
+                                    <th>Open</th>
+                                    <th>High</th>
+                                    <th>Low</th>
+                                    <th>Close</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    candles.slice(0, 50).forEach(candle => {
+                        tableHTML += `
+                            <tr>
+                                <td>${candle.epoch || '--'}</td>
+                                <td>${Number(candle.open).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.high).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.low).toFixed(3) || '--'}</td>
+                                <td>${Number(candle.close).toFixed(3) || '--'}</td>
+                                <td>${formatTimestamp(candle.timestamp) || '--'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    container.innerHTML = tableHTML;
+                } else {
+                    container.innerHTML = '<div class="loading">No 5-minute candles available</div>';
+                }
+            } catch (error) {
+                console.error('Error loading 5min candles:', error);
+                container.innerHTML = '<div class="error">Error loading 5-minute candles</div>';
             }
         }
         
