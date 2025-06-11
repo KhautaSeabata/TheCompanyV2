@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volatility 25 Live Charts</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .back-btn {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) translateY(-2px);
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .chart-controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+        }
+        
+        .btn-active {
+            background: #17a2b8 !important;
+        }
+        
+        .charts-container {
+            padding: 30px;
+        }
+        
+        .chart-section {
+            margin-bottom: 40px;
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-section h3 {
+            margin-bottom: 20px;
+            color: #343a40;
+            font-size: 1.5rem;
+            font-weight: 400;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .chart-info-item {
+            text-align: center;
+        }
+        
+        .chart-info-item label {
+            display: block;
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .chart-info-item value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #343a40;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .back-btn {
+                position: relative;
+                left: auto;
+                top: auto;
+                transform: none;
+                margin-bottom: 15px;
+                display: block;
+            }
+            
+            .status-bar {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .chart-controls {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn">← Back to Data</a>
+            <h1>Volatility 25 Live Charts</h1>
+            <p>Real-time price visualization and candlestick analysis</p>
+        </div>
+        
+        <div class="status-bar">
+            <div class="status">
+                <div class="status-dot"></div>
+                <span>Live Streaming</span>
+            </div>
+            <div>
+                <span>Last Update: <span id="lastUpdate">--</span></span>
+            </div>
+        </div>
+        
+        <div class="chart-controls">
+            <button class="btn btn-primary btn-active" onclick="showChart('ticks')" id="ticksBtn">Live Ticks</button>
+            <button class="btn btn-primary" onclick="showChart('1min')" id="1minBtn">1Min Candles</button>
+            <button class="btn btn-primary" onclick="showChart('5min')" id="5minBtn">5Min Candles</button>
+            <div style="margin-left: auto;">
+                <button class="btn btn-success" onclick="refreshData()">Refresh Data</button>
+                <button class="btn btn-primary" onclick="toggleAutoRefresh()" id="autoRefreshBtn">Auto: ON</button>
+            </div>
+        </div>
+        
+        <div class="charts-container">
+            <!-- Live Ticks Chart -->
+            <div id="ticksChart" class="chart-section">
+                <h3>Live Tick Prices</h3>
+                <div class="chart-container">
+                    <canvas id="ticksCanvas"></canvas>
+                </div>
+                <div class="chart-info" id="ticksInfo">
+                    <div class="chart-info-item">
+                        <label>Latest Price</label>
+                        <value id="latestPrice">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Price Change</label>
+                        <value id="priceChange">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Total Ticks</label>
+                        <value id="totalTicks">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Time Range</label>
+                        <value id="timeRange">--</value>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 1 Minute Candlesticks -->
+            <div id="1minChart" class="chart-section" style="display: none;">
+                <h3>1-Minute Candlesticks</h3>
+                <div class="chart-container">
+                    <canvas id="1minCanvas"></canvas>
+                </div>
+                <div class="chart-info" id="1minInfo">
+                    <div class="chart-info-item">
+                        <label>Latest Close</label>
+                        <value id="1minClose">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>High</label>
+                        <value id="1minHigh">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Low</label>
+                        <value id="1minLow">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Total Candles</label>
+                        <value id="1minTotal">--</value>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 5 Minute Candlesticks -->
+            <div id="5minChart" class="chart-section" style="display: none;">
+                <h3>5-Minute Candlesticks</h3>
+                <div class="chart-container">
+                    <canvas id="5minCanvas"></canvas>
+                </div>
+                <div class="chart-info" id="5minInfo">
+                    <div class="chart-info-item">
+                        <label>Latest Close</label>
+                        <value id="5minClose">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>High</label>
+                        <value id="5minHigh">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Low</label>
+                        <value id="5minLow">--</value>
+                    </div>
+                    <div class="chart-info-item">
+                        <label>Total Candles</label>
+                        <value id="5minTotal">--</value>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart instances
+        let ticksChart = null;
+        let candlestick1minChart = null;
+        let candlestick5minChart = null;
+        
+        // Auto refresh settings
+        let autoRefresh = true;
+        let refreshInterval = null;
+        
+        // Data storage
+        let ticksData = [];
+        let candles1minData = [];
+        let candles5minData = [];
+        
+        // Initialize charts on page load
+        window.onload = function() {
+            initializeCharts();
+            refreshData();
+            startAutoRefresh();
+        };
+        
+        function initializeCharts() {
+            // Initialize ticks chart
+            const ticksCtx = document.getElementById('ticksCanvas').getContext('2d');
+            ticksChart = new Chart(ticksCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Tick Price',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 1,
+                        pointHoverRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Live Tick Data Stream'
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    }
+                }
+            });
+            
+            // Initialize 1min candlestick chart
+            const canvas1min = document.getElementById('1minCanvas').getContext('2d');
+            candlestick1minChart = new Chart(canvas1min, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'High',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false
+                        },
+                        {
+                            label: 'Close',
+                            data: [],
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Low',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '1-Minute OHLC Data'
+                        }
+                    }
+                }
+            });
+            
+            // Initialize 5min candlestick chart
+            const canvas5min = document.getElementById('5minCanvas').getContext('2d');
+            candlestick5minChart = new Chart(canvas5min, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'High',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false
+                        },
+                        {
+                            label: 'Close',
+                            data: [],
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Low',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '5-Minute OHLC Data'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function showChart(chartType) {
+            // Hide all charts
+            document.getElementById('ticksChart').style.display = 'none';
+            document.getElementById('1minChart').style.display = 'none';
+            document.getElementById('5minChart').style.display = 'none';
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.chart-controls .btn-primary').forEach(btn => {
+                btn.classList.remove('btn-active');
+            });
+            
+            // Show selected chart and activate button
+            document.getElementById(chartType + 'Chart').style.display = 'block';
+            document.getElementById(chartType + 'Btn').classList.add('btn-active');
+        }
+        
+        async function refreshData() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            
+            try {
+                await Promise.all([
+                    loadTicksData(),
+                    load1MinData(),
+                    load5MinData()
+                ]);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+        
+        async function loadTicksData() {
+            try {
+                const response = await fetch('/api/all-ticks');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const ticks = Object.values(data)
+                        .sort((a, b) => a.epoch - b.epoch)
+                        .slice(-100); // Last 100 ticks
+                    
+                    ticksData = ticks;
+                    
+                    // Update chart
+                    const labels = ticks.map(tick => new Date(tick.epoch * 1000));
+                    const prices = ticks.map(tick => parseFloat(tick.quote));
+                    
+                    ticksChart.data.labels = labels;
+                    ticksChart.data.datasets[0].data = prices;
+                    ticksChart.update('none');
+                    
+                    // Update info
+                    if (ticks.length > 0) {
+                        const latest = ticks[ticks.length - 1];
+                        const first = ticks[0];
+                        const priceChange = (parseFloat(latest.quote) - parseFloat(first.quote)).toFixed(4);
+                        
+                        document.getElementById('latestPrice').textContent = parseFloat(latest.quote).toFixed(4);
+                        document.getElementById('priceChange').textContent = priceChange;
+                        document.getElementById('totalTicks').textContent = ticks.length;
+                        document.getElementById('timeRange').textContent = 
+                            `${new Date(first.epoch * 1000).toLocaleTimeString()} - ${new Date(latest.epoch * 1000).toLocaleTimeString()}`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading ticks data:', error);
+            }
+        }
+        
+        async function load1MinData() {
+            try {
+                const response = await fetch('/api/1min-candles');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const candles = Object.values(data)
+                        .sort((a, b) => a.epoch - b.epoch)
+                        .slice(-50); // Last 50 candles
+                    
+                    candles1minData = candles;
+                    
+                    // Update chart
+                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                    const highs = candles.map(candle => parseFloat(candle.high));
+                    const closes = candles.map(candle => parseFloat(candle.close));
+                    const lows = candles.map(candle => parseFloat(candle.low));
+                    
+                    candlestick1minChart.data.labels = labels;
+                    candlestick1minChart.data.datasets[0].data = highs;
+                    candlestick1minChart.data.datasets[1].data = closes;
+                    candlestick1minChart.data.datasets[2].data = lows;
+                    candlestick1minChart.update('none');
+                    
+                    // Update info
+                    if (candles.length > 0) {
+                        const latest = candles[candles.length - 1];
+                        document.getElementById('1minClose').textContent = parseFloat(latest.close).toFixed(4);
+                        document.getElementById('1minHigh').textContent = parseFloat(latest.high).toFixed(4);
+                        document.getElementById('1minLow').textContent = parseFloat(latest.low).toFixed(4);
+                        document.getElementById('1minTotal').textContent = candles.length;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading 1min data:', error);
+            }
+        }
+        
+        async function load5MinData() {
+            try {
+                const response = await fetch('/api/5min-candles');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const candles = Object.values(data)
+                        .sort((a, b) => a.epoch - b.epoch)
+                        .slice(-50); // Last 50 candles
+                    
+                    candles5minData = candles;
+                    
+                    // Update chart
+                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                    const highs = candles.map(candle => parseFloat(candle.high));
+                    const closes = candles.map(candle => parseFloat(candle.close));
+                    const lows = candles.map(candle => parseFloat(candle.low));
+                    
+                    candlestick5minChart.data.labels = labels;
+                    candlestick5minChart.data.datasets[0].data = highs;
+                    candlestick5minChart.data.datasets[1].data = closes;
+                    candlestick5minChart.data.datasets[2].data = lows;
+                    candlestick5minChart.update('none');
+                    
+                    // Update info
+                    if (candles.length > 0) {
+                        const latest = candles[candles.length - 1];
+                        document.getElementById('5minClose').textContent = parseFloat(latest.close).toFixed(4);
+                        document.getElementById('5minHigh').textContent = parseFloat(latest.high).toFixed(4);
+                        document.getElementById('5minLow').textContent = parseFloat(latest.low).toFixed(4);
+                        document.getElementById('5minTotal').textContent = candles.length;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading 5min data:', error);
+            }
+        }
+        
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefresh) {
+                btn.textContent = 'Auto: ON';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                startAutoRefresh();
+            } else {
+                btn.textContent = 'Auto: OFF';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+                stopAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            if (autoRefresh) {
+                refreshInterval = setInterval(refreshData, 5000); // Refresh every 5 seconds
+            }
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+    </script>
+</body>
+</html>
