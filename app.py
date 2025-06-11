@@ -90,7 +90,7 @@ def run_ticker():
 
 @app.route('/')
 def index():
-    return render_template('live_chart.html')
+    return render_template('index.html')
 
 @app.route('/api/recent-ticks')
 def get_recent_ticks():
