@@ -164,9 +164,9 @@ def start_tick_collector():
     thread = threading.Thread(target=tick_collector.start, daemon=True)
     thread.start()
 
+# Start the tick collector when the module is imported (for production)
+start_tick_collector()
+
 if __name__ == '__main__':
-    # Start the tick collector
-    start_tick_collector()
-    
-    # Start Flask app
+    # Start Flask app (for local development)
     app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
