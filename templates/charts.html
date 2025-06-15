@@ -7,9 +7,7 @@
     <!-- Chart.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <!-- Chart.js adapter for date-fns for time series axes -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <!-- Chart.js financial plugin for candlestick charts -->
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.0/dist/chartjs-chart-financial.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/2.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         /* General reset and base styling */
         * {
@@ -36,7 +34,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            min-height: calc(100vh - 40px); /* Adjust for padding */
+            min-height: calc(100vh - 40px);
         }
         
         /* Header section styling */
@@ -88,7 +86,7 @@
             padding: 20px 30px;
             background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
-            flex-wrap: wrap; /* Allow wrapping on small screens */
+            flex-wrap: wrap;
             gap: 10px;
         }
         
@@ -102,8 +100,12 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #28a745; /* Green for connected */
+            background: #28a745;
             animation: pulse 2s infinite;
+        }
+        
+        .status-dot.error {
+            background: #dc3545;
         }
         
         @keyframes pulse {
@@ -121,7 +123,7 @@
             gap: 15px;
             flex-wrap: wrap;
             align-items: center;
-            justify-content: flex-start; /* Align controls to the left */
+            justify-content: flex-start;
         }
         
         /* Button general styling */
@@ -138,7 +140,7 @@
         }
         
         .btn-primary {
-            background: #007bff; /* Blue */
+            background: #007bff;
             color: white;
         }
         
@@ -148,7 +150,7 @@
         }
         
         .btn-success {
-            background: #28a745; /* Green */
+            background: #28a745;
             color: white;
         }
         
@@ -158,14 +160,14 @@
         }
         
         .btn-active {
-            background: #17a2b8 !important; /* Teal for active */
+            background: #17a2b8 !important;
             box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
         }
 
         /* Container for all chart sections */
         .charts-container {
             padding: 30px;
-            flex-grow: 1; /* Allow container to take available space */
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
@@ -177,7 +179,7 @@
             border-radius: 10px;
             padding: 25px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            flex-grow: 1; /* Each chart section can grow */
+            flex-grow: 1;
         }
         
         .chart-section h3 {
@@ -191,7 +193,7 @@
         
         .chart-container {
             position: relative;
-            height: 400px; /* Fixed height for charts */
+            height: 400px;
             margin-bottom: 20px;
         }
         
@@ -256,8 +258,8 @@
                 transform: none;
                 margin-bottom: 15px;
                 display: block;
-                width: fit-content; /* Make button fit content */
-                margin: 0 auto 15px auto; /* Center button */
+                width: fit-content;
+                margin: 0 auto 15px auto;
             }
             
             .status-bar {
@@ -271,11 +273,11 @@
             }
             
             .btn {
-                width: 100%; /* Full width buttons on small screens */
+                width: 100%;
             }
             
             .chart-container {
-                height: 300px; /* Slightly smaller chart height on mobile */
+                height: 300px;
             }
         }
     </style>
@@ -285,13 +287,13 @@
         <div class="header">
             <a href="/" class="back-btn">← Back to Data</a>
             <h1>Volatility 25 Live Charts</h1>
-            <p>Real-time price visualization and candlestick analysis</p>
+            <p>Real-time price visualization and analysis</p>
         </div>
         
         <div class="status-bar">
             <div class="status">
-                <div class="status-dot"></div>
-                <span>Live Streaming</span>
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
             </div>
             <div>
                 <span>Last Update: <span id="lastUpdate">--</span></span>
@@ -301,8 +303,8 @@
         <div class="chart-controls">
             <!-- Chart type selection buttons -->
             <button class="btn btn-primary btn-active" onclick="showChart('ticks')" id="ticksBtn">Live Ticks</button>
-            <button class="btn btn-primary" onclick="showChart('1min')" id="1minBtn">1Min Candles</button>
-            <button class="btn btn-primary" onclick="showChart('5min')" id="5minBtn">5Min Candles</button>
+            <button class="btn btn-primary" onclick="showChart('1min')" id="1minBtn">1Min OHLC</button>
+            <button class="btn btn-primary" onclick="showChart('5min')" id="5minBtn">5Min OHLC</button>
             
             <!-- Refresh and Auto-refresh controls -->
             <div style="margin-left: auto; display: flex; gap: 15px; flex-wrap: wrap;">
@@ -338,9 +340,9 @@
                 </div>
             </div>
             
-            <!-- 1 Minute Candlesticks Chart Section -->
+            <!-- 1 Minute OHLC Chart Section -->
             <div id="1minChart" class="chart-section" style="display: none;">
-                <h3>1-Minute Candlesticks</h3>
+                <h3>1-Minute OHLC Data (Close Prices)</h3>
                 <div class="chart-container">
                     <canvas id="1minCanvas"></canvas>
                 </div>
@@ -350,11 +352,11 @@
                         <value id="1minClose">--</value>
                     </div>
                     <div class="chart-info-item">
-                        <label>High</label>
+                        <label>Highest</label>
                         <value id="1minHigh">--</value>
                     </div>
                     <div class="chart-info-item">
-                        <label>Low</label>
+                        <label>Lowest</label>
                         <value id="1minLow">--</value>
                     </div>
                     <div class="chart-info-item">
@@ -364,9 +366,9 @@
                 </div>
             </div>
             
-            <!-- 5 Minute Candlesticks Chart Section -->
+            <!-- 5 Minute OHLC Chart Section -->
             <div id="5minChart" class="chart-section" style="display: none;">
-                <h3>5-Minute Candlesticks</h3>
+                <h3>5-Minute OHLC Data (Close Prices)</h3>
                 <div class="chart-container">
                     <canvas id="5minCanvas"></canvas>
                 </div>
@@ -376,11 +378,11 @@
                         <value id="5minClose">--</value>
                     </div>
                     <div class="chart-info-item">
-                        <label>High</label>
+                        <label>Highest</label>
                         <value id="5minHigh">--</value>
                     </div>
                     <div class="chart-info-item">
-                        <label>Low</label>
+                        <label>Lowest</label>
                         <value id="5minLow">--</value>
                     </div>
                     <div class="chart-info-item">
@@ -395,51 +397,45 @@
     <script>
         // Global variables for chart instances
         let ticksChart = null;
-        let candlestick1minChart = null;
-        let candlestick5minChart = null;
+        let ohlc1minChart = null;
+        let ohlc5minChart = null;
         
         // Auto refresh control variables
         let autoRefresh = true;
         let refreshInterval = null;
         
-        // Data storage for ticks and candles
+        // Data storage
         let ticksData = [];
         let candles1minData = [];
         let candles5minData = [];
         
         // Initialize charts and start data refresh on window load
         window.onload = function() {
-            // Register financial chart type (needed for Chart.js 3.x with financial plugin)
-            Chart.register(ChartDataSource); // Ensure ChartDataSource is registered if used elsewhere.
-            // For chartjs-chart-financial, ensure it's loaded and its elements are registered
-            // No explicit Chart.register for 'candlestick' is typically needed if the plugin loads correctly.
-            // If issues persist, ensure the plugin correctly adds the 'candlestick' controller.
-
             initializeCharts();
-            refreshData(); // Initial data load
-            startAutoRefresh(); // Start periodic refresh
+            refreshData();
+            startAutoRefresh();
         };
         
         /**
-         * Initializes all Chart.js chart instances (Line for ticks, Candlestick for 1min/5min).
+         * Initializes all Chart.js chart instances as line charts
          */
         function initializeCharts() {
             // Initialize ticks chart (Line Chart)
             const ticksCtx = document.getElementById('ticksCanvas').getContext('2d');
             ticksChart = new Chart(ticksCtx, {
-                type: 'line', // Line chart for tick data
+                type: 'line',
                 data: {
-                    labels: [], // Timestamps
+                    labels: [],
                     datasets: [{
                         label: 'Tick Price',
-                        data: [], // Prices
+                        data: [],
                         borderColor: '#28a745',
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.1, // Smooth curves
-                        pointRadius: 1, // Small points
-                        pointHoverRadius: 4 // Larger on hover
+                        tension: 0.1,
+                        pointRadius: 1,
+                        pointHoverRadius: 4
                     }]
                 },
                 options: {
@@ -447,7 +443,7 @@
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            type: 'time', // Time scale for X-axis
+                            type: 'time',
                             time: {
                                 unit: 'minute',
                                 displayFormats: {
@@ -468,7 +464,7 @@
                     },
                     plugins: {
                         legend: {
-                            display: false // No legend needed for single line
+                            display: false
                         },
                         title: {
                             display: true,
@@ -476,30 +472,58 @@
                         }
                     },
                     animation: {
-                        duration: 0 // No animation for continuous updates
+                        duration: 0
                     }
                 }
             });
             
-            // Initialize 1-minute candlestick chart
+            // Initialize 1-minute OHLC chart (showing close prices as line)
             const canvas1min = document.getElementById('1minCanvas').getContext('2d');
-            candlestick1minChart = new Chart(canvas1min, {
-                type: 'candlestick', // Candlestick chart type from financial plugin
+            ohlc1minChart = new Chart(canvas1min, {
+                type: 'line',
                 data: {
-                    datasets: [{
-                        label: '1-Minute Candles',
-                        data: [], // OHLC data: [{x: timestamp, o: open, h: high, l: low, c: close}]
-                        borderColor: 'transparent', // Candlestick plugin handles colors
-                        backgroundColor: 'rgba(0, 123, 255, 0.5)', // Default background color
-                        lineTension: 0 // Straight lines
-                    }]
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Close Price',
+                            data: [],
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'High Price',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Low Price',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1,
+                            borderDash: [5, 5]
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            type: 'time', // Time scale for X-axis
+                            type: 'time',
                             time: {
                                 unit: 'minute',
                                 displayFormats: {
@@ -524,33 +548,62 @@
                             text: '1-Minute OHLC Data'
                         },
                         legend: {
-                            display: false // Legend not typically needed for single candlestick dataset
+                            display: true,
+                            position: 'top'
                         }
                     }
                 }
             });
             
-            // Initialize 5-minute candlestick chart
+            // Initialize 5-minute OHLC chart (showing close prices as line)
             const canvas5min = document.getElementById('5minCanvas').getContext('2d');
-            candlestick5minChart = new Chart(canvas5min, {
-                type: 'candlestick', // Candlestick chart type
+            ohlc5minChart = new Chart(canvas5min, {
+                type: 'line',
                 data: {
-                    datasets: [{
-                        label: '5-Minute Candles',
-                        data: [], // OHLC data
-                        borderColor: 'transparent',
-                        backgroundColor: 'rgba(40, 167, 69, 0.5)',
-                        lineTension: 0
-                    }]
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Close Price',
+                            data: [],
+                            borderColor: '#17a2b8',
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'High Price',
+                            data: [],
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1,
+                            borderDash: [5, 5]
+                        },
+                        {
+                            label: 'Low Price',
+                            data: [],
+                            borderColor: '#dc3545',
+                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 1,
+                            borderDash: [5, 5]
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
                         x: {
-                            type: 'time', // Time scale for X-axis
+                            type: 'time',
                             time: {
-                                unit: 'hour', // Use hour unit for 5min candles as they span longer
+                                unit: 'hour',
                                 displayFormats: {
                                     hour: 'HH:mm'
                                 }
@@ -573,7 +626,8 @@
                             text: '5-Minute OHLC Data'
                         },
                         legend: {
-                            display: false
+                            display: true,
+                            position: 'top'
                         }
                     }
                 }
@@ -582,7 +636,6 @@
         
         /**
          * Shows the selected chart section and updates active button state.
-         * @param {string} chartType - The type of chart to show ('ticks', '1min', '5min').
          */
         function showChart(chartType) {
             // Hide all chart sections
@@ -605,17 +658,34 @@
          */
         async function refreshData() {
             document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            updateStatus('loading', 'Loading data...');
             
             try {
-                // Use Promise.all to fetch data concurrently
                 await Promise.all([
                     loadTicksData(),
                     load1MinData(),
                     load5MinData()
                 ]);
+                updateStatus('connected', 'Live Streaming');
             } catch (error) {
                 console.error('Error refreshing data:', error);
+                updateStatus('error', 'Connection Error');
             }
+        }
+        
+        /**
+         * Updates the status indicator
+         */
+        function updateStatus(status, text) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            statusDot.className = 'status-dot';
+            if (status === 'error') {
+                statusDot.classList.add('error');
+            }
+            
+            statusText.textContent = text;
         }
         
         /**
@@ -624,13 +694,18 @@
         async function loadTicksData() {
             try {
                 const response = await fetch('/api/all-ticks');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data && Object.keys(data).length > 0) {
                     // Sort ticks by epoch and get the last 100 for display
                     const ticks = Object.values(data)
                         .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-100); 
+                        .slice(-100);
                     
                     ticksData = ticks;
                     
@@ -640,7 +715,7 @@
                     
                     ticksChart.data.labels = labels;
                     ticksChart.data.datasets[0].data = prices;
-                    ticksChart.update('none'); // 'none' for no animation on update
+                    ticksChart.update('none');
                     
                     // Update chart info panel
                     if (ticks.length > 0) {
@@ -662,37 +737,42 @@
                 }
             } catch (error) {
                 console.error('Error loading ticks data:', error);
-                document.getElementById('ticksInfo').innerHTML = '<div class="error">Error loading ticks data</div>';
+                document.getElementById('ticksInfo').innerHTML = '<div class="error">Error loading ticks data: ' + error.message + '</div>';
             }
         }
         
         /**
-         * Fetches 1-minute candlestick data and updates the candlestick chart.
+         * Fetches 1-minute candlestick data and updates the OHLC chart.
          */
         async function load1MinData() {
             try {
                 const response = await fetch('/api/1min-candles');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data && Object.keys(data).length > 0) {
                     // Sort candles by epoch and get the last 50 for display
                     const candles = Object.values(data)
                         .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-50); 
+                        .slice(-50);
                     
                     candles1minData = candles;
                     
-                    // Prepare data in OHLC format for candlestick chart
-                    const ohlcData = candles.map(candle => ({
-                        x: new Date(candle.epoch * 1000), // Epoch to Date object
-                        o: parseFloat(candle.open),
-                        h: parseFloat(candle.high),
-                        l: parseFloat(candle.low),
-                        c: parseFloat(candle.close)
-                    }));
+                    // Prepare data for line chart
+                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                    const closePrices = candles.map(candle => parseFloat(candle.close));
+                    const highPrices = candles.map(candle => parseFloat(candle.high));
+                    const lowPrices = candles.map(candle => parseFloat(candle.low));
                     
-                    candlestick1minChart.data.datasets[0].data = ohlcData;
-                    candlestick1minChart.update('none');
+                    ohlc1minChart.data.labels = labels;
+                    ohlc1minChart.data.datasets[0].data = closePrices;
+                    ohlc1minChart.data.datasets[1].data = highPrices;
+                    ohlc1minChart.data.datasets[2].data = lowPrices;
+                    ohlc1minChart.update('none');
                     
                     // Update chart info panel
                     if (candles.length > 0) {
@@ -704,42 +784,48 @@
                     }
                 } else {
                     document.getElementById('1minInfo').innerHTML = '<div class="loading">No 1-minute candles available</div>';
-                    candlestick1minChart.data.datasets[0].data = [];
-                    candlestick1minChart.update();
+                    ohlc1minChart.data.labels = [];
+                    ohlc1minChart.data.datasets.forEach(dataset => dataset.data = []);
+                    ohlc1minChart.update();
                 }
             } catch (error) {
                 console.error('Error loading 1min data:', error);
-                document.getElementById('1minInfo').innerHTML = '<div class="error">Error loading 1-minute candles</div>';
+                document.getElementById('1minInfo').innerHTML = '<div class="error">Error loading 1-minute candles: ' + error.message + '</div>';
             }
         }
         
         /**
-         * Fetches 5-minute candlestick data and updates the candlestick chart.
+         * Fetches 5-minute candlestick data and updates the OHLC chart.
          */
         async function load5MinData() {
             try {
                 const response = await fetch('/api/5min-candles');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
                 if (data && Object.keys(data).length > 0) {
                     // Sort candles by epoch and get the last 50 for display
                     const candles = Object.values(data)
                         .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-50); 
+                        .slice(-50);
                     
                     candles5minData = candles;
                     
-                    // Prepare data in OHLC format for candlestick chart
-                    const ohlcData = candles.map(candle => ({
-                        x: new Date(candle.epoch * 1000),
-                        o: parseFloat(candle.open),
-                        h: parseFloat(candle.high),
-                        l: parseFloat(candle.low),
-                        c: parseFloat(candle.close)
-                    }));
+                    // Prepare data for line chart
+                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                    const closePrices = candles.map(candle => parseFloat(candle.close));
+                    const hightPrices = candles.map(candle => parseFloat(candle.high));
+                    const lowPrices = candles.map(candle => parseFloat(candle.low));
                     
-                    candlestick5minChart.data.datasets[0].data = ohlcData;
-                    candlestick5minChart.update('none');
+                    ohlc5minChart.data.labels = labels;
+                    ohlc5minChart.data.datasets[0].data = closePrices;
+                    ohlc5minChart.data.datasets[1].data = hightPrices;
+                    ohlc5minChart.data.datasets[2].data = lowPrices;
+                    ohlc5minChart.update('none');
                     
                     // Update chart info panel
                     if (candles.length > 0) {
@@ -751,57 +837,15 @@
                     }
                 } else {
                     document.getElementById('5minInfo').innerHTML = '<div class="loading">No 5-minute candles available</div>';
-                    candlestick5minChart.data.datasets[0].data = [];
-                    candlestick5minChart.update();
+                    ohlc5minChart.data.labels = [];
+                    ohlc5minChart.data.datasets.forEach(dataset => dataset.data = []);
+                    ohlc5minChart.update();
                 }
             } catch (error) {
                 console.error('Error loading 5min data:', error);
-                document.getElementById('5minInfo').innerHTML = '<div class="error">Error loading 5-minute candles</div>';
+                document.getElementById('5minInfo').innerHTML = '<div class="error">Error loading 5-minute candles: ' + error.message + '</div>';
             }
         }
         
         /**
-         * Toggles the auto-refresh functionality on/off.
-         */
-        function toggleAutoRefresh() {
-            autoRefresh = !autoRefresh;
-            const btn = document.getElementById('autoRefreshBtn');
-            
-            if (autoRefresh) {
-                btn.textContent = 'Auto: ON';
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-success');
-                startAutoRefresh();
-            } else {
-                btn.textContent = 'Auto: OFF';
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-primary');
-                stopAutoRefresh();
-            }
-        }
-        
-        /**
-         * Starts the auto-refresh interval.
-         */
-        function startAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval); // Clear any existing interval
-            }
-            
-            if (autoRefresh) {
-                refreshInterval = setInterval(refreshData, 5000); // Refresh every 5 seconds
-            }
-        }
-        
-        /**
-         * Stops the auto-refresh interval.
-         */
-        function stopAutoRefresh() {
-            if (refreshInterval) {
-                clearInterval(refreshInterval);
-                refreshInterval = null;
-            }
-        }
-    </script>
-</body>
-</html>
+         * Toggles the auto-refresh functionality on
