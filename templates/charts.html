@@ -847,5 +847,39 @@
             }
         }
         
-        /**
-         * Toggles the auto-refresh functionality on
+       function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefresh) {
+                btn.textContent = 'Auto: ON';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+                startAutoRefresh();
+            } else {
+                btn.textContent = 'Auto: OFF';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+                stopAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            if (autoRefresh && !refreshInterval) {
+                refreshInterval = setInterval(refreshData, 10000);
+            }
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        window.addEventListener('beforeunload', function() {
+            stopAutoRefresh();
+        });
+    </script>
+</body>
+</html>
