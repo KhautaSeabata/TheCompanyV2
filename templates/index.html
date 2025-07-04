@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volatility 25 Live Ticks</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -117,12 +118,33 @@
             display: block;
         }
         
+        .chart-container {
+            padding: 30px;
+            background: white;
+            margin: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chart-container h2 {
+            margin-bottom: 20px;
+            color: #343a40;
+            font-size: 1.8rem;
+            font-weight: 300;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        
         .controls {
             padding: 20px 30px;
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            justify-content: flex-start; /* Align buttons to the start */
+            justify-content: flex-start;
         }
         
         .btn {
@@ -226,6 +248,10 @@
             .btn {
                 width: 100%;
             }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
         }
     </style>
 </head>
@@ -268,9 +294,17 @@
             </div>
         </div>
         
+        <div class="chart-container">
+            <h2>Live Price Chart</h2>
+            <div class="chart-wrapper">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+        
         <div class="controls">
             <button class="btn btn-primary" onclick="loadAllTicks()">Load All Ticks</button>
             <button class="btn btn-success" onclick="refreshLatestTick()">Refresh Latest</button>
+            <button class="btn btn-primary" onclick="refreshChart()">Refresh Chart</button>
             <a href="/charts" class="btn btn-primary">View Charts</a>
             <a href="/api/all-ticks" class="btn btn-primary" target="_blank">View Raw Ticks</a>
             <a href="/api/1min-candles" class="btn btn-success" target="_blank">View 1Min Data</a>
@@ -314,14 +348,130 @@
     </div>
 
     <script>
+        // Chart configuration
+        let priceChart;
+        let chartData = [];
+        const MAX_CHART_POINTS = 100;
+        
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Volatility 25 Price',
+                        data: [],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 2,
+                        pointBackgroundColor: '#007bff',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Price'
+                            },
+                            beginAtZero: false
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    },
+                    elements: {
+                        point: {
+                            hoverRadius: 5
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update chart with new data
+        function updateChart(ticks) {
+            if (!priceChart) return;
+            
+            // Sort ticks by epoch
+            const sortedTicks = ticks.sort((a, b) => a.epoch - b.epoch);
+            
+            // Take only the latest points
+            const latestTicks = sortedTicks.slice(-MAX_CHART_POINTS);
+            
+            // Prepare data for chart
+            const labels = latestTicks.map(tick => {
+                const date = new Date(tick.epoch * 1000);
+                return date.toLocaleTimeString();
+            });
+            
+            const prices = latestTicks.map(tick => parseFloat(tick.quote));
+            
+            // Update chart data
+            priceChart.data.labels = labels;
+            priceChart.data.datasets[0].data = prices;
+            priceChart.update();
+        }
+        
+        // Load chart data from API
+        async function loadChartData() {
+            try {
+                const response = await fetch('/api/all-ticks');
+                const data = await response.json();
+                
+                if (data && Object.keys(data).length > 0) {
+                    const ticks = Object.values(data);
+                    updateChart(ticks);
+                }
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+            }
+        }
+        
+        // Refresh chart manually
+        async function refreshChart() {
+            await loadChartData();
+        }
+        
         // Auto-refresh latest tick every 2 seconds
         setInterval(refreshLatestTick, 2000);
         
+        // Auto-refresh chart every 5 seconds
+        setInterval(loadChartData, 5000);
+        
         // Load all data on page load
         window.onload = function() {
+            initChart();
             refreshLatestTick();
             loadAllTicks();
-            showTab('ticks'); // Show ticks by default
+            loadChartData();
+            showTab('ticks');
         };
         
         function showTab(tabName) {
@@ -334,7 +484,6 @@
             document.getElementById(tabName + 'View').style.display = 'block';
             
             // Update tab buttons
-            // You can enhance this part to highlight the active tab button
             document.getElementById('ticksTab').classList.remove('btn-success');
             document.getElementById('1minTab').classList.remove('btn-success');
             document.getElementById('5minTab').classList.remove('btn-success');
@@ -345,7 +494,6 @@
 
             document.getElementById(tabName + 'Tab').classList.remove('btn-primary');
             document.getElementById(tabName + 'Tab').classList.add('btn-success');
-
 
             // Load data for the selected tab
             if (tabName === 'ticks') {
@@ -531,4 +679,3 @@
     </script>
 </body>
 </html>
-
