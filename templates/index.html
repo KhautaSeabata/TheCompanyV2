@@ -359,7 +359,7 @@
         let priceChart;
         let candlestickChart;
         let chartData = [];
-        const MAX_CHART_POINTS = 100;
+        const MAX_CHART_POINTS = 50;
         
         // Initialize charts
         function initCharts() {
@@ -426,45 +426,34 @@
             // Initialize candlestick chart
             const ctx2 = document.getElementById('candlestickChart').getContext('2d');
             candlestickChart = new Chart(ctx2, {
-                type: 'line',
+                type: 'bar',
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Open',
+                        label: 'Wicks',
                         data: [],
-                        borderColor: '#28a745',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 3
+                        backgroundColor: 'rgba(0, 0, 0, 0)',
+                        borderColor: '#333333',
+                        borderWidth: 1,
+                        borderSkipped: false,
+                        barPercentage: 0.1,
+                        categoryPercentage: 1.0
                     }, {
-                        label: 'High',
+                        label: 'Bullish Candles',
                         data: [],
-                        borderColor: '#ffc107',
-                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 3
+                        backgroundColor: '#22c55e',
+                        borderColor: '#16a34a',
+                        borderWidth: 1,
+                        barPercentage: 0.6,
+                        categoryPercentage: 1.0
                     }, {
-                        label: 'Low',
+                        label: 'Bearish Candles',
                         data: [],
-                        borderColor: '#dc3545',
-                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.1,
-                        pointRadius: 3
-                    }, {
-                        label: 'Close',
-                        data: [],
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.1,
-                        pointRadius: 4
+                        backgroundColor: '#ef4444',
+                        borderColor: '#dc2626',
+                        borderWidth: 1,
+                        barPercentage: 0.6,
+                        categoryPercentage: 1.0
                     }]
                 },
                 options: {
@@ -474,6 +463,30 @@
                         legend: {
                             display: true,
                             position: 'top'
+                        },
+                        tooltip: {
+                            filter: function(tooltipItem) {
+                                return tooltipItem.datasetIndex !== 0; // Hide tooltip for wicks dataset
+                            },
+                            callbacks: {
+                                beforeLabel: function(context) {
+                                    const dataIndex = context.dataIndex;
+                                    const candles = candlestickChart.candleData || [];
+                                    const candle = candles[dataIndex];
+                                    if (candle) {
+                                        return [
+                                            `Open: ${candle.open.toFixed(3)}`,
+                                            `High: ${candle.high.toFixed(3)}`,
+                                            `Low: ${candle.low.toFixed(3)}`,
+                                            `Close: ${candle.close.toFixed(3)}`
+                                        ];
+                                    }
+                                    return '';
+                                },
+                                label: function(context) {
+                                    return '';
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -498,11 +511,6 @@
                     },
                     animation: {
                         duration: 0
-                    },
-                    elements: {
-                        point: {
-                            hoverRadius: 5
-                        }
                     }
                 }
             });
@@ -542,23 +550,46 @@
             // Take only the latest points
             const latestCandles = sortedCandles.slice(-MAX_CHART_POINTS);
             
+            // Store candle data for tooltips
+            candlestickChart.candleData = latestCandles;
+            
             // Prepare data for chart
             const labels = latestCandles.map(candle => {
                 const date = new Date(candle.epoch * 1000);
                 return date.toLocaleTimeString();
             });
             
-            const opens = latestCandles.map(candle => parseFloat(candle.open));
-            const highs = latestCandles.map(candle => parseFloat(candle.high));
-            const lows = latestCandles.map(candle => parseFloat(candle.low));
-            const closes = latestCandles.map(candle => parseFloat(candle.close));
+            // Prepare candlestick data
+            const wicks = [];
+            const bullishCandles = [];
+            const bearishCandles = [];
+            
+            latestCandles.forEach(candle => {
+                const open = parseFloat(candle.open);
+                const high = parseFloat(candle.high);
+                const low = parseFloat(candle.low);
+                const close = parseFloat(candle.close);
+                
+                // Wicks (high-low range)
+                wicks.push([low, high]);
+                
+                // Candle bodies
+                if (close >= open) {
+                    // Bullish candle
+                    bullishCandles.push([open, close]);
+                    bearishCandles.push([0, 0]);
+                } else {
+                    // Bearish candle
+                    bearishCandles.push([close, open]);
+                    bullishCandles.push([0, 0]);
+                }
+            });
             
             // Update chart data
             candlestickChart.data.labels = labels;
-            candlestickChart.data.datasets[0].data = opens;
-            candlestickChart.data.datasets[1].data = highs;
-            candlestickChart.data.datasets[2].data = lows;
-            candlestickChart.data.datasets[3].data = closes;
+            candlestickChart.data.datasets[0].data = wicks;
+            candlestickChart.data.datasets[1].data = bullishCandles;
+            candlestickChart.data.datasets[2].data = bearishCandles;
             candlestickChart.update();
         }
         
