@@ -144,7 +144,8 @@
             display: flex;
             gap: 15px;
             flex-wrap: wrap;
-            justify-content: flex-start;
+            justify-content: center;
+            margin-bottom: 30px;
         }
         
         .btn {
@@ -176,42 +177,6 @@
         .btn-success:hover {
             background: #1e7e34;
             transform: translateY(-2px);
-        }
-        
-        .ticks-table-container {
-            padding: 30px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .ticks-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .ticks-table th {
-            background: #343a40;
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-size: 0.9rem;
-        }
-        
-        .ticks-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e9ecef;
-            transition: background-color 0.3s ease;
-        }
-        
-        .ticks-table tbody tr:hover {
-            background: #f8f9fa;
         }
         
         .loading {
@@ -309,48 +274,8 @@
         </div>
         
         <div class="controls">
-            <button class="btn btn-primary" onclick="loadAllTicks()">Load All Ticks</button>
             <button class="btn btn-success" onclick="refreshLatestTick()">Refresh Latest</button>
             <button class="btn btn-primary" onclick="refreshChart()">Refresh Charts</button>
-            <a href="/charts" class="btn btn-primary">View Charts</a>
-            <a href="/api/all-ticks" class="btn btn-primary" target="_blank">View Raw Ticks</a>
-            <a href="/api/1min-candles" class="btn btn-success" target="_blank">View 1Min Data</a>
-            <a href="/api/5min-candles" class="btn btn-success" target="_blank">View 5Min Data</a>
-        </div>
-        
-        <div class="ticks-table-container">
-            <h3 style="margin-bottom: 20px; color: #343a40;">Data Views</h3>
-            
-            <!-- Tab Navigation -->
-            <div style="margin-bottom: 20px;">
-                <button class="btn btn-primary" onclick="showTab('ticks')" id="ticksTab">Recent Ticks</button>
-                <button class="btn btn-primary" onclick="showTab('1min')" id="1minTab">1Min Candles</button>
-                <button class="btn btn-primary" onclick="showTab('5min')" id="5minTab">5Min Candles</button>
-            </div>
-            
-            <!-- Ticks Table -->
-            <div id="ticksView" class="data-view">
-                <h4 style="margin-bottom: 15px; color: #343a40;">Recent Ticks History</h4>
-                <div id="ticksTableContainer">
-                    <div class="loading">Loading ticks data...</div>
-                </div>
-            </div>
-            
-            <!-- 1Min Candles Table -->
-            <div id="1minView" class="data-view" style="display: none;">
-                <h4 style="margin-bottom: 15px; color: #343a40;">1-Minute Candlesticks</h4>
-                <div id="1minTableContainer">
-                    <div class="loading">Loading 1-minute candles...</div>
-                </div>
-            </div>
-            
-            <!-- 5Min Candles Table -->
-            <div id="5minView" class="data-view" style="display: none;">
-                <h4 style="margin-bottom: 15px; color: #343a40;">5-Minute Candlesticks</h4>
-                <div id="5minTableContainer">
-                    <div class="loading">Loading 5-minute candles...</div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -423,21 +348,21 @@
                 }
             });
 
-            // Initialize candlestick chart
+            // Initialize candlestick chart with proper OHLC visualization
             const ctx2 = document.getElementById('candlestickChart').getContext('2d');
             candlestickChart = new Chart(ctx2, {
                 type: 'bar',
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'Wicks',
+                        label: 'High-Low Range',
                         data: [],
                         backgroundColor: 'rgba(0, 0, 0, 0)',
-                        borderColor: '#333333',
+                        borderColor: '#000000',
                         borderWidth: 1,
-                        borderSkipped: false,
-                        barPercentage: 0.1,
-                        categoryPercentage: 1.0
+                        barPercentage: 0.05,
+                        categoryPercentage: 1.0,
+                        order: 1
                     }, {
                         label: 'Bullish Candles',
                         data: [],
@@ -445,7 +370,8 @@
                         borderColor: '#16a34a',
                         borderWidth: 1,
                         barPercentage: 0.6,
-                        categoryPercentage: 1.0
+                        categoryPercentage: 1.0,
+                        order: 2
                     }, {
                         label: 'Bearish Candles',
                         data: [],
@@ -453,7 +379,8 @@
                         borderColor: '#dc2626',
                         borderWidth: 1,
                         barPercentage: 0.6,
-                        categoryPercentage: 1.0
+                        categoryPercentage: 1.0,
+                        order: 3
                     }]
                 },
                 options: {
@@ -465,23 +392,23 @@
                             position: 'top'
                         },
                         tooltip: {
-                            filter: function(tooltipItem) {
-                                return tooltipItem.datasetIndex !== 0; // Hide tooltip for wicks dataset
-                            },
                             callbacks: {
-                                beforeLabel: function(context) {
-                                    const dataIndex = context.dataIndex;
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                beforeBody: function(context) {
+                                    const dataIndex = context[0].dataIndex;
                                     const candles = candlestickChart.candleData || [];
                                     const candle = candles[dataIndex];
                                     if (candle) {
                                         return [
-                                            `Open: ${candle.open.toFixed(3)}`,
-                                            `High: ${candle.high.toFixed(3)}`,
-                                            `Low: ${candle.low.toFixed(3)}`,
-                                            `Close: ${candle.close.toFixed(3)}`
+                                            `Open: ${parseFloat(candle.open).toFixed(3)}`,
+                                            `High: ${parseFloat(candle.high).toFixed(3)}`,
+                                            `Low: ${parseFloat(candle.low).toFixed(3)}`,
+                                            `Close: ${parseFloat(candle.close).toFixed(3)}`
                                         ];
                                     }
-                                    return '';
+                                    return [];
                                 },
                                 label: function(context) {
                                     return '';
@@ -518,7 +445,7 @@
         
         // Update ticks chart with new data
         function updateTicksChart(ticks) {
-            if (!priceChart) return;
+            if (!priceChart || !ticks || ticks.length === 0) return;
             
             // Sort ticks by epoch
             const sortedTicks = ticks.sort((a, b) => a.epoch - b.epoch);
@@ -542,7 +469,9 @@
 
         // Update candlestick chart with new data
         function updateCandlestickChart(candles) {
-            if (!candlestickChart) return;
+            if (!candlestickChart || !candles || candles.length === 0) return;
+            
+            console.log('Updating candlestick chart with data:', candles);
             
             // Sort candles by epoch
             const sortedCandles = candles.sort((a, b) => a.epoch - b.epoch);
@@ -560,7 +489,7 @@
             });
             
             // Prepare candlestick data
-            const wicks = [];
+            const highLowRanges = [];
             const bullishCandles = [];
             const bearishCandles = [];
             
@@ -570,48 +499,77 @@
                 const low = parseFloat(candle.low);
                 const close = parseFloat(candle.close);
                 
-                // Wicks (high-low range)
-                wicks.push([low, high]);
+                // High-Low range (wicks)
+                highLowRanges.push({
+                    x: candle.epoch,
+                    y: [low, high]
+                });
                 
                 // Candle bodies
                 if (close >= open) {
-                    // Bullish candle
-                    bullishCandles.push([open, close]);
-                    bearishCandles.push([0, 0]);
+                    // Bullish candle (green)
+                    bullishCandles.push({
+                        x: candle.epoch,
+                        y: [open, close]
+                    });
+                    bearishCandles.push({
+                        x: candle.epoch,
+                        y: [0, 0]
+                    });
                 } else {
-                    // Bearish candle
-                    bearishCandles.push([close, open]);
-                    bullishCandles.push([0, 0]);
+                    // Bearish candle (red)
+                    bearishCandles.push({
+                        x: candle.epoch,
+                        y: [close, open]
+                    });
+                    bullishCandles.push({
+                        x: candle.epoch,
+                        y: [0, 0]
+                    });
                 }
             });
             
             // Update chart data
             candlestickChart.data.labels = labels;
-            candlestickChart.data.datasets[0].data = wicks;
-            candlestickChart.data.datasets[1].data = bullishCandles;
-            candlestickChart.data.datasets[2].data = bearishCandles;
+            candlestickChart.data.datasets[0].data = highLowRanges.map(item => item.y);
+            candlestickChart.data.datasets[1].data = bullishCandles.map(item => item.y);
+            candlestickChart.data.datasets[2].data = bearishCandles.map(item => item.y);
             candlestickChart.update();
+            
+            console.log('Candlestick chart updated successfully');
         }
         
         // Load chart data from API
         async function loadChartData() {
             try {
+                console.log('Loading chart data...');
+                
                 // Load ticks data
                 const ticksResponse = await fetch('/api/all-ticks');
-                const ticksData = await ticksResponse.json();
-                
-                if (ticksData && Object.keys(ticksData).length > 0) {
-                    const ticks = Object.values(ticksData);
-                    updateTicksChart(ticks);
+                if (ticksResponse.ok) {
+                    const ticksData = await ticksResponse.json();
+                    console.log('Ticks data loaded:', ticksData);
+                    
+                    if (ticksData && typeof ticksData === 'object' && Object.keys(ticksData).length > 0) {
+                        const ticks = Object.values(ticksData);
+                        updateTicksChart(ticks);
+                    }
                 }
 
                 // Load 1-minute candles data
                 const candlesResponse = await fetch('/api/1min-candles');
-                const candlesData = await candlesResponse.json();
-                
-                if (candlesData && Object.keys(candlesData).length > 0) {
-                    const candles = Object.values(candlesData);
-                    updateCandlestickChart(candles);
+                if (candlesResponse.ok) {
+                    const candlesData = await candlesResponse.json();
+                    console.log('1min candles data loaded:', candlesData);
+                    
+                    if (candlesData && typeof candlesData === 'object' && Object.keys(candlesData).length > 0) {
+                        const candles = Object.values(candlesData);
+                        updateCandlestickChart(candles);
+                    } else {
+                        console.log('No 1min candles data available');
+                    }
+                } else {
+                    console.error('Failed to load 1min candles:', candlesResponse.status);
                 }
             } catch (error) {
                 console.error('Error loading chart data:', error);
@@ -620,55 +578,11 @@
         
         // Refresh charts manually
         async function refreshChart() {
+            console.log('Refreshing charts...');
             await loadChartData();
         }
         
-        // Auto-refresh latest tick every 2 seconds
-        setInterval(refreshLatestTick, 2000);
-        
-        // Auto-refresh charts every 5 seconds
-        setInterval(loadChartData, 5000);
-        
-        // Load all data on page load
-        window.onload = function() {
-            initCharts();
-            refreshLatestTick();
-            loadAllTicks();
-            loadChartData();
-            showTab('ticks');
-        };
-        
-        function showTab(tabName) {
-            // Hide all views
-            document.querySelectorAll('.data-view').forEach(view => {
-                view.style.display = 'none';
-            });
-            
-            // Show selected view
-            document.getElementById(tabName + 'View').style.display = 'block';
-            
-            // Update tab buttons
-            document.getElementById('ticksTab').classList.remove('btn-success');
-            document.getElementById('1minTab').classList.remove('btn-success');
-            document.getElementById('5minTab').classList.remove('btn-success');
-
-            document.getElementById('ticksTab').classList.add('btn-primary');
-            document.getElementById('1minTab').classList.add('btn-primary');
-            document.getElementById('5minTab').classList.add('btn-primary');
-
-            document.getElementById(tabName + 'Tab').classList.remove('btn-primary');
-            document.getElementById(tabName + 'Tab').classList.add('btn-success');
-
-            // Load data for the selected tab
-            if (tabName === 'ticks') {
-                loadAllTicks();
-            } else if (tabName === '1min') {
-                load1MinCandles();
-            } else if (tabName === '5min') {
-                load5MinCandles();
-            }
-        }
-        
+        // Refresh latest tick
         async function refreshLatestTick() {
             try {
                 const response = await fetch('/api/latest-tick');
@@ -686,152 +600,6 @@
             }
         }
         
-        async function loadAllTicks() {
-            const container = document.getElementById('ticksTableContainer');
-            container.innerHTML = '<div class="loading">Loading ticks data...</div>';
-            
-            try {
-                const response = await fetch('/api/all-ticks');
-                const data = await response.json();
-                
-                if (data && Object.keys(data).length > 0) {
-                    const ticks = Object.values(data).sort((a, b) => b.epoch - a.epoch);
-                    
-                    let tableHTML = `
-                        <table class="ticks-table">
-                            <thead>
-                                <tr>
-                                    <th>Symbol</th>
-                                    <th>Quote</th>
-                                    <th>Epoch</th>
-                                    <th>Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
-                    ticks.slice(0, 50).forEach(tick => {
-                        tableHTML += `
-                            <tr>
-                                <td>${tick.symbol || '--'}</td>
-                                <td>${tick.quote || '--'}</td>
-                                <td>${tick.epoch || '--'}</td>
-                                <td>${formatTimestamp(tick.timestamp) || '--'}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tableHTML += '</tbody></table>';
-                    container.innerHTML = tableHTML;
-                } else {
-                    container.innerHTML = '<div class="loading">No ticks data available</div>';
-                }
-            } catch (error) {
-                console.error('Error loading ticks:', error);
-                container.innerHTML = '<div class="error">Error loading ticks data</div>';
-            }
-        }
-        
-        async function load1MinCandles() {
-            const container = document.getElementById('1minTableContainer');
-            container.innerHTML = '<div class="loading">Loading 1-minute candles...</div>';
-            
-            try {
-                const response = await fetch('/api/1min-candles');
-                const data = await response.json();
-                
-                if (data && Object.keys(data).length > 0) {
-                    const candles = Object.values(data).sort((a, b) => b.epoch - a.epoch);
-                    
-                    let tableHTML = `
-                        <table class="ticks-table">
-                            <thead>
-                                <tr>
-                                    <th>Epoch</th>
-                                    <th>Open</th>
-                                    <th>High</th>
-                                    <th>Low</th>
-                                    <th>Close</th>
-                                    <th>Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
-                    candles.slice(0, 50).forEach(candle => {
-                        tableHTML += `
-                            <tr>
-                                <td>${candle.epoch || '--'}</td>
-                                <td>${Number(candle.open).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.high).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.low).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.close).toFixed(3) || '--'}</td>
-                                <td>${formatTimestamp(candle.timestamp) || '--'}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tableHTML += '</tbody></table>';
-                    container.innerHTML = tableHTML;
-                } else {
-                    container.innerHTML = '<div class="loading">No 1-minute candles available</div>';
-                }
-            } catch (error) {
-                console.error('Error loading 1min candles:', error);
-                container.innerHTML = '<div class="error">Error loading 1-minute candles</div>';
-            }
-        }
-        
-        async function load5MinCandles() {
-            const container = document.getElementById('5minTableContainer');
-            container.innerHTML = '<div class="loading">Loading 5-minute candles...</div>';
-            
-            try {
-                const response = await fetch('/api/5min-candles');
-                const data = await response.json();
-                
-                if (data && Object.keys(data).length > 0) {
-                    const candles = Object.values(data).sort((a, b) => b.epoch - a.epoch);
-                    
-                    let tableHTML = `
-                        <table class="ticks-table">
-                            <thead>
-                                <tr>
-                                    <th>Epoch</th>
-                                    <th>Open</th>
-                                    <th>High</th>
-                                    <th>Low</th>
-                                    <th>Close</th>
-                                    <th>Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
-                    candles.slice(0, 50).forEach(candle => {
-                        tableHTML += `
-                            <tr>
-                                <td>${candle.epoch || '--'}</td>
-                                <td>${Number(candle.open).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.high).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.low).toFixed(3) || '--'}</td>
-                                <td>${Number(candle.close).toFixed(3) || '--'}</td>
-                                <td>${formatTimestamp(candle.timestamp) || '--'}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    tableHTML += '</tbody></table>';
-                    container.innerHTML = tableHTML;
-                } else {
-                    container.innerHTML = '<div class="loading">No 5-minute candles available</div>';
-                }
-            } catch (error) {
-                console.error('Error loading 5min candles:', error);
-                container.innerHTML = '<div class="error">Error loading 5-minute candles</div>';
-            }
-        }
-        
         function formatTimestamp(timestamp) {
             if (!timestamp) return '--';
             try {
@@ -840,6 +608,20 @@
                 return timestamp;
             }
         }
+        
+        // Auto-refresh latest tick every 2 seconds
+        setInterval(refreshLatestTick, 2000);
+        
+        // Auto-refresh charts every 5 seconds
+        setInterval(loadChartData, 5000);
+        
+        // Load all data on page load
+        window.onload = function() {
+            console.log('Page loaded, initializing...');
+            initCharts();
+            refreshLatestTick();
+            loadChartData();
+        };
     </script>
 </body>
 </html>
