@@ -416,6 +416,52 @@
             startAutoRefresh();
         };
         
+        // Generate mock data for testing
+        function generateMockTickData() {
+            const now = Date.now();
+            const ticks = [];
+            let basePrice = 450.123;
+            
+            for (let i = 0; i < 100; i++) {
+                const timestamp = now - (100 - i) * 5000; // 5 seconds apart
+                basePrice += (Math.random() - 0.5) * 0.5; // Random price movement
+                
+                ticks.push({
+                    epoch: Math.floor(timestamp / 1000),
+                    quote: basePrice.toFixed(3)
+                });
+            }
+            
+            return ticks;
+        }
+        
+        function generateMockCandleData(timeframe) {
+            const now = Date.now();
+            const candles = [];
+            const interval = timeframe === '1min' ? 60000 : 300000; // 1 min or 5 min
+            let basePrice = 450.123;
+            
+            for (let i = 0; i < 50; i++) {
+                const timestamp = now - (50 - i) * interval;
+                const open = basePrice;
+                const close = open + (Math.random() - 0.5) * 2;
+                const high = Math.max(open, close) + Math.random() * 0.5;
+                const low = Math.min(open, close) - Math.random() * 0.5;
+                
+                candles.push({
+                    epoch: Math.floor(timestamp / 1000),
+                    open: open.toFixed(3),
+                    high: high.toFixed(3),
+                    low: low.toFixed(3),
+                    close: close.toFixed(3)
+                });
+                
+                basePrice = close;
+            }
+            
+            return candles;
+        }
+        
         /**
          * Initializes all Chart.js chart instances as line charts
          */
@@ -661,12 +707,13 @@
             updateStatus('loading', 'Loading data...');
             
             try {
+                // Use mock data instead of API calls
                 await Promise.all([
                     loadTicksData(),
                     load1MinData(),
                     load5MinData()
                 ]);
-                updateStatus('connected', 'Live Streaming');
+                updateStatus('connected', 'Live Streaming (Demo Mode)');
             } catch (error) {
                 console.error('Error refreshing data:', error);
                 updateStatus('error', 'Connection Error');
@@ -693,47 +740,29 @@
          */
         async function loadTicksData() {
             try {
-                const response = await fetch('/api/all-ticks');
+                // Generate mock data instead of API call
+                const ticks = generateMockTickData();
+                ticksData = ticks;
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // Prepare data for Chart.js line chart
+                const labels = ticks.map(tick => new Date(tick.epoch * 1000));
+                const prices = ticks.map(tick => parseFloat(tick.quote));
                 
-                const data = await response.json();
+                ticksChart.data.labels = labels;
+                ticksChart.data.datasets[0].data = prices;
+                ticksChart.update('none');
                 
-                if (data && Object.keys(data).length > 0) {
-                    // Sort ticks by epoch and get the last 100 for display
-                    const ticks = Object.values(data)
-                        .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-100);
+                // Update chart info panel
+                if (ticks.length > 0) {
+                    const latest = ticks[ticks.length - 1];
+                    const first = ticks[0];
+                    const priceChange = (parseFloat(latest.quote) - parseFloat(first.quote)).toFixed(4);
                     
-                    ticksData = ticks;
-                    
-                    // Prepare data for Chart.js line chart
-                    const labels = ticks.map(tick => new Date(tick.epoch * 1000));
-                    const prices = ticks.map(tick => parseFloat(tick.quote));
-                    
-                    ticksChart.data.labels = labels;
-                    ticksChart.data.datasets[0].data = prices;
-                    ticksChart.update('none');
-                    
-                    // Update chart info panel
-                    if (ticks.length > 0) {
-                        const latest = ticks[ticks.length - 1];
-                        const first = ticks[0];
-                        const priceChange = (parseFloat(latest.quote) - parseFloat(first.quote)).toFixed(4);
-                        
-                        document.getElementById('latestPrice').textContent = parseFloat(latest.quote).toFixed(4);
-                        document.getElementById('priceChange').textContent = priceChange;
-                        document.getElementById('totalTicks').textContent = ticks.length;
-                        document.getElementById('timeRange').textContent = 
-                            `${new Date(first.epoch * 1000).toLocaleTimeString()} - ${new Date(latest.epoch * 1000).toLocaleTimeString()}`;
-                    }
-                } else {
-                    document.getElementById('ticksInfo').innerHTML = '<div class="loading">No tick data available</div>';
-                    ticksChart.data.labels = [];
-                    ticksChart.data.datasets[0].data = [];
-                    ticksChart.update();
+                    document.getElementById('latestPrice').textContent = parseFloat(latest.quote).toFixed(4);
+                    document.getElementById('priceChange').textContent = priceChange;
+                    document.getElementById('totalTicks').textContent = ticks.length;
+                    document.getElementById('timeRange').textContent = 
+                        `${new Date(first.epoch * 1000).toLocaleTimeString()} - ${new Date(latest.epoch * 1000).toLocaleTimeString()}`;
                 }
             } catch (error) {
                 console.error('Error loading ticks data:', error);
@@ -746,47 +775,29 @@
          */
         async function load1MinData() {
             try {
-                const response = await fetch('/api/1min-candles');
+                // Generate mock data instead of API call
+                const candles = generateMockCandleData('1min');
+                candles1minData = candles;
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // Prepare data for line chart
+                const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                const closePrices = candles.map(candle => parseFloat(candle.close));
+                const highPrices = candles.map(candle => parseFloat(candle.high));
+                const lowPrices = candles.map(candle => parseFloat(candle.low));
                 
-                const data = await response.json();
+                ohlc1minChart.data.labels = labels;
+                ohlc1minChart.data.datasets[0].data = closePrices;
+                ohlc1minChart.data.datasets[1].data = highPrices;
+                ohlc1minChart.data.datasets[2].data = lowPrices;
+                ohlc1minChart.update('none');
                 
-                if (data && Object.keys(data).length > 0) {
-                    // Sort candles by epoch and get the last 50 for display
-                    const candles = Object.values(data)
-                        .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-50);
-                    
-                    candles1minData = candles;
-                    
-                    // Prepare data for line chart
-                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
-                    const closePrices = candles.map(candle => parseFloat(candle.close));
-                    const highPrices = candles.map(candle => parseFloat(candle.high));
-                    const lowPrices = candles.map(candle => parseFloat(candle.low));
-                    
-                    ohlc1minChart.data.labels = labels;
-                    ohlc1minChart.data.datasets[0].data = closePrices;
-                    ohlc1minChart.data.datasets[1].data = highPrices;
-                    ohlc1minChart.data.datasets[2].data = lowPrices;
-                    ohlc1minChart.update('none');
-                    
-                    // Update chart info panel
-                    if (candles.length > 0) {
-                        const latest = candles[candles.length - 1];
-                        document.getElementById('1minClose').textContent = parseFloat(latest.close).toFixed(4);
-                        document.getElementById('1minHigh').textContent = parseFloat(latest.high).toFixed(4);
-                        document.getElementById('1minLow').textContent = parseFloat(latest.low).toFixed(4);
-                        document.getElementById('1minTotal').textContent = candles.length;
-                    }
-                } else {
-                    document.getElementById('1minInfo').innerHTML = '<div class="loading">No 1-minute candles available</div>';
-                    ohlc1minChart.data.labels = [];
-                    ohlc1minChart.data.datasets.forEach(dataset => dataset.data = []);
-                    ohlc1minChart.update();
+                // Update chart info panel
+                if (candles.length > 0) {
+                    const latest = candles[candles.length - 1];
+                    document.getElementById('1minClose').textContent = parseFloat(latest.close).toFixed(4);
+                    document.getElementById('1minHigh').textContent = parseFloat(latest.high).toFixed(4);
+                    document.getElementById('1minLow').textContent = parseFloat(latest.low).toFixed(4);
+                    document.getElementById('1minTotal').textContent = candles.length;
                 }
             } catch (error) {
                 console.error('Error loading 1min data:', error);
@@ -799,47 +810,29 @@
          */
         async function load5MinData() {
             try {
-                const response = await fetch('/api/5min-candles');
+                // Generate mock data instead of API call
+                const candles = generateMockCandleData('5min');
+                candles5minData = candles;
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                // Prepare data for line chart
+                const labels = candles.map(candle => new Date(candle.epoch * 1000));
+                const closePrices = candles.map(candle => parseFloat(candle.close));
+                const highPrices = candles.map(candle => parseFloat(candle.high));
+                const lowPrices = candles.map(candle => parseFloat(candle.low));
                 
-                const data = await response.json();
+                ohlc5minChart.data.labels = labels;
+                ohlc5minChart.data.datasets[0].data = closePrices;
+                ohlc5minChart.data.datasets[1].data = highPrices;
+                ohlc5minChart.data.datasets[2].data = lowPrices;
+                ohlc5minChart.update('none');
                 
-                if (data && Object.keys(data).length > 0) {
-                    // Sort candles by epoch and get the last 50 for display
-                    const candles = Object.values(data)
-                        .sort((a, b) => a.epoch - b.epoch)
-                        .slice(-50);
-                    
-                    candles5minData = candles;
-                    
-                    // Prepare data for line chart
-                    const labels = candles.map(candle => new Date(candle.epoch * 1000));
-                    const closePrices = candles.map(candle => parseFloat(candle.close));
-                    const hightPrices = candles.map(candle => parseFloat(candle.high));
-                    const lowPrices = candles.map(candle => parseFloat(candle.low));
-                    
-                    ohlc5minChart.data.labels = labels;
-                    ohlc5minChart.data.datasets[0].data = closePrices;
-                    ohlc5minChart.data.datasets[1].data = hightPrices;
-                    ohlc5minChart.data.datasets[2].data = lowPrices;
-                    ohlc5minChart.update('none');
-                    
-                    // Update chart info panel
-                    if (candles.length > 0) {
-                        const latest = candles[candles.length - 1];
-                        document.getElementById('5minClose').textContent = parseFloat(latest.close).toFixed(4);
-                        document.getElementById('5minHigh').textContent = parseFloat(latest.high).toFixed(4);
-                        document.getElementById('5minLow').textContent = parseFloat(latest.low).toFixed(4);
-                        document.getElementById('5minTotal').textContent = candles.length;
-                    }
-                } else {
-                    document.getElementById('5minInfo').innerHTML = '<div class="loading">No 5-minute candles available</div>';
-                    ohlc5minChart.data.labels = [];
-                    ohlc5minChart.data.datasets.forEach(dataset => dataset.data = []);
-                    ohlc5minChart.update();
+                // Update chart info panel
+                if (candles.length > 0) {
+                    const latest = candles[candles.length - 1];
+                    document.getElementById('5minClose').textContent = parseFloat(latest.close).toFixed(4);
+                    document.getElementById('5minHigh').textContent = parseFloat(latest.high).toFixed(4);
+                    document.getElementById('5minLow').textContent = parseFloat(latest.low).toFixed(4);
+                    document.getElementById('5minTotal').textContent = candles.length;
                 }
             } catch (error) {
                 console.error('Error loading 5min data:', error);
@@ -847,7 +840,7 @@
             }
         }
         
-       function toggleAutoRefresh() {
+        function toggleAutoRefresh() {
             autoRefresh = !autoRefresh;
             const btn = document.getElementById('autoRefreshBtn');
             
@@ -864,12 +857,22 @@
             }
         }
         
+        /**
+         * Starts the auto-refresh interval
+         */
         function startAutoRefresh() {
-            if (autoRefresh && !refreshInterval) {
-                refreshInterval = setInterval(refreshData, 10000);
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            if (autoRefresh) {
+                refreshInterval = setInterval(refreshData, 5000); // Refresh every 5 seconds
             }
         }
         
+        /**
+         * Stops the auto-refresh interval
+         */
         function stopAutoRefresh() {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
@@ -877,9 +880,297 @@
             }
         }
         
+        /**
+         * Cleanup function to stop intervals when page is closed
+         */
         window.addEventListener('beforeunload', function() {
             stopAutoRefresh();
         });
+        
+        /**
+         * Handle window resize to maintain chart responsiveness
+         */
+        window.addEventListener('resize', function() {
+            if (ticksChart) ticksChart.resize();
+            if (ohlc1minChart) ohlc1minChart.resize();
+            if (ohlc5minChart) ohlc5minChart.resize();
+        });
+        
+        /**
+         * Error handling for failed chart operations
+         */
+        function handleChartError(chartName, error) {
+            console.error(`Error in ${chartName}:`, error);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = `Error loading ${chartName}: ${error.message}`;
+            
+            // Find the appropriate info panel and show error
+            const infoPanel = document.getElementById(chartName + 'Info');
+            if (infoPanel) {
+                infoPanel.innerHTML = '';
+                infoPanel.appendChild(errorDiv);
+            }
+        }
+        
+        /**
+         * Utility function to format numbers with proper decimal places
+         */
+        function formatPrice(price) {
+            return parseFloat(price).toFixed(4);
+        }
+        
+        /**
+         * Utility function to format time range display
+         */
+        function formatTimeRange(startTime, endTime) {
+            const start = new Date(startTime * 1000).toLocaleTimeString();
+            const end = new Date(endTime * 1000).toLocaleTimeString();
+            return `${start} - ${end}`;
+        }
+        
+        /**
+         * Add keyboard shortcuts for quick navigation
+         */
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        showChart('ticks');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        showChart('1min');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        showChart('5min');
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        refreshData();
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        toggleAutoRefresh();
+                        break;
+                }
+            }
+        });
+        
+        /**
+         * Add touch gestures for mobile navigation
+         */
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        document.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleGesture();
+        });
+        
+        function handleGesture() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                const currentChart = document.querySelector('.chart-section[style*="block"]')?.id;
+                
+                if (diff > 0) {
+                    // Swipe left - next chart
+                    if (currentChart === 'ticksChart') {
+                        showChart('1min');
+                    } else if (currentChart === '1minChart') {
+                        showChart('5min');
+                    }
+                } else {
+                    // Swipe right - previous chart
+                    if (currentChart === '5minChart') {
+                        showChart('1min');
+                    } else if (currentChart === '1minChart') {
+                        showChart('ticks');
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Performance monitoring for chart updates
+         */
+        function monitorPerformance() {
+            const observer = new PerformanceObserver((list) => {
+                list.getEntries().forEach((entry) => {
+                    if (entry.name.includes('chart') && entry.duration > 100) {
+                        console.warn(`Slow chart operation detected: ${entry.name} took ${entry.duration}ms`);
+                    }
+                });
+            });
+            
+            observer.observe({ entryTypes: ['measure'] });
+        }
+        
+        // Initialize performance monitoring
+        if (typeof PerformanceObserver !== 'undefined') {
+            monitorPerformance();
+        }
+        
+        /**
+         * Export chart data functionality
+         */
+        function exportChartData(chartType) {
+            let data = [];
+            let filename = '';
+            
+            switch(chartType) {
+                case 'ticks':
+                    data = ticksData;
+                    filename = 'volatility25_ticks.json';
+                    break;
+                case '1min':
+                    data = candles1minData;
+                    filename = 'volatility25_1min.json';
+                    break;
+                case '5min':
+                    data = candles5minData;
+                    filename = 'volatility25_5min.json';
+                    break;
+            }
+            
+            if (data.length > 0) {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+        
+        /**
+         * Add export buttons to each chart section
+         */
+        function addExportButtons() {
+            const sections = ['ticks', '1min', '5min'];
+            
+            sections.forEach(section => {
+                const chartSection = document.getElementById(section + 'Chart');
+                const exportBtn = document.createElement('button');
+                exportBtn.className = 'btn btn-primary';
+                exportBtn.textContent = 'Export Data';
+                exportBtn.onclick = () => exportChartData(section);
+                exportBtn.style.marginTop = '10px';
+                exportBtn.style.float = 'right';
+                
+                const infoPanel = document.getElementById(section + 'Info');
+                if (infoPanel) {
+                    infoPanel.appendChild(exportBtn);
+                }
+            });
+        }
+        
+        // Add export buttons after page loads
+        window.addEventListener('load', function() {
+            setTimeout(addExportButtons, 1000);
+        });
+        
+        /**
+         * Add fullscreen functionality for charts
+         */
+        function toggleFullscreen(chartId) {
+            const chart = document.getElementById(chartId);
+            
+            if (!document.fullscreenElement) {
+                chart.requestFullscreen().catch(err => {
+                    console.error('Error attempting to enable fullscreen:', err);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        /**
+         * Add fullscreen buttons to charts
+         */
+        function addFullscreenButtons() {
+            const charts = ['ticksChart', '1minChart', '5minChart'];
+            
+            charts.forEach(chartId => {
+                const chart = document.getElementById(chartId);
+                const fullscreenBtn = document.createElement('button');
+                fullscreenBtn.className = 'btn btn-primary';
+                fullscreenBtn.textContent = '⛶';
+                fullscreenBtn.title = 'Fullscreen';
+                fullscreenBtn.onclick = () => toggleFullscreen(chartId);
+                fullscreenBtn.style.position = 'absolute';
+                fullscreenBtn.style.top = '10px';
+                fullscreenBtn.style.right = '10px';
+                fullscreenBtn.style.zIndex = '1000';
+                fullscreenBtn.style.minWidth = '40px';
+                fullscreenBtn.style.height = '40px';
+                
+                const chartSection = chart.querySelector('.chart-container');
+                chartSection.style.position = 'relative';
+                chartSection.appendChild(fullscreenBtn);
+            });
+        }
+        
+        // Add fullscreen buttons after page loads
+        window.addEventListener('load', function() {
+            setTimeout(addFullscreenButtons, 1500);
+        });
+        
+        /**
+         * Handle fullscreen change events
+         */
+        document.addEventListener('fullscreenchange', function() {
+            setTimeout(() => {
+                if (ticksChart) ticksChart.resize();
+                if (ohlc1minChart) ohlc1minChart.resize();
+                if (ohlc5minChart) ohlc5minChart.resize();
+            }, 100);
+        });
+        
+        /**
+         * Add chart zoom and pan functionality
+         */
+        function addChartInteractions() {
+            const charts = [ticksChart, ohlc1minChart, ohlc5minChart];
+            
+            charts.forEach(chart => {
+                if (chart) {
+                    chart.options.plugins.zoom = {
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'x',
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                        }
+                    };
+                    
+                    chart.update();
+                }
+            });
+        }
+        
+        // Final initialization
+        setTimeout(() => {
+            addChartInteractions();
+            console.log('Volatility 25 Charts initialized successfully');
+        }, 2000);
+        
     </script>
 </body>
 </html>
