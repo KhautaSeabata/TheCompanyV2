@@ -14,7 +14,7 @@
         }
         .chart-container {
             width: 100%;
-            height: 400px; /* Increased height for better visibility */
+            height: 300px; /* Fixed height for charts */
             background-color: #2d3748; /* Darker background for charts */
             border-radius: 0.5rem; /* Rounded corners */
             overflow: hidden; /* Hide overflow */
@@ -42,12 +42,18 @@
         .tab-button:hover:not(.active) {
             background-color: #5a6578;
         }
-        /* Hide all chart wrappers by default, only show active one */
-        .chart-wrapper {
-            display: none;
+        .grid-cols-1-md-2-lg-4 {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
         }
-        .chart-wrapper.active {
-            display: block;
+        @media (min-width: 768px) { /* md breakpoint */
+            .grid-cols-1-md-2-lg-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1024px) { /* lg breakpoint */
+            .grid-cols-1-md-2-lg-4 {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
         }
     </style>
 </head>
@@ -55,19 +61,13 @@
     <h1 class="text-3xl md:text-4xl font-bold text-center mb-8 text-blue-400">Deriv Volatility Indices Live Data</h1>
 
     <!-- Symbol Tabs -->
-    <div class="flex flex-wrap justify-center gap-2 mb-4" id="symbol-tabs">
+    <div class="flex flex-wrap justify-center gap-2 mb-8" id="symbol-tabs">
         <!-- Tabs will be dynamically generated here -->
     </div>
 
-    <!-- Timeframe Tabs -->
-    <div class="flex flex-wrap justify-center gap-2 mb-8" id="timeframe-tabs">
-        <!-- Timeframe tabs will be dynamically generated here -->
-    </div>
-
-    <!-- Chart Container -->
-    <div id="chart-section" class="p-4 bg-gray-800 rounded-lg shadow-lg">
-        <h3 class="chart-title text-center text-xl mb-4" id="current-chart-title"></h3>
-        <div id="main-chart-container" class="chart-container"></div>
+    <!-- Chart Containers -->
+    <div id="chart-section" class="grid grid-cols-1-md-2-lg-4 gap-6">
+        <!-- Charts will be dynamically generated here -->
     </div>
 
     <!-- Socket.IO Client Library -->
@@ -84,31 +84,22 @@
             '900': '15 Min Candles'
         };
 
-        let currentChart = null; // Stores the single Lightweight Chart instance
-        let currentSeries = null; // Stores the single series instance
-        let chartDataStore = {}; // Stores all data: { 'symbol_interval': [] }
+        const charts = {}; // Stores chart instances: { 'symbol_interval': chartInstance }
+        const series = {}; // Stores series instances: { 'symbol_interval': seriesInstance }
+        const chartData = {}; // Stores actual data: { 'symbol_interval': [] }
 
         let activeSymbol = SYMBOLS[0]; // Default active symbol
-        let activeTimeframe = 'tick'; // Default active timeframe
 
         // Initialize Socket.IO connection
         const socket = io();
 
-        // Function to create or update the main chart
-        function initializeMainChart() {
-            const container = document.getElementById('main-chart-container');
+        // Function to create a chart
+        function createChart(symbol, interval) {
+            const chartId = `${symbol}_${interval}`;
+            const container = document.getElementById(chartId);
             if (!container) return;
 
-            console.log('Initializing main chart for:', activeSymbol, activeTimeframe);
-
-            // Dispose of existing chart if it exists
-            if (currentChart) {
-                currentChart.remove();
-                console.log('Disposed of existing chart.');
-            }
-
-            // At this point, LightweightCharts should be defined due to the polling mechanism
-            currentChart = LightweightCharts.createChart(container, {
+            const chart = LightweightCharts.createChart(container, {
                 width: container.clientWidth,
                 height: container.clientHeight,
                 layout: {
@@ -136,76 +127,49 @@
                 },
             });
 
-            currentSeries = currentChart.addLineSeries({
-                color: '#63b3ed', // Blue for line chart
-                lineWidth: 2,
-            });
-            console.log('Line series added.');
+            let newSeries;
+            if (interval === 'tick') {
+                newSeries = chart.addLineSeries({
+                    color: '#63b3ed', // Blue for line chart
+                    lineWidth: 2,
+                });
+            } else {
+                newSeries = chart.addCandlestickSeries({
+                    upColor: '#4CAF50',   // Green for up candles
+                    downColor: '#EF5350', // Red for down candles
+                    borderVisible: false,
+                    wickVisible: true,
+                    wickUpColor: '#4CAF50',
+                    wickDownColor: '#EF5350',
+                });
+            }
+
+            charts[chartId] = chart;
+            series[chartId] = newSeries;
+            chartData[chartId] = [];
 
             // Handle window resize to make charts responsive
             new ResizeObserver(entries => {
                 entries.forEach(entry => {
-                    currentChart.applyOptions({ width: entry.contentRect.width, height: entry.contentRect.height });
+                    chart.applyOptions({ width: entry.contentRect.width, height: entry.contentRect.height });
                 });
             }).observe(container);
-
-            // Set initial data for the newly created chart
-            const chartId = `${activeSymbol}_${activeTimeframe}`;
-            if (chartDataStore[chartId] && chartDataStore[chartId].length > 0) {
-                console.log('Setting initial data for chart:', chartId, 'Data points:', chartDataStore[chartId].length);
-                currentSeries.setData(chartDataStore[chartId]);
-            } else {
-                console.log('No initial data found for chart:', chartId);
-            }
         }
 
         // Function to update chart data
         function updateChart(symbol, interval, newData) {
             const chartId = `${symbol}_${interval}`;
-            // console.log('Received update for:', chartId, 'New data:', newData); // Too verbose
-
-            // Store the data
-            if (!chartDataStore[chartId]) {
-                chartDataStore[chartId] = [];
-            }
-            // For candlestick data, we only care about the close price for line chart
-            const dataToStore = interval === 'tick' ? newData : { time: newData.time, value: newData.close };
-            chartDataStore[chartId].push(dataToStore);
-
-            // Keep a reasonable number of data points to prevent performance issues
-            const maxDataPoints = 500; // Adjust as needed
-            if (chartDataStore[chartId].length > maxDataPoints) {
-                chartDataStore[chartId] = chartDataStore[chartId].slice(-maxDataPoints);
-                // console.log('Trimmed data for', chartId, 'to', chartDataStore[chartId].length, 'points.'); // Too verbose
-            }
-
-            // If this is the currently active chart, update it
-            if (symbol === activeSymbol && interval === activeTimeframe) {
-                if (currentSeries) {
-                    // console.log('Updating active chart series with:', dataToStore); // Too verbose
-                    currentSeries.update(dataToStore);
-                } else {
-                    console.log('currentSeries is null, cannot update chart for:', chartId);
-                }
+            if (series[chartId]) {
+                // Lightweight Charts expects 'time' in epoch seconds for candlestick/line series
+                series[chartId].update(newData);
             }
         }
 
         // Function to set initial chart data
         function setInitialChartData(symbol, interval, data) {
             const chartId = `${symbol}_${interval}`;
-            console.log('Received initial data for:', chartId, 'Data points:', data.length);
-
-            chartDataStore[chartId] = data.map(item =>
-                interval === 'tick' ? item : { time: item.time, value: item.close }
-            );
-
-            if (symbol === activeSymbol && interval === activeTimeframe) {
-                if (currentSeries) {
-                    console.log('Setting initial data for active chart series from store:', chartDataStore[chartId].length, 'points.');
-                    currentSeries.setData(chartDataStore[chartId]);
-                } else {
-                    console.log('currentSeries is null, cannot set initial data for:', chartId);
-                }
+            if (series[chartId]) {
+                series[chartId].setData(data);
             }
         }
 
@@ -216,48 +180,65 @@
             SYMBOLS.forEach(symbol => {
                 const button = document.createElement('button');
                 button.className = `tab-button ${symbol === activeSymbol ? 'active' : ''}`;
-                button.textContent = symbol.replace('R_', 'Volatility ');
+                button.textContent = symbol.replace('R_', 'Volatility '); // Make it more readable
                 button.onclick = () => switchSymbol(symbol);
                 tabContainer.appendChild(button);
             });
         }
 
-        function generateTimeframeTabs() {
-            const tabContainer = document.getElementById('timeframe-tabs');
-            tabContainer.innerHTML = ''; // Clear existing tabs
-            Object.keys(INTERVALS).forEach(intervalKey => {
-                const button = document.createElement('button');
-                button.className = `tab-button ${intervalKey === activeTimeframe ? 'active' : ''}`;
-                button.textContent = INTERVALS[intervalKey];
-                button.onclick = () => switchTimeframe(intervalKey);
-                tabContainer.appendChild(button);
-            });
-        }
+        function generateChartContainers() {
+            const chartSection = document.getElementById('chart-section');
+            chartSection.innerHTML = ''; // Clear existing charts
 
-        function updateChartTitle() {
-            const titleElement = document.getElementById('current-chart-title');
-            const symbolText = activeSymbol.replace('R_', 'Volatility ');
-            const timeframeText = INTERVALS[activeTimeframe];
-            titleElement.textContent = `${symbolText} - ${timeframeText}`;
+            Object.keys(INTERVALS).forEach(intervalKey => {
+                const intervalName = INTERVALS[intervalKey];
+                const chartId = `${activeSymbol}_${intervalKey}`;
+
+                const chartWrapper = document.createElement('div');
+                chartWrapper.className = `p-4 bg-gray-800 rounded-lg shadow-lg ${activeSymbol === SYMBOLS[0] ? '' : 'hidden'}`; // Hide initially if not active symbol
+                chartWrapper.id = `wrapper_${chartId}`; // Wrapper ID for toggling visibility
+
+                chartWrapper.innerHTML = `
+                    <h3 class="chart-title text-center text-lg">${activeSymbol.replace('R_', 'Volatility ')} - ${intervalName}</h3>
+                    <div id="${chartId}" class="chart-container"></div>
+                `;
+                chartSection.appendChild(chartWrapper);
+
+                // Create the chart instance after it's in the DOM
+                createChart(activeSymbol, intervalKey);
+            });
         }
 
         function switchSymbol(symbol) {
             if (activeSymbol === symbol) return;
+
+            // Update active tab button
+            document.querySelectorAll('.tab-button').forEach(button => {
+                if (button.textContent.includes(symbol.replace('R_', ''))) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+
+            // Hide all current charts
+            Object.keys(INTERVALS).forEach(intervalKey => {
+                const chartId = `${activeSymbol}_${intervalKey}`;
+                const wrapper = document.getElementById(`wrapper_${chartId}`);
+                if (wrapper) wrapper.classList.add('hidden');
+            });
+
             activeSymbol = symbol;
-            generateSymbolTabs(); // Re-render symbol tabs to update active state
-            updateChartDisplay();
-        }
 
-        function switchTimeframe(timeframe) {
-            if (activeTimeframe === timeframe) return;
-            activeTimeframe = timeframe;
-            generateTimeframeTabs(); // Re-render timeframe tabs to update active state
-            updateChartDisplay();
-        }
+            // Generate new chart containers for the new active symbol
+            generateChartContainers();
 
-        function updateChartDisplay() {
-            updateChartTitle();
-            initializeMainChart(); // Re-initialize the chart with new symbol/timeframe
+            // Show charts for the new active symbol
+            Object.keys(INTERVALS).forEach(intervalKey => {
+                const chartId = `${activeSymbol}_${intervalKey}`;
+                const wrapper = document.getElementById(`wrapper_${chartId}`);
+                if (wrapper) wrapper.classList.remove('hidden');
+            });
         }
 
         // --- Socket.IO Event Handlers ---
@@ -266,21 +247,27 @@
         });
 
         socket.on('initial_tick_data', (msg) => {
-            console.log('Socket.IO: initial_tick_data received for', msg.symbol);
-            setInitialChartData(msg.symbol, 'tick', msg.data);
+            if (msg.symbol === activeSymbol) {
+                setInitialChartData(msg.symbol, 'tick', msg.data);
+            }
         });
 
         socket.on('initial_candlestick_data', (msg) => {
-            console.log('Socket.IO: initial_candlestick_data received for', msg.symbol, 'interval', msg.interval);
-            setInitialChartData(msg.symbol, msg.interval, msg.data);
+            if (msg.symbol === activeSymbol) {
+                setInitialChartData(msg.symbol, msg.interval, msg.data);
+            }
         });
 
         socket.on('tick_update', (msg) => {
-            updateChart(msg.symbol, 'tick', msg.data);
+            if (msg.symbol === activeSymbol) {
+                updateChart(msg.symbol, 'tick', msg.data);
+            }
         });
 
         socket.on('candlestick_update', (msg) => {
-            updateChart(msg.symbol, msg.interval, msg.data);
+            if (msg.symbol === activeSymbol) {
+                updateChart(msg.symbol, msg.interval, msg.data);
+            }
         });
 
         socket.on('disconnect', () => {
@@ -289,19 +276,8 @@
 
         // Initial setup on page load
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM Content Loaded. Starting LightweightCharts check.');
-            // Poll for LightweightCharts to be defined
-            const checkLightweightCharts = setInterval(() => {
-                if (typeof LightweightCharts !== 'undefined' && LightweightCharts.createChart) {
-                    clearInterval(checkLightweightCharts); // Stop polling
-                    console.log('LightweightCharts is now defined. Proceeding with chart initialization.');
-                    generateSymbolTabs();
-                    generateTimeframeTabs();
-                    updateChartDisplay(); // Initialize the first chart
-                } else {
-                    console.log('Waiting for LightweightCharts to load...');
-                }
-            }, 100); // Check every 100ms
+            generateSymbolTabs();
+            generateChartContainers();
         });
     </script>
 </body>
