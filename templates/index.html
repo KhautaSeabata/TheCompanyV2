@@ -59,6 +59,32 @@
             background-color: #ffc107; /* Yellow */
             color: #343a40;
         }
+        .table-responsive {
+            max-height: 300px; /* Limit height for scrollable tables */
+            overflow-y: auto;
+        }
+        .preformatted-json {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.85em;
+            white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+            word-break: break-all; /* Break words to prevent overflow */
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .analysis-signal {
+            border-bottom: 1px dashed #ced4da;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .analysis-signal:last-child {
+            border-bottom: none;
+        }
+        .confidence-high { color: #28a745; font-weight: bold; }
+        .confidence-medium { color: #ffc107; }
+        .confidence-low { color: #dc3545; }
     </style>
 </head>
 <body>
@@ -147,11 +173,115 @@
                 </div>
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">Last 100 1-Minute Candlesticks</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="1minCandleTableBody">
+                                    <tr><td colspan="5">Loading 1-min candles...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">Last 100 5-Minute Candlesticks</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="5minCandleTableBody">
+                                    <tr><td colspan="5">Loading 5-min candles...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">Last 50 Raw Ticks</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Price</th>
+                                        <th>Epoch</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tickDataTableBody">
+                                    <tr><td colspan="3">Loading ticks...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+             <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">Latest Analysis Results</div>
+                    <div class="card-body">
+                        <p><strong>Analysis Timestamp:</strong> <span id="analysisTimestamp">N/A</span></p>
+                        <p><strong>Current Price Analyzed:</strong> <span id="analysisCurrentPrice">N/A</span></p>
+                        <p><strong>RSI:</strong> <span id="analysisRSI">N/A</span></p>
+                        <p><strong>Moving Averages:</strong></p>
+                        <ul id="analysisMAs">
+                            <li>N/A</li>
+                        </ul>
+                        <p><strong>Detected Patterns:</strong></p>
+                        <ul id="analysisPatterns">
+                            <li>N/A</li>
+                        </ul>
+                        <p><strong>Generated Signals:</strong></p>
+                        <div id="analysisSignals">
+                            <p>No signals generated yet. Click "Run Analysis Now".</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     <script>
+        // Helper function to format timestamp
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
         // Function to fetch and update latest tick data
         async function fetchLatestTick() {
             try {
@@ -159,9 +289,7 @@
                 const data = await response.json();
                 if (data && !data.error) {
                     document.getElementById('latestTickPrice').innerText = parseFloat(data.quote).toFixed(5);
-                    // Format timestamp for better readability
-                    const date = new Date(data.timestamp);
-                    document.getElementById('latestTickTimestamp').innerText = date.toLocaleString();
+                    document.getElementById('latestTickTimestamp').innerText = formatTimestamp(data.timestamp);
                     document.getElementById('latestTickSymbol').innerText = data.symbol;
                 } else {
                     document.getElementById('latestTickPrice').innerText = 'N/A';
@@ -187,16 +315,19 @@
 
                     document.getElementById('totalTicks').innerText = data.total_ticks_in_firebase;
                     document.getElementById('activeAlertCount').innerText = data.active_alerts;
-                    document.getElementById('statusTimestamp').innerText = new Date(data.timestamp).toLocaleString();
+                    document.getElementById('statusTimestamp').innerText = formatTimestamp(data.timestamp);
 
                     // Update current 1-min candle
-                    const min1Candle = Object.values(data.current_1min_candle)[0]; // Get the first (and likely only) current candle
+                    // Firebase stores objects, so convert to array of values and find the latest if multiple entries (though it should ideally be just one current candle)
+                    const current1MinCandleValues = Object.values(data.current_1min_candle);
+                    const min1Candle = current1MinCandleValues.length > 0 ? current1MinCandleValues[current1MinCandleValues.length - 1] : null;
+
                     if (min1Candle) {
                         document.getElementById('min1Open').innerText = parseFloat(min1Candle.open).toFixed(5);
                         document.getElementById('min1High').innerText = parseFloat(min1Candle.high).toFixed(5);
                         document.getElementById('min1Low').innerText = parseFloat(min1Candle.low).toFixed(5);
                         document.getElementById('min1Close').innerText = parseFloat(min1Candle.close).toFixed(5);
-                        document.getElementById('min1Timestamp').innerText = new Date(min1Candle.timestamp).toLocaleString();
+                        document.getElementById('min1Timestamp').innerText = formatTimestamp(min1Candle.timestamp);
                     } else {
                         document.getElementById('min1Open').innerText = 'N/A';
                         document.getElementById('min1High').innerText = 'N/A';
@@ -206,13 +337,15 @@
                     }
 
                     // Update current 5-min candle
-                    const min5Candle = Object.values(data.current_5min_candle)[0]; // Get the first (and likely only) current candle
+                    const current5MinCandleValues = Object.values(data.current_5min_candle);
+                    const min5Candle = current5MinCandleValues.length > 0 ? current5MinCandleValues[current5MinCandleValues.length - 1] : null;
+
                     if (min5Candle) {
                         document.getElementById('min5Open').innerText = parseFloat(min5Candle.open).toFixed(5);
                         document.getElementById('min5High').innerText = parseFloat(min5Candle.high).toFixed(5);
                         document.getElementById('min5Low').innerText = parseFloat(min5Candle.low).toFixed(5);
                         document.getElementById('min5Close').innerText = parseFloat(min5Candle.close).toFixed(5);
-                        document.getElementById('min5Timestamp').innerText = new Date(min5Candle.timestamp).toLocaleString();
+                        document.getElementById('min5Timestamp').innerText = formatTimestamp(min5Candle.timestamp);
                     } else {
                         document.getElementById('min5Open').innerText = 'N/A';
                         document.getElementById('min5High').innerText = 'N/A';
@@ -241,9 +374,10 @@
                     data.active_alerts.forEach(alert => {
                         const alertDiv = document.createElement('div');
                         alertDiv.classList.add('alert-item', alert.action.toLowerCase());
+                        const confidenceClass = alert.confidence > 0.8 ? 'confidence-high' : (alert.confidence > 0.6 ? 'confidence-medium' : 'confidence-low');
                         alertDiv.innerHTML = `
                             <strong>${alert.type} (${alert.action})</strong>: ${alert.description}<br>
-                            Price: ${parseFloat(alert.price).toFixed(5)} | Confidence: ${(alert.confidence * 100).toFixed(1)}%<br>
+                            Price: ${parseFloat(alert.price).toFixed(5)} | Confidence: <span class="${confidenceClass}">${(alert.confidence * 100).toFixed(1)}%</span><br>
                             Expiry: ${new Date(alert.expiry).toLocaleTimeString()}
                         `;
                         alertsList.appendChild(alertDiv);
@@ -253,6 +387,159 @@
                 }
             } catch (error) {
                 console.error('Failed to fetch alerts:', error);
+            }
+        }
+
+        // Function to fetch and display 1-minute candlesticks
+        async function fetch1MinCandles() {
+            try {
+                const response = await fetch('/api/1min-candles');
+                const data = await response.json();
+                const tableBody = document.getElementById('1minCandleTableBody');
+                tableBody.innerHTML = ''; // Clear previous data
+
+                if (data) {
+                    // Convert object to array, sort by epoch (key), and take last 100
+                    const candlesArray = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-100);
+
+                    if (candlesArray.length > 0) {
+                        candlesArray.forEach(candle => {
+                            const row = tableBody.insertRow();
+                            row.insertCell().innerText = formatTimestamp(candle.timestamp);
+                            row.insertCell().innerText = parseFloat(candle.open).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.high).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.low).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.close).toFixed(5);
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="5">No 1-minute candles available.</td></tr>';
+                    }
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="5">Failed to load 1-minute candles.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to fetch 1-min candles:', error);
+                const tableBody = document.getElementById('1minCandleTableBody');
+                tableBody.innerHTML = '<tr><td colspan="5">Error loading 1-minute candles.</td></tr>';
+            }
+        }
+
+        // Function to fetch and display 5-minute candlesticks
+        async function fetch5MinCandles() {
+            try {
+                const response = await fetch('/api/5min-candles');
+                const data = await response.json();
+                const tableBody = document.getElementById('5minCandleTableBody');
+                tableBody.innerHTML = ''; // Clear previous data
+
+                if (data) {
+                    // Convert object to array, sort by epoch (key), and take last 100
+                    const candlesArray = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-100);
+
+                    if (candlesArray.length > 0) {
+                        candlesArray.forEach(candle => {
+                            const row = tableBody.insertRow();
+                            row.insertCell().innerText = formatTimestamp(candle.timestamp);
+                            row.insertCell().innerText = parseFloat(candle.open).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.high).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.low).toFixed(5);
+                            row.insertCell().innerText = parseFloat(candle.close).toFixed(5);
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="5">No 5-minute candles available.</td></tr>';
+                    }
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="5">Failed to load 5-minute candles.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to fetch 5-min candles:', error);
+                const tableBody = document.getElementById('5minCandleTableBody');
+                tableBody.innerHTML = '<tr><td colspan="5">Error loading 5-minute candles.</td></tr>';
+            }
+        }
+
+        // Function to fetch and display raw tick data
+        async function fetchRawTicks() {
+            try {
+                const response = await fetch('/api/all-ticks');
+                const data = await response.json();
+                const tableBody = document.getElementById('tickDataTableBody');
+                tableBody.innerHTML = ''; // Clear previous data
+
+                if (data) {
+                    // Convert object to array, sort by epoch, and take last 50
+                    const ticksArray = Object.values(data).sort((a, b) => a.epoch - b.epoch).slice(-50);
+
+                    if (ticksArray.length > 0) {
+                        ticksArray.forEach(tick => {
+                            const row = tableBody.insertRow();
+                            row.insertCell().innerText = formatTimestamp(tick.timestamp);
+                            row.insertCell().innerText = parseFloat(tick.quote).toFixed(5);
+                            row.insertCell().innerText = tick.epoch;
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="3">No raw ticks available.</td></tr>';
+                    }
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="3">Failed to load raw ticks.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to fetch raw ticks:', error);
+                const tableBody = document.getElementById('tickDataTableBody');
+                tableBody.innerHTML = '<tr><td colspan="3">Error loading raw ticks.</td></tr>';
+            }
+        }
+
+        // Function to display analysis results
+        function displayAnalysisResults(data) {
+            document.getElementById('analysisTimestamp').innerText = formatTimestamp(data.analysis_timestamp);
+            document.getElementById('analysisCurrentPrice').innerText = parseFloat(data.current_price).toFixed(5);
+            document.getElementById('analysisRSI').innerText = parseFloat(data.rsi).toFixed(2);
+
+            // Moving Averages
+            const maList = document.getElementById('analysisMAs');
+            maList.innerHTML = '';
+            if (Object.keys(data.moving_averages).length > 0) {
+                for (const maKey in data.moving_averages) {
+                    const li = document.createElement('li');
+                    li.innerText = `${maKey}: ${parseFloat(data.moving_averages[maKey]).toFixed(5)}`;
+                    maList.appendChild(li);
+                }
+            } else {
+                maList.innerHTML = '<li>N/A</li>';
+            }
+
+            // Detected Patterns
+            const patternsList = document.getElementById('analysisPatterns');
+            patternsList.innerHTML = '';
+            if (data.detected_patterns && data.detected_patterns.length > 0) {
+                data.detected_patterns.forEach(pattern => {
+                    const li = document.createElement('li');
+                    const strengthClass = pattern.strength > 0.75 ? 'confidence-high' : (pattern.strength > 0.6 ? 'confidence-medium' : 'confidence-low');
+                    li.innerHTML = `<strong>${pattern.type}</strong>: ${pattern.description} (<span class="${strengthClass}">${(pattern.strength * 100).toFixed(1)}% Strength</span>)`;
+                    patternsList.appendChild(li);
+                });
+            } else {
+                patternsList.innerHTML = '<li>No significant patterns detected.</li>';
+            }
+
+            // Generated Signals
+            const signalsDiv = document.getElementById('analysisSignals');
+            signalsDiv.innerHTML = '';
+            if (data.generated_signals && data.generated_signals.length > 0) {
+                data.generated_signals.forEach(signal => {
+                    const signalDiv = document.createElement('div');
+                    signalDiv.classList.add('analysis-signal');
+                    const confidenceClass = signal.confidence > 0.8 ? 'confidence-high' : (signal.confidence > 0.6 ? 'confidence-medium' : 'confidence-low');
+                    signalDiv.innerHTML = `
+                        <strong>${signal.type} (${signal.action})</strong>: ${signal.description}<br>
+                        Entry: ${parseFloat(signal.entry_price).toFixed(5)} | SL: ${parseFloat(signal.stop_loss).toFixed(5)} | TP: ${parseFloat(signal.take_profit).toFixed(5)}<br>
+                        Confidence: <span class="${confidenceClass}">${(signal.confidence * 100).toFixed(1)}%</span> | R:R: ${signal.risk_reward}
+                    `;
+                    signalsDiv.appendChild(signalDiv);
+                });
+            } else {
+                signalsDiv.innerHTML = '<p>No strong signals generated.</p>';
             }
         }
 
@@ -273,8 +560,9 @@
                     alert('Analysis failed: ' + data.error);
                 } else {
                     console.log('Analysis result:', data);
-                    alert('Analysis completed. Check console for details. Alerts updated.');
+                    // alert('Analysis completed. Check console for details. Alerts and analysis results updated.');
                     fetchAlerts(); // Refresh alerts after analysis
+                    displayAnalysisResults(data); // Display analysis results on the page
                 }
             } catch (error) {
                 console.error('Error triggering analysis:', error);
@@ -293,11 +581,17 @@
             fetchLatestTick();
             fetchStatus();
             fetchAlerts();
+            fetch1MinCandles();
+            fetch5MinCandles();
+            fetchRawTicks();
 
             // Set intervals for periodic updates
-            setInterval(fetchLatestTick, 2000); // Update latest tick every 2 seconds
-            setInterval(fetchStatus, 5000);    // Update status every 5 seconds
-            setInterval(fetchAlerts, 10000);   // Update alerts every 10 seconds
+            setInterval(fetchLatestTick, 2000);    // Update latest tick every 2 seconds
+            setInterval(fetchStatus, 5000);       // Update status (including current candles) every 5 seconds
+            setInterval(fetchAlerts, 10000);      // Update alerts every 10 seconds
+            setInterval(fetch1MinCandles, 15000); // Update 1-min candles every 15 seconds
+            setInterval(fetch5MinCandles, 30000); // Update 5-min candles every 30 seconds
+            setInterval(fetchRawTicks, 10000);    // Update raw ticks every 10 seconds
         });
     </script>
 </body>
