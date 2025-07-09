@@ -99,11 +99,15 @@
             const container = document.getElementById('main-chart-container');
             if (!container) return;
 
+            console.log('Initializing main chart for:', activeSymbol, activeTimeframe);
+
             // Dispose of existing chart if it exists
             if (currentChart) {
                 currentChart.remove();
+                console.log('Disposed of existing chart.');
             }
 
+            // At this point, LightweightCharts should be defined due to the polling mechanism
             currentChart = LightweightCharts.createChart(container, {
                 width: container.clientWidth,
                 height: container.clientHeight,
@@ -132,11 +136,11 @@
                 },
             });
 
-            // Add a line series for all data types (tick, 1min, 5min, 15min)
             currentSeries = currentChart.addLineSeries({
                 color: '#63b3ed', // Blue for line chart
                 lineWidth: 2,
             });
+            console.log('Line series added.');
 
             // Handle window resize to make charts responsive
             new ResizeObserver(entries => {
@@ -147,14 +151,18 @@
 
             // Set initial data for the newly created chart
             const chartId = `${activeSymbol}_${activeTimeframe}`;
-            if (chartDataStore[chartId]) {
+            if (chartDataStore[chartId] && chartDataStore[chartId].length > 0) {
+                console.log('Setting initial data for chart:', chartId, 'Data points:', chartDataStore[chartId].length);
                 currentSeries.setData(chartDataStore[chartId]);
+            } else {
+                console.log('No initial data found for chart:', chartId);
             }
         }
 
         // Function to update chart data
         function updateChart(symbol, interval, newData) {
             const chartId = `${symbol}_${interval}`;
+            // console.log('Received update for:', chartId, 'New data:', newData); // Too verbose
 
             // Store the data
             if (!chartDataStore[chartId]) {
@@ -168,12 +176,16 @@
             const maxDataPoints = 500; // Adjust as needed
             if (chartDataStore[chartId].length > maxDataPoints) {
                 chartDataStore[chartId] = chartDataStore[chartId].slice(-maxDataPoints);
+                // console.log('Trimmed data for', chartId, 'to', chartDataStore[chartId].length, 'points.'); // Too verbose
             }
 
             // If this is the currently active chart, update it
             if (symbol === activeSymbol && interval === activeTimeframe) {
                 if (currentSeries) {
+                    // console.log('Updating active chart series with:', dataToStore); // Too verbose
                     currentSeries.update(dataToStore);
+                } else {
+                    console.log('currentSeries is null, cannot update chart for:', chartId);
                 }
             }
         }
@@ -181,15 +193,18 @@
         // Function to set initial chart data
         function setInitialChartData(symbol, interval, data) {
             const chartId = `${symbol}_${interval}`;
-            // For candlestick data, convert to line chart format (time, value)
+            console.log('Received initial data for:', chartId, 'Data points:', data.length);
+
             chartDataStore[chartId] = data.map(item =>
                 interval === 'tick' ? item : { time: item.time, value: item.close }
             );
 
-            // If this is the currently active chart, set its data
             if (symbol === activeSymbol && interval === activeTimeframe) {
                 if (currentSeries) {
+                    console.log('Setting initial data for active chart series from store:', chartDataStore[chartId].length, 'points.');
                     currentSeries.setData(chartDataStore[chartId]);
+                } else {
+                    console.log('currentSeries is null, cannot set initial data for:', chartId);
                 }
             }
         }
@@ -248,14 +263,15 @@
         // --- Socket.IO Event Handlers ---
         socket.on('connect', () => {
             console.log('Connected to Flask Socket.IO');
-            // Request initial data after connection (if needed, though server sends on connect)
         });
 
         socket.on('initial_tick_data', (msg) => {
+            console.log('Socket.IO: initial_tick_data received for', msg.symbol);
             setInitialChartData(msg.symbol, 'tick', msg.data);
         });
 
         socket.on('initial_candlestick_data', (msg) => {
+            console.log('Socket.IO: initial_candlestick_data received for', msg.symbol, 'interval', msg.interval);
             setInitialChartData(msg.symbol, msg.interval, msg.data);
         });
 
@@ -273,9 +289,19 @@
 
         // Initial setup on page load
         document.addEventListener('DOMContentLoaded', () => {
-            generateSymbolTabs();
-            generateTimeframeTabs();
-            updateChartDisplay(); // Initialize the first chart
+            console.log('DOM Content Loaded. Starting LightweightCharts check.');
+            // Poll for LightweightCharts to be defined
+            const checkLightweightCharts = setInterval(() => {
+                if (typeof LightweightCharts !== 'undefined' && LightweightCharts.createChart) {
+                    clearInterval(checkLightweightCharts); // Stop polling
+                    console.log('LightweightCharts is now defined. Proceeding with chart initialization.');
+                    generateSymbolTabs();
+                    generateTimeframeTabs();
+                    updateChartDisplay(); // Initialize the first chart
+                } else {
+                    console.log('Waiting for LightweightCharts to load...');
+                }
+            }, 100); // Check every 100ms
         });
     </script>
 </body>
