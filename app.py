@@ -1,493 +1,462 @@
-from flask import Flask, render_template, jsonify, request
-import asyncio
-import websockets
-import json
-import requests
-import threading
-import time
-from datetime import datetime, timedelta
 import uuid
+import asyncio
+import json
+import os
+import time
+from datetime import datetime, timedelta, timezone
+import numpy as np
+import requests
+from flask import Flask, jsonify, render_template, request
+from threading import Thread, Lock
+from collections import deque
+from websockets.client import connect as ws_connect
+import firebase_admin
+from firebase_admin import credentials, db
 
-# Import the trading logic components
-from trading_logic import TradingAlerts, TrendlineAnalyzer, trading_alerts
+# Assuming trading_logic.py is in the same directory
+from trading_logic import TradingAlerts, TrendlineAnalyzer
 
-app = Flask(__name__)
+# --- Firebase Configuration (for alerts only) ---
+# Check if Firebase app is already initialized to prevent re-initialization errors
+if not firebase_admin._apps:
+    try:
+        # For local development, use a service account key file
+        # Make sure 'path/to/your/serviceAccountKey.json' is correct
+        # For deployment, consider environment variables for credentials or Firebase Functions
+        # IMPORTANT: This path should be correct for your environment.
+        FIREBASE_CRED_PATH = "company-bdb78-firebase-adminsdk-v02b4-e4c194689b.json"
+        cred = credentials.Certificate(FIREBASE_CRED_PATH)
+        firebase_admin.initialize_app(cred, {
+            'databaseURL': "https://company-bdb78-default-rtdb.firebaseio.com"
+        })
+        print(f"Firebase app initialized successfully using {FIREBASE_CRED_PATH}.")
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
+        print("Please ensure your Firebase service account key is in the correct path and readable.")
+        print("Specifically, check if the file 'company-bdb78-firebase-adminsdk-v02b4-e4c194689b.json' exists and is accessible.")
 
-# Firebase configuration
 FIREBASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
-FIREBASE_TICKS_PATH = "/ticks.json"
-FIREBASE_1MIN_PATH = "/1minVix25.json"
-FIREBASE_5MIN_PATH = "/5minVix25.json"
-FIREBASE_ALERTS_PATH = "/alerts.json" # Still needed here for API endpoint to fetch alerts
+FIREBASE_ALERTS_PATH = "/alerts.json" # Alerts will still be stored here
 
-# Deriv WebSocket configuration
-DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=1089"
+# --- Deriv API Configuration ---
+# WARNING: HARDCODING API TOKENS IS A SECURITY RISK.
+# For production, ALWAYS use environment variables or a secrets management system.
+# This is done here ONLY because it was explicitly requested for demonstration.
+DERIV_APP_ID = "108" # Your Deriv App ID (e.g., from registering your app)
+DERIV_API_TOKEN = "bK3fhHLYrP1sMEb" # Your hardcoded API token as requested
+DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=" + DERIV_APP_ID
+SYMBOL = 'VIX25' # The symbol we are trading
 
-# Global variables to store latest data (maintained by the tick collector)
-latest_tick = {}
-current_1min_candle = {}
-current_5min_candle = {}
-candle_buffers = {
-    '1min': [],
-    '5min': []
-}
+# --- Global Data Stores (in-memory, no Firebase for ticks/candles for now) ---
+latest_tick = {'symbol': SYMBOL, 'quote': None, 'timestamp': None, 'epoch': None}
+tick_history_buffer = deque(maxlen=2000) # Buffer to hold recent ticks for analysis
+min_1_candles = {} # Stores 1-minute OHLCV data by start_epoch
+min_5_candles = {} # Stores 5-minute OHLCV data by start_epoch
 
-class DerivTickCollector:
-    """
-    Connects to Deriv WebSocket, subscribes to tick data,
-    processes ticks into 1-minute and 5-minute candlesticks,
-    and stores data to Firebase.
-    """
-    def __init__(self):
-        self.websocket = None
-        self.running = False
-        
-    async def connect_and_subscribe(self):
-        """
-        Establishes WebSocket connection to Deriv and subscribes to Volatility 25 ticks.
-        Continuously listens for messages and processes tick data.
-        Includes reconnection logic on error.
-        """
-        try:
-            self.websocket = await websockets.connect(DERIV_WS_URL)
-            print("Connected to Deriv WebSocket.")
-            
-            # Subscribe to Volatility 25 (R_25) ticks
-            subscribe_request = {
-                "ticks": "R_25",
-                "subscribe": 1
+# --- Concurrency Management ---
+tick_collector_running = False
+tick_collector_thread = None
+data_lock = Lock() # To protect shared data structures (latest_tick, buffers, candles)
+
+# --- Trading Logic Initialization ---
+trading_alerts = TradingAlerts() # Alerts system (still uses Firebase)
+
+# --- Flask App Setup ---
+app = Flask(__name__)
+# WARNING: Hardcoding secret key is also a security risk. Use environment variables.
+app.secret_key = 'super_secret_dev_key_do_not_use_in_prod' # Replace with a strong secret key for session management
+
+# --- Deriv API Helper Functions ---
+async def get_deriv_ticks_history(symbol=SYMBOL, count=100):
+    """Fetches historical tick data directly from Deriv API."""
+    try:
+        async with ws_connect(DERIV_WS_URL) as websocket:
+            # Authorize if needed for private data, otherwise just send ticks_history
+            # For public ticks_history, authorization is often not strictly required.
+            # But including it ensures compatibility for any future private data needs.
+            await websocket.send(json.dumps({"authorize": DERIV_API_TOKEN}))
+            auth_response = await websocket.recv()
+            auth_data = json.loads(auth_response)
+            if 'error' in auth_data:
+                print(f"Deriv API Authorization Error: {auth_data['error']['message']}")
+                return None
+
+            request_data = {
+                "ticks_history": symbol,
+                "count": count,
+                "end": "latest",
+                "style": "ticks",
+                "adjust_start_time": 1,
+                "subscribe": 0 # Not subscribing, just getting history
             }
-            
-            await self.websocket.send(json.dumps(subscribe_request))
-            print("Subscribed to R_25 ticks.")
-            
-            # Listen for incoming messages indefinitely
-            async for message in self.websocket:
-                try:
-                    data = json.loads(message)
-                    if 'tick' in data:
-                        await self.process_tick(data['tick'])
-                except json.JSONDecodeError:
-                    print(f"Failed to decode message: {message}")
-                except Exception as e:
-                    print(f"Error processing message: {e}")
-                    
+            await websocket.send(json.dumps(request_data))
+            response = await websocket.recv()
+            data = json.loads(response)
+
+            if 'history' in data and 'prices' in data['history'] and 'times' in data['history']:
+                ticks = []
+                prices = data['history']['prices']
+                times = data['history']['times']
+                for i in range(len(prices)):
+                    ticks.append({
+                        "epoch": times[i],
+                        "quote": float(prices[i]),
+                        "timestamp": datetime.fromtimestamp(times[i], tz=timezone.utc).isoformat()
+                    })
+                # Ensure ticks are sorted by epoch ascending
+                ticks.sort(key=lambda x: x['epoch'])
+                return ticks
+            else:
+                print(f"Error fetching Deriv ticks history: {data.get('error', {}).get('message', 'Unknown error')}")
+                return None
+    except Exception as e:
+        print(f"WebSocket error fetching Deriv ticks history for {symbol}: {e}")
+        return None
+
+async def get_deriv_ohlc_history(symbol=SYMBOL, interval='1m', count=100):
+    """Fetches historical OHLC (candlestick) data directly from Deriv API."""
+    granularity = 60 # 1 minute
+    if interval == '5m':
+        granularity = 300 # 5 minutes
+    elif interval == '1h':
+        granularity = 3600 # 1 hour
+    # Add more intervals as needed
+
+    try:
+        async with ws_connect(DERIV_WS_URL) as websocket:
+            # Authorize if needed
+            await websocket.send(json.dumps({"authorize": DERIV_API_TOKEN}))
+            auth_response = await websocket.recv()
+            auth_data = json.loads(auth_response)
+            if 'error' in auth_data:
+                print(f"Deriv API Authorization Error: {auth_data['error']['message']}")
+                return None
+
+            request_data = {
+                "ohlc": symbol,
+                "granularity": granularity,
+                "count": count,
+                "end": "latest",
+                "subscribe": 0 # Not subscribing, just getting history
+            }
+            await websocket.send(json.dumps(request_data))
+            response = await websocket.recv()
+            data = json.loads(response)
+
+            if 'ohlc' in data and data['ohlc']:
+                candles = {}
+                # The 'ohlc' field contains a list of candle data
+                for candle_data in data['ohlc']:
+                    epoch_time = candle_data['open_time']
+                    candles[str(epoch_time)] = {
+                        'open': float(candle_data['open']),
+                        'high': float(candle_data['high']),
+                        'low': float(candle_data['low']),
+                        'close': float(candle_data['close']),
+                        'timestamp': datetime.fromtimestamp(epoch_time, tz=timezone.utc).isoformat(),
+                        'epoch': epoch_time,
+                        'volume': candle_data.get('volume', 0) # Volume might not be present for VIX
+                    }
+                # Sort candles by epoch ascending
+                sorted_candles = dict(sorted(candles.items(), key=lambda item: int(item[0])))
+                return sorted_candles
+            else:
+                print(f"Error fetching Deriv OHLC history for {symbol} ({interval}): {data.get('error', {}).get('message', 'Unknown error')}")
+                return None
+    except Exception as e:
+        print(f"WebSocket error fetching Deriv OHLC history for {symbol} ({interval}): {e}")
+        return None
+
+
+# --- Tick Collector Thread (modified to not write to Firebase for ticks/candles) ---
+async def _tick_collector_logic():
+    global latest_tick, tick_history_buffer, tick_collector_running, min_1_candles, min_5_candles
+    print("Starting tick collector logic...")
+    while tick_collector_running:
+        try:
+            async with ws_connect(DERIV_WS_URL) as websocket:
+                # Authorize the connection for real-time ticks
+                await websocket.send(json.dumps({"authorize": DERIV_API_TOKEN}))
+                auth_response = await websocket.recv()
+                auth_data = json.loads(auth_response)
+                if 'error' in auth_data:
+                    print(f"Deriv API Authorization Error for collector: {auth_data['error']['message']}")
+                    await asyncio.sleep(5) # Wait before retrying connection
+                    continue
+
+                # Subscribe to tick stream
+                await websocket.send(json.dumps({"ticks": SYMBOL, "subscribe": 1}))
+                print(f"Subscribed to {SYMBOL} ticks.")
+
+                # Initialize current candle data
+                current_1min_candle = {'open': None, 'high': None, 'low': None, 'close': None, 'timestamp': None, 'epoch': None}
+                current_5min_candle = {'open': None, 'high': None, 'low': None, 'close': None, 'timestamp': None, 'epoch': None}
+
+                while tick_collector_running:
+                    try:
+                        message = await asyncio.wait_for(websocket.recv(), timeout=10) # Timeout for graceful shutdown
+                        data = json.loads(message)
+
+                        if 'tick' in data:
+                            tick_data = data['tick']
+                            price = float(tick_data['quote'])
+                            epoch_time = int(tick_data['epoch'])
+                            iso_timestamp = datetime.fromtimestamp(epoch_time, tz=timezone.utc).isoformat()
+
+                            with data_lock:
+                                latest_tick.update({
+                                    'symbol': tick_data['symbol'],
+                                    'quote': price,
+                                    'timestamp': iso_timestamp,
+                                    'epoch': epoch_time
+                                })
+                                tick_history_buffer.append(price) # Add to analysis buffer
+
+                                # --- In-memory Candlestick Aggregation (1-minute) ---
+                                current_1min_floor_epoch = (epoch_time // 60) * 60 # Floor to nearest minute
+                                if current_1min_candle['epoch'] != current_1min_floor_epoch:
+                                    # New 1-minute candle starts
+                                    if current_1min_candle['epoch'] is not None:
+                                        # Close previous candle and store it
+                                        min_1_candles[str(current_1min_candle['epoch'])] = current_1min_candle.copy()
+                                        # Keep only last 200 candles in memory for performance
+                                        if len(min_1_candles) > 200:
+                                            oldest_key = sorted(min_1_candles.keys())[0]
+                                            del min_1_candles[oldest_key]
+                                    current_1min_candle = {
+                                        'open': price,
+                                        'high': price,
+                                        'low': price,
+                                        'close': price,
+                                        'timestamp': datetime.fromtimestamp(current_1min_floor_epoch, tz=timezone.utc).isoformat(),
+                                        'epoch': current_1min_floor_epoch
+                                    }
+                                else:
+                                    # Update current 1-minute candle
+                                    current_1min_candle['high'] = max(current_1min_candle['high'], price)
+                                    current_1min_candle['low'] = min(current_1min_candle['low'], price)
+                                    current_1min_candle['close'] = price
+
+                                # --- In-memory Candlestick Aggregation (5-minute) ---
+                                current_5min_floor_epoch = (epoch_time // 300) * 300 # Floor to nearest 5 minutes
+                                if current_5min_candle['epoch'] != current_5min_floor_epoch:
+                                    # New 5-minute candle starts
+                                    if current_5min_candle['epoch'] is not None:
+                                        # Close previous candle and store it
+                                        min_5_candles[str(current_5min_candle['epoch'])] = current_5min_candle.copy()
+                                        # Keep only last 200 candles in memory for performance
+                                        if len(min_5_candles) > 200:
+                                            oldest_key = sorted(min_5_candles.keys())[0]
+                                            del min_5_candles[oldest_key]
+                                    current_5min_candle = {
+                                        'open': price,
+                                        'high': price,
+                                        'low': price,
+                                        'close': price,
+                                        'timestamp': datetime.fromtimestamp(current_5min_floor_epoch, tz=timezone.utc).isoformat(),
+                                        'epoch': current_5min_floor_epoch
+                                    }
+                                else:
+                                    # Update current 5-minute candle
+                                    current_5min_candle['high'] = max(current_5min_candle['high'], price)
+                                    current_5min_candle['low'] = min(current_5min_candle['low'], price)
+                                    current_5min_candle['close'] = price
+
+                            # print(f"Received tick: {SYMBOL} - {price} at {iso_timestamp}") # Optional: log ticks
+
+                        elif 'error' in data:
+                            print(f"Deriv API Error (collector): {data['error']['message']}")
+                        else:
+                            # print(f"Received non-tick message: {data}") # Optional: log other messages
+                            pass
+
+                    except asyncio.TimeoutError:
+                        # No message received within timeout, check if collector is still running
+                        print("Tick collector: No message received, re-checking status...")
+                        continue # Continue loop to re-evaluate tick_collector_running
+                    except Exception as e:
+                        print(f"Error in tick collector inner loop: {e}")
+                        # Attempt to reconnect after a short delay
+                        await asyncio.sleep(2)
+                        break # Break inner loop to try re-establishing WebSocket connection
+
         except Exception as e:
-            print(f"WebSocket connection error: {e}. Retrying in 5 seconds...")
+            print(f"Error in tick collector outer loop (websocket connection): {e}")
+            # Wait before attempting to reconnect
             await asyncio.sleep(5)
-            # Only attempt to reconnect if the collector is still meant to be running
-            if self.running:
-                await self.connect_and_subscribe()
-    
-    async def process_tick(self, tick_data):
-        """
-        Processes an incoming tick, updates the latest_tick global,
-        stores it to Firebase, and processes it for candlestick generation.
-        """
-        global latest_tick
-        
-        try:
-            tick_info = {
-                "epoch": tick_data.get("epoch"),
-                "quote": tick_data.get("quote"),
-                "symbol": tick_data.get("symbol"),
-                "timestamp": datetime.now().isoformat(), # Use server time for consistency
-                "id": str(uuid.uuid4())[:8] # Unique ID for Firebase key
-            }
-            
-            latest_tick = tick_info # Update global latest tick
-            # print(f"Received tick: {tick_info['quote']} at {tick_info['timestamp']}")
-            
-            await self.store_to_firebase(tick_info)
-            await self.process_candlestick_data(tick_info)
-            
-        except Exception as e:
-            print(f"Error processing tick: {e}")
-    
-    async def process_candlestick_data(self, tick_info):
-        """
-        Takes a processed tick and updates the current 1-minute and 5-minute
-        candlestick data.
-        """
-        try:
-            epoch = tick_info['epoch']
-            quote = float(tick_info['quote'])
-            
-            # Update 1-minute candlestick
-            await self.update_candlestick(epoch, quote, '1min', 60)
-            
-            # Update 5-minute candlestick
-            await self.update_candlestick(epoch, quote, '5min', 300)
-            
-        except Exception as e:
-            print(f"Error processing candlestick data: {e}")
-    
-    async def update_candlestick(self, epoch, quote, timeframe, seconds):
-        """
-        Updates the current candlestick for a given timeframe (1min or 5min).
-        Closes and stores completed candles to Firebase.
-        """
-        global current_1min_candle, current_5min_candle, candle_buffers
-        
-        try:
-            # Calculate the start epoch of the current candle period
-            candle_start = (epoch // seconds) * seconds
-            
-            # Get the correct global dictionary for the current timeframe
-            current_candle_dict = current_1min_candle if timeframe == '1min' else current_5min_candle
-            
-            # Initialize a new candle if it's a new period or the candle doesn't exist
-            if candle_start not in current_candle_dict or current_candle_dict[candle_start] is None:
-                current_candle_dict[candle_start] = {
-                    "epoch": candle_start,
-                    "open": quote,
-                    "high": quote,
-                    "low": quote,
-                    "close": quote,
-                    "timestamp": datetime.fromtimestamp(candle_start).isoformat()
-                }
-                # print(f"Started new {timeframe} candle at {datetime.fromtimestamp(candle_start).isoformat()}")
-            else:
-                # Update existing candle with new high, low, and close
-                candle = current_candle_dict[candle_start]
-                candle["high"] = max(candle["high"], quote)
-                candle["low"] = min(candle["low"], quote)
-                candle["close"] = quote
-                candle["timestamp"] = datetime.fromtimestamp(candle_start).isoformat() # Update timestamp to current candle's start
-            
-            # Check for and close any candles that have completed
-            # Iterate over a copy of keys to allow modification during iteration
-            for existing_candle_epoch in list(current_candle_dict.keys()):
-                if existing_candle_epoch < candle_start: # If an old candle is found
-                    completed_candle_data = current_candle_dict[existing_candle_epoch]
-                    await self.store_candlestick_to_firebase(completed_candle_data, timeframe)
-                    
-                    # Add to in-memory buffer for API access (e.g., for charts)
-                    candle_buffers[timeframe].append(completed_candle_data)
-                    if len(candle_buffers[timeframe]) > 100:  # Keep last 100 candles in memory
-                        candle_buffers[timeframe].pop(0)
-                    
-                    # Remove the completed candle from the current_candle_dict
-                    del current_candle_dict[existing_candle_epoch]
-                    # print(f"Completed {timeframe} candle: {completed_candle_data['close']}")
-            
-        except Exception as e:
-            print(f"Error updating {timeframe} candlestick: {e}")
-    
-    async def store_candlestick_to_firebase(self, candle_data, timeframe):
-        """
-        Stores a completed candlestick to its respective Firebase path.
-        Maintains a maximum of 950 candles in Firebase.
-        """
-        try:
-            firebase_path = FIREBASE_1MIN_PATH if timeframe == '1min' else FIREBASE_5MIN_PATH
-            
-            # Fetch current candles from Firebase
-            response = requests.get(f"{FIREBASE_URL}{firebase_path}")
-            
-            if response.status_code == 200:
-                current_candles = response.json() or {}
-            else:
-                # If fetch fails, initialize as empty to prevent errors
-                current_candles = {}
-                print(f"Warning: Failed to fetch existing {timeframe} candles (Status: {response.status_code}). Starting fresh.")
-            
-            # Add new candle with its epoch as the key
-            candle_key = str(candle_data['epoch'])
-            current_candles[candle_key] = candle_data
-            
-            # Keep only the latest 950 candles (sorted by epoch)
-            if len(current_candles) > 950:
-                sorted_candles = dict(sorted(current_candles.items(), 
-                                           key=lambda x: int(x[0]), # Sort by epoch (integer key)
-                                           reverse=True)[:950]) # Keep latest 950
-                current_candles = sorted_candles
-            
-            # Update Firebase with the modified set of candles
-            update_response = requests.put(
-                f"{FIREBASE_URL}{firebase_path}",
-                json=current_candles
-            )
-            
-            if update_response.status_code == 200:
-                # print(f"Successfully stored {timeframe} candle to Firebase. Total candles: {len(current_candles)}")
-                pass # Suppress frequent success messages
-            else:
-                print(f"Failed to store {timeframe} candle to Firebase: {update_response.status_code} - {update_response.text}")
-                
-        except Exception as e:
-            print(f"Error storing {timeframe} candle to Firebase: {e}")
-    
-    async def store_to_firebase(self, tick_data):
-        """
-        Stores a raw tick to Firebase and maintains a maximum of 950 latest records.
-        """
-        try:
-            # Fetch current ticks from Firebase
-            response = requests.get(f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}")
-            
-            if response.status_code == 200:
-                current_ticks = response.json() or {}
-            else:
-                # If fetch fails, initialize as empty
-                current_ticks = {}
-                print(f"Warning: Failed to fetch existing ticks (Status: {response.status_code}). Starting fresh.")
+    print("Tick collector stopped.")
 
-            # Add new tick with a unique key (epoch_id)
-            tick_key = f"{tick_data['epoch']}_{tick_data['id']}"
-            current_ticks[tick_key] = tick_data
-            
-            # Keep only the latest 950 ticks (sorted by epoch)
-            if len(current_ticks) > 950:
-                sorted_ticks = dict(sorted(current_ticks.items(), 
-                                         key=lambda x: x[1]['epoch'], # Sort by tick epoch
-                                         reverse=True)[:950]) # Keep latest 950
-                current_ticks = sorted_ticks
-            
-            # Update Firebase with the modified set of ticks
-            update_response = requests.put(
-                f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}",
-                json=current_ticks
-            )
-            
-            if update_response.status_code == 200:
-                # print(f"Successfully stored tick to Firebase. Total ticks: {len(current_ticks)}")
-                pass # Suppress frequent success messages
-            else:
-                print(f"Failed to store tick to Firebase: {update_response.status_code} - {update_response.text}")
-                
-        except Exception as e:
-            print(f"Error storing to Firebase: {e}")
-    
-    def start(self):
-        """
-        Starts the asynchronous WebSocket connection and tick processing loop.
-        Runs in a new event loop on a separate thread.
-        """
-        self.running = True
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.connect_and_subscribe())
+def start_tick_collector():
+    global tick_collector_running, tick_collector_thread
+    if not tick_collector_running:
+        tick_collector_running = True
+        # Run the async collector logic in a new event loop on a separate thread
+        def run_async_loop():
+            asyncio.run(_tick_collector_logic())
 
-# Initialize tick collector
-tick_collector = DerivTickCollector()
+        tick_collector_thread = Thread(target=run_async_loop)
+        tick_collector_thread.start()
+        print("Tick collector thread started.")
 
-# Flask Routes
+def stop_tick_collector():
+    global tick_collector_running, tick_collector_thread
+    if tick_collector_running:
+        tick_collector_running = False
+        if tick_collector_thread and tick_collector_thread.is_alive():
+            tick_collector_thread.join(timeout=10) # Wait for thread to finish
+            if tick_collector_thread.is_alive():
+                print("Warning: Tick collector thread did not terminate gracefully.")
+        tick_collector_thread = None
+        print("Tick collector stopped.")
+
+
+# --- Flask Routes ---
 @app.route('/')
 def index():
-    """Renders the main index page."""
     return render_template('index.html')
 
-@app.route('/charts')
-def charts():
-    """Renders the charts page."""
-    return render_template('charts.html')
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze_ticks():
-    """
-    API endpoint to perform enhanced technical analysis on tick data
-    and generate trading signals/alerts.
-    """
-    try:
-        # Fetch all ticks from Firebase for analysis
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}")
-        
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch tick data from Firebase"}), 500
-        
-        ticks_data = response.json() or {}
-        
-        if not ticks_data:
-            return jsonify({"error": "No tick data available in Firebase for analysis"}), 404
-        
-        # Convert dictionary to list, sort by epoch, and extract prices
-        ticks_list = list(ticks_data.values())
-        ticks_list.sort(key=lambda x: x.get('epoch', 0))
-        
-        # Use the last 200 ticks for analysis to keep it relevant and performant
-        prices = [float(tick.get('quote', 0)) for tick in ticks_list[-200:] if tick.get('quote')]
-        
-        if len(prices) < 20: # Ensure sufficient data for analysis
-            return jsonify({"error": "Insufficient data (less than 20 ticks) for detailed analysis"}), 400
-        
-        analyzer = TrendlineAnalyzer() # Create an instance of the analyzer
-        
-        # Perform analysis
-        support_levels, resistance_levels = analyzer.find_support_resistance(prices)
-        signals = analyzer.generate_enhanced_signals(prices, support_levels, resistance_levels)
-        
-        # Add strong signals as trading alerts
-        for signal in signals:
-            if signal['confidence'] > 0.8: # Only add alerts for high-confidence signals
-                alert = trading_alerts.add_alert(
-                    alert_type=signal['type'],
-                    direction=signal['action'],
-                    price=signal['entry_price'],
-                    confidence=signal['confidence'],
-                    description=signal['description'],
-                    expiry_minutes=10 # Alerts expire after 10 minutes
-                )
-                
-                if alert:
-                    print(f"New trading alert generated: {alert['description']} ({alert['action']} at {alert['price']:.5f})")
-        
-        # Compile comprehensive analysis result
-        current_price = prices[-1]
-        ma_data = analyzer.calculate_moving_averages(prices)
-        rsi = analyzer.calculate_rsi(prices)
-        patterns = analyzer.detect_price_action_patterns(prices) # Also include patterns in the result
-        
-        analysis_result = {
-            'support_levels_count': len(support_levels),
-            'resistance_levels_count': len(resistance_levels),
-            'current_price': current_price,
-            'rsi': rsi,
-            'moving_averages': ma_data,
-            'detected_patterns': patterns,
-            'generated_signals': signals,
-            'total_ticks_analyzed': len(prices),
-            'analysis_timestamp': datetime.now().isoformat()
-        }
-        
-        return jsonify(analysis_result)
-        
-    except Exception as e:
-        print(f"Error during analysis: {e}")
-        return jsonify({"error": f"Analysis failed: {str(e)}"}), 500
-
-@app.route('/api/alerts')
-def get_alerts():
-    """API endpoint to get currently active trading alerts."""
-    try:
-        active_alerts = trading_alerts.get_active_alerts()
-        return jsonify({
-            'active_alerts': active_alerts,
-            'total_active_alerts': len(active_alerts)
-        })
-    except Exception as e:
-        print(f"Error fetching active alerts: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/alerts/history')
-def get_alerts_history():
-    """API endpoint to get the history of alerts stored in Firebase."""
-    try:
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_ALERTS_PATH}")
-        if response.status_code == 200:
-            alerts = response.json() or {}
-            return jsonify(alerts)
-        else:
-            return jsonify({"error": "Failed to fetch alerts history"}), 500
-    except Exception as e:
-        print(f"Error fetching alerts history: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/api/latest-tick')
-def get_latest_tick():
-    """API endpoint to get the single latest tick data from Firebase."""
-    try:
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}")
-        if response.status_code == 200:
-            ticks = response.json() or {}
-            if ticks:
-                # Find the tick with the maximum epoch (latest)
-                latest_tick_data = max(ticks.values(), key=lambda x: x.get('epoch', 0))
-                return jsonify(latest_tick_data)
-            else:
-                return jsonify({"error": "No ticks available"}), 404
-        else:
-            return jsonify({"error": "Failed to fetch ticks"}), 500
-    except Exception as e:
-        print(f"Error fetching latest tick: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/all-ticks')
-def get_all_ticks():
-    """API endpoint to get all raw ticks from Firebase."""
-    try:
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}")
-        if response.status_code == 200:
-            ticks = response.json() or {}
-            return jsonify(ticks)
-        else:
-            return jsonify({"error": "Failed to fetch ticks"}), 500
-    except Exception as e:
-        print(f"Error fetching all ticks: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/1min-candles')
-def get_1min_candles():
-    """API endpoint to get 1-minute candlestick data from Firebase."""
-    try:
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_1MIN_PATH}")
-        if response.status_code == 200:
-            candles = response.json() or {}
-            return jsonify(candles)
-        else:
-            return jsonify({"error": "Failed to fetch 1min candles"}), 500
-    except Exception as e:
-        print(f"Error fetching 1min candles: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/5min-candles')
-def get_5min_candles():
-    """API endpoint to get 5-minute candlestick data from Firebase."""
-    try:
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_5MIN_PATH}")
-        if response.status_code == 200:
-            candles = response.json() or {}
-            return jsonify(candles)
-        else:
-            return jsonify({"error": "Failed to fetch 5min candles"}), 500
-    except Exception as e:
-        print(f"Error fetching 5min candles: {e}")
-        return jsonify({"error": str(e)}), 500
+def get_latest_tick_route():
+    with data_lock:
+        if latest_tick['quote'] is not None:
+            return jsonify(latest_tick)
+        return jsonify({"error": "No tick data available yet."}), 404
 
 @app.route('/api/status')
 def get_status():
-    """
-    API endpoint to get the overall status of the application,
-    including tick collector status, latest tick, current candles,
-    total ticks in Firebase, and active alert count.
-    """
-    global current_1min_candle, current_5min_candle
-    
-    tick_count = 0
-    try:
-        # Attempt to get total tick count from Firebase for status display
-        response = requests.get(f"{FIREBASE_URL}{FIREBASE_TICKS_PATH}")
-        if response.status_code == 200:
-            ticks = response.json() or {}
-            tick_count = len(ticks)
-    except Exception as e:
-        print(f"Could not get total tick count for status: {e}")
-        pass # Silently fail if Firebase fetch for count fails
-    
+    with data_lock:
+        collector_status = "running" if tick_collector_running else "stopped"
+        total_ticks_count_in_buffer = len(tick_history_buffer) # Report buffer size instead
+
+        active_alerts = trading_alerts.get_active_alerts()
+
+        # Get the latest 1-min and 5-min candles from in-memory store
+        current_1min_candle_data = {}
+        if min_1_candles:
+            # Get the very last (most recent) candle from the in-memory dictionary
+            last_1min_epoch = sorted(min_1_candles.keys())[-1]
+            current_1min_candle_data = {last_1min_epoch: min_1_candles[last_1min_epoch]}
+
+        current_5min_candle_data = {}
+        if min_5_candles:
+            last_5min_epoch = sorted(min_5_candles.keys())[-1]
+            current_5min_candle_data = {last_5min_epoch: min_5_candles[last_5min_epoch]}
+
+
+        return jsonify({
+            "status": collector_status,
+            "timestamp": datetime.now().isoformat(),
+            "latest_tick_price": latest_tick['quote'],
+            "total_ticks_in_memory_buffer": total_ticks_count_in_buffer, # Updated status field
+            "active_alerts": len(active_alerts),
+            "current_1min_candle": current_1min_candle_data,
+            "current_5min_candle": current_5min_candle_data
+        })
+
+@app.route('/api/alerts')
+def get_alerts():
+    active_alerts = trading_alerts.get_active_alerts()
+    return jsonify({"active_alerts": active_alerts})
+
+@app.route('/api/analyze', methods=['POST'])
+async def analyze_data():
+    with data_lock:
+        if len(tick_history_buffer) < 200: # Need enough data for analysis
+            return jsonify({"error": "Not enough tick data for comprehensive analysis (need at least 200 ticks). Please wait for more data to be collected."}), 400
+
+        recent_prices = list(tick_history_buffer) # Convert deque to list
+
+    # Perform analysis using trading_logic
+    support_levels, resistance_levels = TrendlineAnalyzer.find_support_resistance(recent_prices)
+    ma_data = TrendlineAnalyzer.calculate_moving_averages(recent_prices)
+    rsi_value = TrendlineAnalyzer.calculate_rsi(recent_prices)
+    price_patterns = TrendlineAnalyzer.detect_price_action_patterns(recent_prices)
+    signals = TrendlineAnalyzer.generate_enhanced_signals(recent_prices, support_levels, resistance_levels)
+
+    analysis_timestamp = datetime.now().isoformat()
+    current_price_analyzed = recent_prices[-1]
+
+    # Add alerts based on generated signals
+    new_alerts_added = []
+    for signal in signals:
+        alert_description = f"{signal['type']} - {signal['description']} Entry: {signal['entry_price']:.5f} SL: {signal['stop_loss']:.5f} TP: {signal['take_profit']:.5f}"
+        added_alert = trading_alerts.add_alert(
+            alert_type=signal['type'],
+            direction=signal['action'],
+            price=signal['entry_price'],
+            confidence=signal['confidence'],
+            description=alert_description,
+            expiry_minutes=10 # Alerts expire after 10 minutes
+        )
+        if added_alert:
+            new_alerts_added.append(added_alert)
+
     return jsonify({
-        "status": "running" if tick_collector.running else "stopped",
-        "latest_tick": latest_tick,
-        "current_1min_candle": current_1min_candle,
-        "current_5min_candle": current_5min_candle,
-        "total_ticks_in_firebase": tick_count,
-        "active_alerts": len(trading_alerts.get_active_alerts()), # Get count of active alerts
-        "timestamp": datetime.now().isoformat()
+        "status": "Analysis complete",
+        "analysis_timestamp": analysis_timestamp,
+        "current_price": current_price_analyzed,
+        "rsi": rsi_value,
+        "moving_averages": ma_data,
+        "detected_patterns": price_patterns,
+        "generated_signals": signals,
+        "new_alerts_added": new_alerts_added
     })
 
-def start_tick_collector():
-    """
-    Starts the DerivTickCollector in a separate daemon thread.
-    A daemon thread will exit automatically when the main program exits.
-    """
-    thread = threading.Thread(target=tick_collector.start, daemon=True)
-    thread.start()
 
-# Start the tick collector when the module is imported (for production environments like Gunicorn)
-start_tick_collector()
+@app.route('/api/deriv-all-ticks')
+async def get_deriv_all_ticks():
+    """API endpoint to get historical ticks directly from Deriv."""
+    count = int(request.args.get('count', 100))
+    ticks = await get_deriv_ticks_history(SYMBOL, count)
+    if ticks:
+        # Convert list of ticks to a dictionary keyed by epoch for consistency with Firebase structure
+        # (Though frontend will just use the list)
+        return jsonify({str(tick['epoch']): tick for tick in ticks})
+    return jsonify({"error": "Failed to fetch historical ticks from Deriv"}), 500
+
+@app.route('/api/deriv-1min-candles')
+async def get_deriv_1min_candles():
+    """API endpoint to get historical 1-minute candles directly from Deriv."""
+    count = int(request.args.get('count', 100))
+    candles = await get_deriv_ohlc_history(SYMBOL, '1m', count)
+    if candles:
+        return jsonify(candles)
+    return jsonify({"error": "Failed to fetch 1-minute candles from Deriv"}), 500
+
+@app.route('/api/deriv-5min-candles')
+async def get_deriv_5min_candles():
+    """API endpoint to get historical 5-minute candles directly from Deriv."""
+    count = int(request.args.get('count', 100))
+    candles = await get_deriv_ohlc_history(SYMBOL, '5m', count)
+    if candles:
+        return jsonify(candles)
+    return jsonify({"error": "Failed to fetch 5-minute candles from Deriv"}), 500
+
+# --- Application Startup/Shutdown ---
+@app.before_request
+def before_first_request():
+    # Start the tick collector thread only once when the first request comes in
+    global tick_collector_thread
+    if tick_collector_thread is None or not tick_collector_thread.is_alive():
+        start_tick_collector()
+
+# You might want to define a cleanup function for when the app shuts down
+# However, for simple Flask apps run via 'flask run' or gunicorn,
+# explicit cleanup on shutdown can be tricky.
+# For production, consider using a proper process manager (e.g., systemd)
+# to ensure the collector thread is managed correctly.
 
 if __name__ == '__main__':
-    # Run Flask app for local development.
-    # use_reloader=False is important when threading is involved to prevent
-    # the thread from being started multiple times.
-    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False)
+    # For running locally with an ASGI server (recommended for async routes)
+    # You need to install gunicorn and uvicorn: pip install gunicorn "uvicorn[standard]"
+    # To run: gunicorn --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 app:app
+    # For simple local testing without gunicorn, you can run:
+    # app.run(debug=True, host='0.0.0.0', port=5000)
+    # But note that async routes might not behave as expected with the default Flask dev server.
 
+    # To simplify local execution for this example, we'll use a basic runner
+    # and rely on the before_request to start the collector.
+    # For production, always use an ASGI server like Gunicorn/Uvicorn.
+    print("Starting Flask app. For production, consider running with Gunicorn/Uvicorn:")
+    print("gunicorn --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:5000 app:app")
+    app.run(debug=True, host='0.0.0.0', port=5000, use_reloader=False) # use_reloader=False prevents collector restart on code change
