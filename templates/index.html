@@ -97,7 +97,10 @@
         function createChart(symbol, interval) {
             const chartId = `${symbol}_${interval}`;
             const container = document.getElementById(chartId);
-            if (!container) return;
+            if (!container) {
+                console.error(`Container not found for chart: ${chartId}`);
+                return;
+            }
 
             const chart = LightweightCharts.createChart(container, {
                 width: container.clientWidth,
@@ -154,22 +157,47 @@
                     chart.applyOptions({ width: entry.contentRect.width, height: entry.contentRect.height });
                 });
             }).observe(container);
+
+            console.log(`Chart created for ${chartId}`);
         }
 
         // Function to update chart data
         function updateChart(symbol, interval, newData) {
             const chartId = `${symbol}_${interval}`;
             if (series[chartId]) {
-                // Lightweight Charts expects 'time' in epoch seconds for candlestick/line series
-                series[chartId].update(newData);
+                // For tick data, convert 'value' to 'price' and ensure time is in seconds
+                let formattedData = { ...newData };
+                if (interval === 'tick' && newData.value !== undefined) {
+                    formattedData = {
+                        time: newData.time,
+                        value: newData.value
+                    };
+                }
+                
+                series[chartId].update(formattedData);
+                console.log(`Updated chart ${chartId} with data:`, formattedData);
+            } else {
+                console.warn(`Series not found for ${chartId}`);
             }
         }
 
         // Function to set initial chart data
         function setInitialChartData(symbol, interval, data) {
             const chartId = `${symbol}_${interval}`;
-            if (series[chartId]) {
-                series[chartId].setData(data);
+            if (series[chartId] && data && data.length > 0) {
+                // For tick data, ensure the data format is correct
+                let formattedData = data;
+                if (interval === 'tick') {
+                    formattedData = data.map(item => ({
+                        time: item.time,
+                        value: item.value
+                    }));
+                }
+                
+                series[chartId].setData(formattedData);
+                console.log(`Set initial data for ${chartId}:`, formattedData.length, 'points');
+            } else {
+                console.warn(`Series not found or no data for ${chartId}`);
             }
         }
 
@@ -195,8 +223,8 @@
                 const chartId = `${activeSymbol}_${intervalKey}`;
 
                 const chartWrapper = document.createElement('div');
-                chartWrapper.className = `p-4 bg-gray-800 rounded-lg shadow-lg ${activeSymbol === SYMBOLS[0] ? '' : 'hidden'}`; // Hide initially if not active symbol
-                chartWrapper.id = `wrapper_${chartId}`; // Wrapper ID for toggling visibility
+                chartWrapper.className = 'p-4 bg-gray-800 rounded-lg shadow-lg';
+                chartWrapper.id = `wrapper_${chartId}`;
 
                 chartWrapper.innerHTML = `
                     <h3 class="chart-title text-center text-lg">${activeSymbol.replace('R_', 'Volatility ')} - ${intervalName}</h3>
@@ -205,12 +233,16 @@
                 chartSection.appendChild(chartWrapper);
 
                 // Create the chart instance after it's in the DOM
-                createChart(activeSymbol, intervalKey);
+                setTimeout(() => {
+                    createChart(activeSymbol, intervalKey);
+                }, 100);
             });
         }
 
         function switchSymbol(symbol) {
             if (activeSymbol === symbol) return;
+
+            console.log(`Switching to symbol: ${symbol}`);
 
             // Update active tab button
             document.querySelectorAll('.tab-button').forEach(button => {
@@ -221,11 +253,15 @@
                 }
             });
 
-            // Hide all current charts
+            // Destroy existing charts for the current symbol
             Object.keys(INTERVALS).forEach(intervalKey => {
                 const chartId = `${activeSymbol}_${intervalKey}`;
-                const wrapper = document.getElementById(`wrapper_${chartId}`);
-                if (wrapper) wrapper.classList.add('hidden');
+                if (charts[chartId]) {
+                    charts[chartId].remove();
+                    delete charts[chartId];
+                    delete series[chartId];
+                    delete chartData[chartId];
+                }
             });
 
             activeSymbol = symbol;
@@ -233,12 +269,8 @@
             // Generate new chart containers for the new active symbol
             generateChartContainers();
 
-            // Show charts for the new active symbol
-            Object.keys(INTERVALS).forEach(intervalKey => {
-                const chartId = `${activeSymbol}_${intervalKey}`;
-                const wrapper = document.getElementById(`wrapper_${chartId}`);
-                if (wrapper) wrapper.classList.remove('hidden');
-            });
+            // Request initial data for the new symbol
+            socket.emit('request_initial_data', { symbol: activeSymbol });
         }
 
         // --- Socket.IO Event Handlers ---
@@ -247,14 +279,16 @@
         });
 
         socket.on('initial_tick_data', (msg) => {
+            console.log('Received initial tick data:', msg);
             if (msg.symbol === activeSymbol) {
                 setInitialChartData(msg.symbol, 'tick', msg.data);
             }
         });
 
         socket.on('initial_candlestick_data', (msg) => {
+            console.log('Received initial candlestick data:', msg);
             if (msg.symbol === activeSymbol) {
-                setInitialChartData(msg.symbol, msg.interval, msg.data);
+                setInitialChartData(msg.symbol, msg.interval.toString(), msg.data);
             }
         });
 
@@ -266,7 +300,7 @@
 
         socket.on('candlestick_update', (msg) => {
             if (msg.symbol === activeSymbol) {
-                updateChart(msg.symbol, msg.interval, msg.data);
+                updateChart(msg.symbol, msg.interval.toString(), msg.data);
             }
         });
 
@@ -276,6 +310,7 @@
 
         // Initial setup on page load
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing UI...');
             generateSymbolTabs();
             generateChartContainers();
         });
