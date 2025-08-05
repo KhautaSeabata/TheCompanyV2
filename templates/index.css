@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Volatility Indices Live Data</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Deriv Volatility Indices - 1 Min Candlestick</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1a202c; /* Dark background */
-            color: #e2e8f0; /* Light text */
+            background-color: #1a202c;
+            color: #e2e8f0;
         }
         .chart-container {
             width: 100%;
-            height: 300px; /* Fixed height for charts */
-            background-color: #2d3748; /* Darker background for charts */
-            border-radius: 0.5rem; /* Rounded corners */
-            overflow: hidden; /* Hide overflow */
+            height: 400px;
+            background-color: #2d3748;
+            border-radius: 0.5rem;
+            overflow: hidden;
         }
         .chart-title {
             font-weight: 600;
@@ -35,71 +34,71 @@
             border: 1px solid transparent;
         }
         .tab-button.active {
-            background-color: #63b3ed; /* Blue for active tab */
+            background-color: #63b3ed;
             color: #1a202c;
             border-color: #63b3ed;
         }
         .tab-button:hover:not(.active) {
             background-color: #5a6578;
         }
-        .grid-cols-1-md-2-lg-4 {
+        .alert-item {
+            background-color: #2d3748;
+            border-left: 4px solid;
+            border-color: #4CAF50; /* Green for BUY, will adjust for SELL */
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.25rem;
+        }
+        .alert-item.sell {
+            border-color: #EF5350; /* Red for SELL */
+        }
+        .grid-cols-1-md-2 {
             grid-template-columns: repeat(1, minmax(0, 1fr));
         }
-        @media (min-width: 768px) { /* md breakpoint */
-            .grid-cols-1-md-2-lg-4 {
+        @media (min-width: 768px) {
+            .grid-cols-1-md-2 {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-        @media (min-width: 1024px) { /* lg breakpoint */
-            .grid-cols-1-md-2-lg-4 {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <h1 class="text-3xl md:text-4xl font-bold text-center mb-8 text-blue-400">Deriv Volatility Indices Live Data</h1>
+    <h1 class="text-3xl md:text-4xl font-bold text-center mb-8 text-blue-400">Deriv Volatility Indices - 1 Min Candlestick</h1>
 
     <!-- Symbol Tabs -->
-    <div class="flex flex-wrap justify-center gap-2 mb-8" id="symbol-tabs">
-        <!-- Tabs will be dynamically generated here -->
+    <div class="flex flex-wrap justify-center gap-2 mb-8" id="symbol-tabs"></div>
+
+    <!-- Chart and Alerts -->
+    <div class="grid grid-cols-1-md-2 gap-6">
+        <!-- Chart Container -->
+        <div>
+            <h3 class="chart-title text-center text-lg" id="chart-title"></h3>
+            <div id="chart" class="chart-container"></div>
+        </div>
+        <!-- Alerts Container -->
+        <div>
+            <h3 class="chart-title text-center text-lg">Trading Alerts</h3>
+            <div id="alerts" class="space-y-2"></div>
+        </div>
     </div>
 
-    <!-- Chart Containers -->
-    <div id="chart-section" class="grid grid-cols-1-md-2-lg-4 gap-6">
-        <!-- Charts will be dynamically generated here -->
-    </div>
-
-    <!-- Socket.IO Client Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
-    <!-- Lightweight Charts Library -->
     <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.umd.production.js"></script>
 
     <script>
         const SYMBOLS = ["R_100", "R_75", "R_50", "R_25"];
-        const INTERVALS = {
-            'tick': 'Tick Data',
-            '60': '1 Min Candles',
-            '300': '5 Min Candles',
-            '900': '15 Min Candles'
-        };
+        const INTERVAL = '60'; // 1-minute candles
 
-        const charts = {}; // Stores chart instances: { 'symbol_interval': chartInstance }
-        const series = {}; // Stores series instances: { 'symbol_interval': seriesInstance }
-        const chartData = {}; // Stores actual data: { 'symbol_interval': [] }
+        let activeSymbol = SYMBOLS[0];
+        let chart, candlestickSeries;
 
-        let activeSymbol = SYMBOLS[0]; // Default active symbol
-
-        // Initialize Socket.IO connection
+        // Initialize Socket.IO
         const socket = io();
 
-        // Function to create a chart
-        function createChart(symbol, interval) {
-            const chartId = `${symbol}_${interval}`;
-            const container = document.getElementById(chartId);
-            if (!container) return;
-
-            const chart = LightweightCharts.createChart(container, {
+        // Create chart
+        function createChart() {
+            const container = document.getElementById('chart');
+            chart = LightweightCharts.createChart(container, {
                 width: container.clientWidth,
                 height: container.clientHeight,
                 layout: {
@@ -107,12 +106,8 @@
                     textColor: '#cbd5e0',
                 },
                 grid: {
-                    vertLines: {
-                        color: '#4a5568',
-                    },
-                    horzLines: {
-                        color: '#4a5568',
-                    },
+                    vertLines: { color: '#4a5568' },
+                    horzLines: { color: '#4a5568' },
                 },
                 timeScale: {
                     timeVisible: true,
@@ -127,146 +122,109 @@
                 },
             });
 
-            let newSeries;
-            if (interval === 'tick') {
-                newSeries = chart.addLineSeries({
-                    color: '#63b3ed', // Blue for line chart
-                    lineWidth: 2,
-                });
-            } else {
-                newSeries = chart.addCandlestickSeries({
-                    upColor: '#4CAF50',   // Green for up candles
-                    downColor: '#EF5350', // Red for down candles
-                    borderVisible: false,
-                    wickVisible: true,
-                    wickUpColor: '#4CAF50',
-                    wickDownColor: '#EF5350',
-                });
-            }
+            candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#4CAF50',
+                downColor: '#EF5350',
+                borderVisible: false,
+                wickVisible: true,
+                wickUpColor: '#4CAF50',
+                wickDownColor: '#EF5350',
+            });
 
-            charts[chartId] = chart;
-            series[chartId] = newSeries;
-            chartData[chartId] = [];
-
-            // Handle window resize to make charts responsive
             new ResizeObserver(entries => {
                 entries.forEach(entry => {
                     chart.applyOptions({ width: entry.contentRect.width, height: entry.contentRect.height });
                 });
             }).observe(container);
+
+            console.log(`Chart created for ${activeSymbol}_${INTERVAL}`);
         }
 
-        // Function to update chart data
-        function updateChart(symbol, interval, newData) {
-            const chartId = `${symbol}_${interval}`;
-            if (series[chartId]) {
-                // Lightweight Charts expects 'time' in epoch seconds for candlestick/line series
-                series[chartId].update(newData);
+        // Update chart data
+        function updateChart(data) {
+            if (candlestickSeries) {
+                candlestickSeries.update(data);
+                console.log(`Updated chart with data:`, data);
             }
         }
 
-        // Function to set initial chart data
-        function setInitialChartData(symbol, interval, data) {
-            const chartId = `${symbol}_${interval}`;
-            if (series[chartId]) {
-                series[chartId].setData(data);
+        // Set initial chart data
+        function setInitialChartData(data) {
+            if (candlestickSeries && data && data.length > 0) {
+                candlestickSeries.setData(data);
+                console.log(`Set initial data: ${data.length} candles`);
             }
         }
 
-        // --- UI Generation ---
+        // Generate symbol tabs
         function generateSymbolTabs() {
             const tabContainer = document.getElementById('symbol-tabs');
-            tabContainer.innerHTML = ''; // Clear existing tabs
+            tabContainer.innerHTML = '';
             SYMBOLS.forEach(symbol => {
                 const button = document.createElement('button');
                 button.className = `tab-button ${symbol === activeSymbol ? 'active' : ''}`;
-                button.textContent = symbol.replace('R_', 'Volatility '); // Make it more readable
+                button.textContent = symbol.replace('R_', 'Volatility ');
                 button.onclick = () => switchSymbol(symbol);
                 tabContainer.appendChild(button);
             });
         }
 
-        function generateChartContainers() {
-            const chartSection = document.getElementById('chart-section');
-            chartSection.innerHTML = ''; // Clear existing charts
-
-            Object.keys(INTERVALS).forEach(intervalKey => {
-                const intervalName = INTERVALS[intervalKey];
-                const chartId = `${activeSymbol}_${intervalKey}`;
-
-                const chartWrapper = document.createElement('div');
-                chartWrapper.className = `p-4 bg-gray-800 rounded-lg shadow-lg ${activeSymbol === SYMBOLS[0] ? '' : 'hidden'}`; // Hide initially if not active symbol
-                chartWrapper.id = `wrapper_${chartId}`; // Wrapper ID for toggling visibility
-
-                chartWrapper.innerHTML = `
-                    <h3 class="chart-title text-center text-lg">${activeSymbol.replace('R_', 'Volatility ')} - ${intervalName}</h3>
-                    <div id="${chartId}" class="chart-container"></div>
-                `;
-                chartSection.appendChild(chartWrapper);
-
-                // Create the chart instance after it's in the DOM
-                createChart(activeSymbol, intervalKey);
-            });
+        // Handle alerts
+        function addAlert(alert) {
+            const alertsContainer = document.getElementById('alerts');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert-item ${alert.direction.toLowerCase()}`;
+            alertDiv.innerHTML = `
+                <p><strong>${alert.type}</strong> (${alert.direction})</p>
+                <p>Price: ${alert.price.toFixed(5)}</p>
+                <p>Confidence: ${(alert.confidence * 100).toFixed(1)}%</p>
+                <p>${alert.description}</p>
+                <p class="text-sm text-gray-400">Expires: ${new Date(alert.expiry).toLocaleString()}</p>
+            `;
+            alertsContainer.prepend(alertDiv); // Add new alerts at the top
+            // Limit to 10 alerts
+            while (alertsContainer.children.length > 10) {
+                alertsContainer.removeChild(alertsContainer.lastChild);
+            }
         }
 
+        // Switch symbol
         function switchSymbol(symbol) {
             if (activeSymbol === symbol) return;
-
-            // Update active tab button
+            console.log(`Switching to symbol: ${symbol}`);
             document.querySelectorAll('.tab-button').forEach(button => {
-                if (button.textContent.includes(symbol.replace('R_', ''))) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
+                button.classList.toggle('active', button.textContent.includes(symbol.replace('R_', '')));
             });
-
-            // Hide all current charts
-            Object.keys(INTERVALS).forEach(intervalKey => {
-                const chartId = `${activeSymbol}_${intervalKey}`;
-                const wrapper = document.getElementById(`wrapper_${chartId}`);
-                if (wrapper) wrapper.classList.add('hidden');
-            });
-
+            if (chart) {
+                chart.remove();
+            }
             activeSymbol = symbol;
-
-            // Generate new chart containers for the new active symbol
-            generateChartContainers();
-
-            // Show charts for the new active symbol
-            Object.keys(INTERVALS).forEach(intervalKey => {
-                const chartId = `${activeSymbol}_${intervalKey}`;
-                const wrapper = document.getElementById(`wrapper_${chartId}`);
-                if (wrapper) wrapper.classList.remove('hidden');
-            });
+            document.getElementById('chart-title').textContent = `${activeSymbol.replace('R_', 'Volatility ')} - 1 Min Candles`;
+            createChart();
+            socket.emit('request_initial_data', { symbol: activeSymbol });
+            document.getElementById('alerts').innerHTML = ''; // Clear alerts
         }
 
-        // --- Socket.IO Event Handlers ---
+        // Socket.IO handlers
         socket.on('connect', () => {
             console.log('Connected to Flask Socket.IO');
         });
 
-        socket.on('initial_tick_data', (msg) => {
-            if (msg.symbol === activeSymbol) {
-                setInitialChartData(msg.symbol, 'tick', msg.data);
-            }
-        });
-
         socket.on('initial_candlestick_data', (msg) => {
-            if (msg.symbol === activeSymbol) {
-                setInitialChartData(msg.symbol, msg.interval, msg.data);
-            }
-        });
-
-        socket.on('tick_update', (msg) => {
-            if (msg.symbol === activeSymbol) {
-                updateChart(msg.symbol, 'tick', msg.data);
+            if (msg.symbol === activeSymbol && msg.interval.toString() === INTERVAL) {
+                setInitialChartData(msg.data);
             }
         });
 
         socket.on('candlestick_update', (msg) => {
-            if (msg.symbol === activeSymbol) {
-                updateChart(msg.symbol, msg.interval, msg.data);
+            if (msg.symbol === activeSymbol && msg.interval.toString() === INTERVAL) {
+                updateChart(msg.data);
+            }
+        });
+
+        socket.on('alert_update', (alert) => {
+            if (alert.symbol === activeSymbol) {
+                addAlert(alert);
             }
         });
 
@@ -274,10 +232,12 @@
             console.log('Disconnected from Flask Socket.IO');
         });
 
-        // Initial setup on page load
+        // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing UI...');
             generateSymbolTabs();
-            generateChartContainers();
+            document.getElementById('chart-title').textContent = `${activeSymbol.replace('R_', 'Volatility ')} - 1 Min Candles`;
+            createChart();
         });
     </script>
 </body>
