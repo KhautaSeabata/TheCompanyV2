@@ -8,3 +8,4 @@ gevent==24.2.1
 gevent-websocket==0.10.1
 pandas
 scipy
+python-socketio==5.11.2
