@@ -9,17 +9,16 @@ from trading_logic import TradingAlerts, TrendlineAnalyzer
 
 # Flask app setup
 app = Flask(__name__)
-socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
 
 # Deriv API configuration
 DERIV_APP_ID = 1089
 DERIV_WS_URL = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
-DERIV_API_TOKEN = "bK3fhHLYrP1sMEb"  # Replace with your actual Deriv API token
+DERIV_API_TOKEN = os.getenv('DERIV_API_TOKEN', 'bK3fhHLYrP1sMEb')  # Use environment variable for production
 
 # Data storage
-candlestick_data = {}
-SYMBOLS = ["R_100", "R_75", "R_50", "R_25"]
-INTERVAL = 60  # 1 minute in seconds
+tick_data = deque(maxlen=200)  # Store last 200 ticks for R_75
+SYMBOL = "R_75"
 
 # Lock for thread-safe access
 data_lock = threading.Lock()
@@ -28,37 +27,25 @@ data_lock = threading.Lock()
 trading_alerts = TradingAlerts()
 trendline_analyzer = TrendlineAnalyzer()
 
-# Initialize candlestick data
-def initialize_candlestick_data():
+def process_tick(price, tick_time):
     with data_lock:
-        for symbol in SYMBOLS:
-            candlestick_data[symbol] = {INTERVAL: deque(maxlen=100)}  # Store last 100 candles
-
-def process_candlestick(symbol, candle):
-    with data_lock:
-        formatted_candle = {
-            'time': candle['epoch'],
-            'open': float(candle['open']),
-            'high': float(candle['high']),
-            'low': float(candle['low']),
-            'close': float(candle['close']),
-            'volume': float(candle.get('volume', 0))
+        formatted_tick = {
+            'time': tick_time,
+            'value': float(price)
         }
-        candlestick_data[symbol][INTERVAL].append(formatted_candle)
+        tick_data.append(formatted_tick)
 
         # Emit to frontend
-        socketio.emit('candlestick_update', {
-            'symbol': symbol,
-            'interval': INTERVAL,
-            'data': formatted_candle
+        socketio.emit('tick_update', {
+            'symbol': SYMBOL,
+            'data': formatted_tick
         }, namespace='/')
 
         # Generate trading signals
-        prices = [c['close'] for c in candlestick_data[symbol][INTERVAL]]
+        prices = [t['value'] for t in tick_data]
         support_levels, resistance_levels = trendline_analyzer.find_support_resistance(prices)
         signals = trendline_analyzer.generate_enhanced_signals(prices, support_levels, resistance_levels)
         
-        # Add signals as alerts
         for signal in signals:
             alert = trading_alerts.add_alert(
                 alert_type=signal['type'],
@@ -88,47 +75,20 @@ async def connect_to_deriv_ws():
                     await asyncio.sleep(5)
                     continue
 
-                # Fetch historical candlestick data
-                for symbol in SYMBOLS:
-                    await websocket.send(json.dumps({
-                        "candles": symbol,
-                        "style": "candles",
-                        "granularity": INTERVAL,
-                        "count": 100
-                    }))
-                
-                # Subscribe to candlestick updates
-                for symbol in SYMBOLS:
-                    await websocket.send(json.dumps({
-                        "ticks_history": symbol,
-                        "style": "candles",
-                        "granularity": INTERVAL,
-                        "subscribe": 1
-                    }))
+                # Subscribe to tick data for R_75
+                await websocket.send(json.dumps({
+                    "ticks": SYMBOL,
+                    "subscribe": 1
+                }))
+                print(f"Subscribed to ticks for {SYMBOL}")
 
                 while True:
                     message = await websocket.recv()
                     data = json.loads(message)
-                    if data.get('msg_type') == 'candles':
-                        candles = data.get('candles', [])
-                        with data_lock:
-                            candlestick_data[data['echo_req']['candles']][INTERVAL].extend([
-                                {
-                                    'time': c['epoch'],
-                                    'open': float(c['open']),
-                                    'high': float(c['high']),
-                                    'low': float(c['low']),
-                                    'close': float(c['close']),
-                                    'volume': float(c.get('volume', 0))
-                                } for c in candles
-                            ])
-                            socketio.emit('initial_candlestick_data', {
-                                'symbol': data['echo_req']['candles'],
-                                'interval': INTERVAL,
-                                'data': list(candlestick_data[data['echo_req']['candles']][INTERVAL])
-                            }, namespace='/')
-                    elif data.get('msg_type') == 'history' and data.get('candles'):
-                        process_candlestick(data['echo_req']['ticks_history'], data['candles'][-1])
+                    if data.get('msg_type') == 'tick':
+                        price = float(data['tick']['quote'])
+                        tick_time = int(data['tick']['epoch'])
+                        process_tick(price, tick_time)
                     elif data.get('error'):
                         print(f"Deriv API Error: {data['error']['message']}")
 
@@ -151,34 +111,27 @@ def index():
 def handle_connect():
     print('Client connected')
     with data_lock:
-        for symbol in SYMBOLS:
-            emit('initial_candlestick_data', {
-                'symbol': symbol,
-                'interval': INTERVAL,
-                'data': list(candlestick_data[symbol][INTERVAL])
-            }, namespace='/')
+        emit('initial_tick_data', {
+            'symbol': SYMBOL,
+            'data': list(tick_data)
+        }, namespace='/')
 
 @socketio.on('request_initial_data')
 def handle_request_initial_data(data):
-    symbol = data.get('symbol')
-    if symbol in SYMBOLS:
+    if data.get('symbol') == SYMBOL:
         with data_lock:
-            emit('initial_candlestick_data', {
-                'symbol': symbol,
-                'interval': INTERVAL,
-                'data': list(candlestick_data[symbol][INTERVAL])
+            emit('initial_tick_data', {
+                'symbol': SYMBOL,
+                'data': list(tick_data)
             }, namespace='/')
 
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
 
-# Main execution
-def start_deriv_websocket_thread():
-    asyncio.run(connect_to_deriv_ws())
+# Start WebSocket thread
+deriv_thread = threading.Thread(target=lambda: asyncio.run(connect_to_deriv_ws()), daemon=True)
+deriv_thread.start()
 
 if __name__ == '__main__':
-    initialize_candlestick_data()
-    deriv_thread = threading.Thread(target=start_deriv_websocket_thread, daemon=True)
-    deriv_thread.start()
     socketio.run(app, host='0.0.0.0', port=5000)
