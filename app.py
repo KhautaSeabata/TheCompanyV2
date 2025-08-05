@@ -1,25 +1,23 @@
 import asyncio
 import json
-import time
 from collections import deque
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import websockets
 import threading
-from trading_logic import TradingAlerts, TrendlineAnalyzer  # Import classes from trading_logic.py
+from trading_logic import TradingAlerts, TrendlineAnalyzer
 
 # Flask app setup
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a strong secret key
 socketio = SocketIO(app, async_mode='threading', cors_allowed_origins="*")
 
 # Deriv API configuration
 DERIV_APP_ID = 1089
 DERIV_WS_URL = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
-DERIV_API_TOKEN = "bK3fhHLYrP1sMEb"
+DERIV_API_TOKEN = "bK3fhHLYrP1sMEb"  # Replace with your actual Deriv API token
 
 # Data storage
-candlestick_data = {}  # { 'symbol': { 'interval': [ { 'time', 'open', 'high', 'low', 'close', 'volume' } ] } }
+candlestick_data = {}
 SYMBOLS = ["R_100", "R_75", "R_50", "R_25"]
 INTERVAL = 60  # 1 minute in seconds
 
@@ -37,9 +35,6 @@ def initialize_candlestick_data():
             candlestick_data[symbol] = {INTERVAL: deque(maxlen=100)}  # Store last 100 candles
 
 def process_candlestick(symbol, candle):
-    """
-    Process a candlestick update from Deriv.
-    """
     with data_lock:
         formatted_candle = {
             'time': candle['epoch'],
@@ -47,7 +42,7 @@ def process_candlestick(symbol, candle):
             'high': float(candle['high']),
             'low': float(candle['low']),
             'close': float(candle['close']),
-            'volume': float(candle.get('volume', 0))  # Volume may not be provided
+            'volume': float(candle.get('volume', 0))
         }
         candlestick_data[symbol][INTERVAL].append(formatted_candle)
 
@@ -99,7 +94,7 @@ async def connect_to_deriv_ws():
                         "candles": symbol,
                         "style": "candles",
                         "granularity": INTERVAL,
-                        "count": 100  # Fetch last 100 candles
+                        "count": 100
                     }))
                 
                 # Subscribe to candlestick updates
@@ -127,14 +122,13 @@ async def connect_to_deriv_ws():
                                     'volume': float(c.get('volume', 0))
                                 } for c in candles
                             ])
-                            # Send initial data to frontend
                             socketio.emit('initial_candlestick_data', {
                                 'symbol': data['echo_req']['candles'],
                                 'interval': INTERVAL,
                                 'data': list(candlestick_data[data['echo_req']['candles']][INTERVAL])
                             }, namespace='/')
                     elif data.get('msg_type') == 'history' and data.get('candles'):
-                        process_candlestick(data['echo_req']['ticks_history'], data['candles'][-1])  # Process latest candle
+                        process_candlestick(data['echo_req']['ticks_history'], data['candles'][-1])
                     elif data.get('error'):
                         print(f"Deriv API Error: {data['error']['message']}")
 
@@ -187,4 +181,4 @@ if __name__ == '__main__':
     initialize_candlestick_data()
     deriv_thread = threading.Thread(target=start_deriv_websocket_thread, daemon=True)
     deriv_thread.start()
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=5000)
