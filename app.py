@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os  # Added to fix NameError
 from collections import deque
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
