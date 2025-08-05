@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Flask app setup
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'fallback_dev_key_1234567890')  # Required for SocketIO sessions
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'fallback_dev_key_1234567890')  # Required for SocketIO
 socketio = SocketIO()
 socketio.init_app(app, async_mode='gevent', cors_allowed_origins="https://thecompanyv2.onrender.com")
 
@@ -25,7 +25,7 @@ DERIV_WS_URL = f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
 DERIV_API_TOKEN = os.getenv('DERIV_API_TOKEN', 'bK3fhHLYrP1sMEb')
 
 # Data storage
-tick_data = deque(maxlen=200)  # Store last 200 ticks for R_75
+tick_data = deque(maxlen=100)  # Reduced to 100 to prevent memory issues
 SYMBOL = "R_75"
 
 # Lock for thread-safe access
@@ -90,7 +90,7 @@ async def connect_to_deriv_ws():
                 # Fetch historical tick data
                 await websocket.send(json.dumps({
                     "ticks_history": SYMBOL,
-                    "count": 200,
+                    "count": 100,
                     "end": "latest",
                     "style": "ticks"
                 }))
@@ -108,6 +108,7 @@ async def connect_to_deriv_ws():
                     data = json.loads(message)
                     if data.get('msg_type') == 'history' and data.get('prices'):
                         with data_lock:
+                            tick_data.clear()  # Clear old data
                             tick_data.extend([{
                                 'time': int(t['epoch']),
                                 'value': float(t['quote'])
