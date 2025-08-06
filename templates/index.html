@@ -2,16 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Volatility 75 Ticker</title>
+  <title>VIX Ticks Status</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      padding: 40px;
       text-align: center;
-      padding: 50px;
     }
     .status {
-      font-size: 1.5em;
+      font-size: 1.4em;
       margin-top: 20px;
+    }
+    .connected {
       color: green;
     }
     .disconnected {
@@ -20,9 +22,14 @@
   </style>
 </head>
 <body>
-  <h1>Volatility 75 Live Tick Feed</h1>
-  <div class="status {{ 'disconnected' if not status else '' }}">
-    WebSocket Status: {{ 'Connected' if status else 'Disconnected' }}
+  <h1>Live Tick Feed Status</h1>
+
+  <div class="status {{ 'connected' if status_25 else 'disconnected' }}">
+    Volatility 25: {{ 'Connected' if status_25 else 'Disconnected' }}
+  </div>
+
+  <div class="status {{ 'connected' if status_75 else 'disconnected' }}">
+    Volatility 75: {{ 'Connected' if status_75 else 'Disconnected' }}
   </div>
 </body>
 </html>
