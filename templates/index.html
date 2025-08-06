@@ -50,6 +50,7 @@
         }]
       },
       options: {
+        animation: false,
         scales: {
           x: {
             title: { display: true, text: 'Time' }
@@ -74,6 +75,7 @@
         }]
       },
       options: {
+        animation: false,
         scales: {
           x: {
             title: { display: true, text: 'Time' }
@@ -93,7 +95,7 @@
       const prices = data.map(tick => tick.quote);
       chart.data.labels = labels;
       chart.data.datasets[0].data = prices;
-      chart.update();
+      chart.update('none');
     }
 
     async function fetchTicks(symbol) {
@@ -114,8 +116,8 @@
         document.getElementById("conn-75").textContent = "Connected";
         document.getElementById("conn-75").style.color = "green";
 
-        if (ticks25 && ticks25.length) updateChartData(chart25, ticks25);
-        if (ticks75 && ticks75.length) updateChartData(chart75, ticks75);
+        if (ticks25 && ticks25.length) updateChartData(chart25, ticks25.slice(-100));
+        if (ticks75 && ticks75.length) updateChartData(chart75, ticks75.slice(-100));
       } catch (error) {
         document.getElementById("conn-25").textContent = "Disconnected";
         document.getElementById("conn-25").style.color = "red";
@@ -125,9 +127,8 @@
       }
     }
 
-    // Update charts every 3 seconds
-    refreshCharts();
-    setInterval(refreshCharts, 3000);
+    // Refresh charts every 200ms (0.2 seconds)
+    setInterval(refreshCharts, 200);
   </script>
 </body>
 </html>
