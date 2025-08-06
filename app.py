@@ -2,36 +2,30 @@ import json
 import threading
 import time
 import requests
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import websocket
 import os
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
 FIREBASE_BASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
-MAX_TICKS = 900
 MAX_CANDLES = 950
 
-TICKS = {
-    "R_25": [],
-    "R_75": []
-}
-CANDLES = {
-    "R_25": [],
-    "R_75": []
-}
-WS_STATUS = {
-    "R_25": False,
-    "R_75": False
-}
+# Store candles by symbol and granularity (interval)
+CANDLES = {}
+WS_STATUS = {}
 
-
-def floor_minute(epoch):
-    return epoch - (epoch % 60)
-
+# Deriv API parameters for granularity in seconds
+VALID_GRANULARITIES = {
+    "1m": 60,
+    "5m": 300,
+    "15m": 900,
+    "1h": 3600,
+    "1d": 86400,
+    "1w": 604800
+}
 
 def store_to_firebase(path, data):
     try:
@@ -39,95 +33,83 @@ def store_to_firebase(path, data):
     except Exception as e:
         print(f"[Firebase Error] {path}: {e}")
 
-
-def update_candles(symbol, tick):
-    epoch_minute = floor_minute(tick["epoch"])
-
-    if not CANDLES[symbol] or CANDLES[symbol][-1]["epoch"] != epoch_minute:
-        # Start a new candle
-        candle = {
-            "epoch": epoch_minute,
-            "open": tick["quote"],
-            "high": tick["quote"],
-            "low": tick["quote"],
-            "close": tick["quote"]
-        }
-        CANDLES[symbol].append(candle)
-        if len(CANDLES[symbol]) > MAX_CANDLES:
-            CANDLES[symbol].pop(0)
-    else:
-        # Update current candle
-        candle = CANDLES[symbol][-1]
-        candle["high"] = max(candle["high"], tick["quote"])
-        candle["low"] = min(candle["low"], tick["quote"])
-        candle["close"] = tick["quote"]
-
-    store_to_firebase(f"candles/{symbol}", CANDLES[symbol])
-
-
-def on_message(symbol):
-    def inner(ws, message):
+def make_ws_on_message(symbol, granularity):
+    def on_message(ws, message):
         data = json.loads(message)
-        if "tick" in data:
-            tick = {
-                "epoch": data["tick"]["epoch"],
-                "quote": data["tick"]["quote"],
-                "symbol": data["tick"]["symbol"]
-            }
+        if "candles" in data:
+            key = f"{symbol}_{granularity}"
+            candles = data["candles"]
 
-            # Store ticks
-            TICKS[symbol].append(tick)
-            if len(TICKS[symbol]) > MAX_TICKS:
-                TICKS[symbol].pop(0)
-            store_to_firebase(f"ticks/{symbol}", TICKS[symbol])
+            # We keep only MAX_CANDLES
+            if len(candles) > MAX_CANDLES:
+                candles = candles[-MAX_CANDLES:]
 
-            # Update 1-minute candle
-            update_candles(symbol, tick)
+            CANDLES[key] = candles
+            store_to_firebase(f"candles/{symbol}/{granularity}", candles)
+    return on_message
 
-    return inner
+def make_ws_on_open(symbol, granularity):
+    def on_open(ws):
+        WS_STATUS[f"{symbol}_{granularity}"] = True
+        subscribe_msg = {
+            "ticks_history": symbol,
+            "style": "candles",
+            "granularity": VALID_GRANULARITIES[granularity],
+            "subscribe": 1,
+            "end": "latest"
+        }
+        ws.send(json.dumps(subscribe_msg))
+    return on_open
 
+def make_ws_on_close(symbol, granularity):
+    def on_close(ws, close_status_code, close_msg):
+        WS_STATUS[f"{symbol}_{granularity}"] = False
+    return on_close
 
-def on_open(symbol):
-    def inner(ws):
-        WS_STATUS[symbol] = True
-        ws.send(json.dumps({
-            "ticks": symbol,
-            "subscribe": 1
-        }))
-    return inner
-
-
-def on_close(symbol):
-    def inner(ws, close_status_code, close_msg):
-        WS_STATUS[symbol] = False
-    return inner
-
-
-def run_ws(symbol):
+def run_ws(symbol, granularity):
     while True:
         try:
             ws = websocket.WebSocketApp(
                 "wss://ws.derivws.com/websockets/v3?app_id=1089",
-                on_message=on_message(symbol),
-                on_open=on_open(symbol),
-                on_close=on_close(symbol)
+                on_message=make_ws_on_message(symbol, granularity),
+                on_open=make_ws_on_open(symbol, granularity),
+                on_close=make_ws_on_close(symbol, granularity),
             )
             ws.run_forever(ping_interval=30, ping_timeout=10)
         except Exception as e:
-            print(f"[WebSocket Error] {symbol}: {e}")
-        WS_STATUS[symbol] = False
+            print(f"[WebSocket Error] {symbol} {granularity}: {e}")
+        WS_STATUS[f"{symbol}_{granularity}"] = False
         time.sleep(5)
-
 
 @app.route("/")
 def index():
-    return render_template("index.html",
-                           status_25=WS_STATUS["R_25"],
-                           status_75=WS_STATUS["R_75"])
+    # Show default chart with Volatility 75, 1m
+    return render_template("index.html")
 
+@app.route("/api/candles")
+def api_candles():
+    symbol = request.args.get("symbol", "R_75")
+    granularity = request.args.get("interval", "1m")
+    if granularity not in VALID_GRANULARITIES:
+        return jsonify({"error": "Invalid interval"}), 400
+
+    key = f"{symbol}_{granularity}"
+    data = CANDLES.get(key, [])
+    return jsonify(data)
+
+@app.route("/api/status")
+def api_status():
+    # Return websocket status for all running streams
+    return jsonify(WS_STATUS)
 
 if __name__ == "__main__":
-    threading.Thread(target=run_ws, args=("R_25",), daemon=True).start()
-    threading.Thread(target=run_ws, args=("R_75",), daemon=True).start()
+    # Start WebSocket threads for each symbol and interval you want
+    symbols = ["R_25", "R_75"]
+    intervals = ["1m", "5m", "15m", "1d", "1w"]
+
+    for symbol in symbols:
+        for interval in intervals:
+            threading.Thread(target=run_ws, args=(symbol, interval), daemon=True).start()
+
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
