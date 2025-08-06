@@ -2,34 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>VIX Ticks Status</title>
+  <title>Volatility 25 & 75 Live Charts</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 40px;
+      padding: 30px;
       text-align: center;
     }
+    canvas {
+      max-width: 100%;
+      margin: 30px auto;
+    }
     .status {
-      font-size: 1.4em;
-      margin-top: 20px;
-    }
-    .connected {
-      color: green;
-    }
-    .disconnected {
-      color: red;
+      margin: 20px;
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
-  <h1>Live Tick Feed Status</h1>
+  <h1>Live Volatility Index Ticks</h1>
 
-  <div class="status {{ 'connected' if status_25 else 'disconnected' }}">
-    Volatility 25: {{ 'Connected' if status_25 else 'Disconnected' }}
+  <div class="status" id="status-25">
+    Volatility 25: <span id="conn-25">Loading...</span>
   </div>
+  <canvas id="chart25" width="600" height="300"></canvas>
 
-  <div class="status {{ 'connected' if status_75 else 'disconnected' }}">
-    Volatility 75: {{ 'Connected' if status_75 else 'Disconnected' }}
+  <div class="status" id="status-75">
+    Volatility 75: <span id="conn-75">Loading...</span>
   </div>
+  <canvas id="chart75" width="600" height="300"></canvas>
+
+  <script>
+    const chart25Ctx = document.getElementById('chart25').getContext('2d');
+    const chart75Ctx = document.getElementById('chart75').getContext('2d');
+
+    const chart25 = new Chart(chart25Ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Volatility 25 Price',
+          data: [],
+          borderColor: 'blue',
+          borderWidth: 1,
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            title: { display: true, text: 'Time' }
+          },
+          y: {
+            title: { display: true, text: 'Price' }
+          }
+        }
+      }
+    });
+
+    const chart75 = new Chart(chart75Ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Volatility 75 Price',
+          data: [],
+          borderColor: 'green',
+          borderWidth: 1,
+          tension: 0.3
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            title: { display: true, text: 'Time' }
+          },
+          y: {
+            title: { display: true, text: 'Price' }
+          }
+        }
+      }
+    });
+
+    function updateChartData(chart, data) {
+      const labels = data.map(tick => {
+        const date = new Date(tick.epoch * 1000);
+        return date.toLocaleTimeString();
+      });
+      const prices = data.map(tick => tick.quote);
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = prices;
+      chart.update();
+    }
+
+    async function fetchTicks(symbol) {
+      const url = `https://company-bdb78-default-rtdb.firebaseio.com/ticks/${symbol}.json`;
+      const response = await fetch(url);
+      return await response.json();
+    }
+
+    async function refreshCharts() {
+      try {
+        const [ticks25, ticks75] = await Promise.all([
+          fetchTicks("R_25"),
+          fetchTicks("R_75")
+        ]);
+
+        document.getElementById("conn-25").textContent = "Connected";
+        document.getElementById("conn-25").style.color = "green";
+        document.getElementById("conn-75").textContent = "Connected";
+        document.getElementById("conn-75").style.color = "green";
+
+        if (ticks25 && ticks25.length) updateChartData(chart25, ticks25);
+        if (ticks75 && ticks75.length) updateChartData(chart75, ticks75);
+      } catch (error) {
+        document.getElementById("conn-25").textContent = "Disconnected";
+        document.getElementById("conn-25").style.color = "red";
+        document.getElementById("conn-75").textContent = "Disconnected";
+        document.getElementById("conn-75").style.color = "red";
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    // Update charts every 3 seconds
+    refreshCharts();
+    setInterval(refreshCharts, 3000);
+  </script>
 </body>
 </html>
