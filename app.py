@@ -13,16 +13,13 @@ CORS(app)
 FIREBASE_BASE_URL = "https://company-bdb78-default-rtdb.firebaseio.com"
 MAX_CANDLES = 950
 
-# Store candles by symbol and granularity (interval)
 CANDLES = {}
 WS_STATUS = {}
 
-# Deriv API parameters for granularity in seconds
 VALID_GRANULARITIES = {
     "1m": 60,
     "5m": 300,
     "15m": 900,
-    "1h": 3600,
     "1d": 86400,
     "1w": 604800
 }
@@ -39,11 +36,8 @@ def make_ws_on_message(symbol, granularity):
         if "candles" in data:
             key = f"{symbol}_{granularity}"
             candles = data["candles"]
-
-            # We keep only MAX_CANDLES
             if len(candles) > MAX_CANDLES:
                 candles = candles[-MAX_CANDLES:]
-
             CANDLES[key] = candles
             store_to_firebase(f"candles/{symbol}/{granularity}", candles)
     return on_message
@@ -83,7 +77,6 @@ def run_ws(symbol, granularity):
 
 @app.route("/")
 def index():
-    # Show default chart with Volatility 75, 1m
     return render_template("index.html")
 
 @app.route("/api/candles")
@@ -99,11 +92,9 @@ def api_candles():
 
 @app.route("/api/status")
 def api_status():
-    # Return websocket status for all running streams
     return jsonify(WS_STATUS)
 
 if __name__ == "__main__":
-    # Start WebSocket threads for each symbol and interval you want
     symbols = ["R_25", "R_75"]
     intervals = ["1m", "5m", "15m", "1d", "1w"]
 
