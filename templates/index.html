@@ -3,34 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <title>Volatility Live Candles</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.4.0/dist/chartjs-chart-financial.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.1/dist/chartjs-chart-financial.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
       text-align: center;
+      background-color: #f5f5f5;
     }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    
     #controls {
       margin-bottom: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: inline-block;
     }
+    
+    #controls label {
+      margin-right: 10px;
+      font-weight: bold;
+    }
+    
+    #controls select {
+      margin-right: 20px;
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    #chartContainer {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 1000px;
+    }
+    
     canvas {
-      max-width: 900px;
-      margin: auto;
-      height: 500px;
+      max-width: 100%;
+      height: 500px !important;
+    }
+    
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .loading {
+      color: #orange;
+    }
+    
+    .connected {
+      color: #green;
+    }
+    
+    .error {
+      color: #red;
     }
   </style>
 </head>
 <body>
   <h1>Volatility Live Candles</h1>
-
+  
   <div id="controls">
     <label for="symbol">Symbol:</label>
     <select id="symbol">
       <option value="R_75" selected>Volatility 75</option>
       <option value="R_25">Volatility 25</option>
     </select>
-
+    
     <label for="interval">Interval:</label>
     <select id="interval">
       <option value="1m" selected>1 Minute</option>
@@ -40,80 +93,150 @@
       <option value="1w">1 Week</option>
     </select>
   </div>
-
-  <canvas id="candleChart"></canvas>
+  
+  <div id="chartContainer">
+    <canvas id="candleChart"></canvas>
+    <div id="status">Loading...</div>
+  </div>
 
   <script>
     const ctx = document.getElementById("candleChart").getContext("2d");
-
+    
     let candleChart = new Chart(ctx, {
       type: 'candlestick',
       data: {
         datasets: [{
-          label: 'Candles',
-          data: []
+          label: 'Price',
+          data: [],
+          borderColor: {
+            up: '#26a69a',
+            down: '#ef5350',
+            unchanged: '#999'
+          },
+          backgroundColorDown: '#ef5350',
+          backgroundColorUp: '#26a69a',
+          borderWidth: 1
         }]
       },
       options: {
         responsive: true,
-        animation: false,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 0
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          title: {
+            display: true,
+            text: 'Live Volatility Candles'
+          }
+        },
         scales: {
           x: {
+            type: 'time',
             time: {
-              unit: 'minute'
-            },
-            adapters: {
-              date: {
-                locale: 'en-US'
+              unit: 'minute',
+              displayFormats: {
+                minute: 'HH:mm',
+                hour: 'HH:mm',
+                day: 'MMM dd',
+                week: 'MMM dd',
+                month: 'MMM yyyy'
               }
             },
-            ticks: {
-              source: 'auto'
+            title: {
+              display: true,
+              text: 'Time'
             }
           },
           y: {
             title: {
               display: true,
               text: 'Price'
-            }
+            },
+            beginAtZero: false
           }
         }
       }
     });
 
     function convertToChartData(candles) {
+      console.log('Converting candles:', candles.length);
       return candles.map(c => ({
         x: new Date(c.epoch * 1000),
-        o: c.open,
-        h: c.high,
-        l: c.low,
-        c: c.close
+        o: parseFloat(c.open),
+        h: parseFloat(c.high),
+        l: parseFloat(c.low),
+        c: parseFloat(c.close)
       }));
     }
 
     async function fetchCandles(symbol, interval) {
-      const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
-      const data = await res.json();
-      return data;
+      try {
+        const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        console.log('Fetched data:', data);
+        return data;
+      } catch (error) {
+        console.error('Fetch error:', error);
+        updateStatus('Error fetching data', 'error');
+        return [];
+      }
+    }
+
+    function updateStatus(message, className = '') {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = message;
+      statusEl.className = className;
     }
 
     async function refresh() {
       const symbol = document.getElementById("symbol").value;
       const interval = document.getElementById("interval").value;
-      const candles = await fetchCandles(symbol, interval);
-      if (candles && candles.length > 0) {
-        candleChart.data.datasets[0].data = convertToChartData(candles);
-        candleChart.update('none');
+      
+      console.log('Refreshing:', symbol, interval);
+      updateStatus('Loading...', 'loading');
+      
+      try {
+        const candles = await fetchCandles(symbol, interval);
+        
+        if (candles && candles.length > 0) {
+          const chartData = convertToChartData(candles);
+          candleChart.data.datasets[0].data = chartData;
+          candleChart.data.datasets[0].label = `${symbol} - ${interval}`;
+          candleChart.update('none');
+          
+          updateStatus(`${candles.length} candles loaded - Last update: ${new Date().toLocaleTimeString()}`, 'connected');
+          console.log('Chart updated with', chartData.length, 'candles');
+        } else {
+          updateStatus('No data available', 'loading');
+          console.log('No candles received');
+        }
+      } catch (error) {
+        console.error('Refresh error:', error);
+        updateStatus('Error loading data', 'error');
       }
     }
 
+    // Event listeners
     document.getElementById("symbol").addEventListener("change", refresh);
     document.getElementById("interval").addEventListener("change", refresh);
 
-    // Refresh every 200ms
-    setInterval(refresh, 200);
+    // Auto-refresh every 1 second (reduced from 200ms to be less aggressive)
+    setInterval(refresh, 1000);
 
     // Initial load
+    console.log('Starting app...');
     refresh();
   </script>
 </body>
