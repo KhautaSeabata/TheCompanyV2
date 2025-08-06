@@ -1,236 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatility 75 Live Chart</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: #FFFFFF;
-            color: #000000;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            font-size: 24px;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #000000;
-        }
-        .chart-container {
-            width: 100%;
-            height: 400px;
-            background-color: #FFFFFF;
-            border: 1px solid #000000;
-        }
-        .tick-info {
-            margin-top: 10px;
-            font-size: 16px;
-            text-align: center;
-            color: #000000;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Volatility 75 Ticker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    .status {
+      font-size: 1.5em;
+      margin-top: 20px;
+      color: green;
+    }
+    .disconnected {
+      color: red;
+    }
+  </style>
 </head>
 <body>
-    <h1>Volatility 75 Live Chart</h1>
-    <div id="chart" class="chart-container"></div>
-    <div id="tick-info" class="tick-info">Latest Tick: Waiting for data...</div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
-    <!-- Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-
-    <script>
-        // Firebase configuration (replace with your Firebase project config)
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "company-bdb78.firebaseapp.com",
-            databaseURL: "https://company-bdb78-default-rtdb.firebaseio.com",
-            projectId: "company-bdb78",
-            storageBucket: "company-bdb78.appspot.com",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-        const SYMBOL = "R_75";
-        const DERIV_WS_URL = "wss://ws.derivws.com/websockets/v3?app_id=1089";
-        const DERIV_API_TOKEN = "YOUR_DERIV_API_TOKEN"; // Replace with your Deriv API token
-        let chart, lineSeries;
-
-        // Initialize Lightweight Charts
-        function createChart() {
-            const container = document.getElementById('chart');
-            chart = LightweightCharts.createChart(container, {
-                width: container.clientWidth,
-                height: container.clientHeight,
-                layout: {
-                    background: { color: '#FFFFFF' },
-                    textColor: '#000000',
-                },
-                grid: {
-                    vertLines: { color: '#000000' },
-                    horzLines: { color: '#000000' },
-                },
-                timeScale: {
-                    timeVisible: true,
-                    secondsVisible: true,
-                    borderColor: '#000000',
-                },
-                rightPriceScale: {
-                    borderColor: '#000000',
-                },
-                crosshair: {
-                    mode: LightweightCharts.CrosshairMode.Normal,
-                },
-            });
-
-            lineSeries = chart.addLineSeries({
-                color: '#000000',
-                lineWidth: 1,
-                title: 'R_75 Tick Price'
-            });
-
-            new ResizeObserver(entries => {
-                entries.forEach(entry => {
-                    chart.applyOptions({ width: entry.contentRect.width, height: entry.contentRect.height });
-                });
-            }).observe(container);
-
-            console.log('Chart initialized for Volatility 75');
-        }
-
-        // Update chart and tick info
-        function updateChart(data) {
-            if (lineSeries && data && typeof data.time === 'number' && typeof data.value === 'number') {
-                console.log('Updating chart with tick:', data);
-                lineSeries.update({ time: data.time, value: data.value });
-                chart.timeScale().fitContent();
-
-                // Update tick info display
-                const tickInfo = document.getElementById('tick-info');
-                const timeString = new Date(data.time * 1000).toLocaleString();
-                tickInfo.textContent = `Latest Tick: Price = ${data.value.toFixed(5)}, Time = ${timeString}`;
-            } else {
-                console.error('Invalid tick data format:', data);
-            }
-        }
-
-        // Set initial chart data from Firebase
-        function setInitialChartData(data) {
-            if (lineSeries && Array.isArray(data) && data.length > 0) {
-                const validData = data.filter(d => typeof d.time === 'number' && typeof d.value === 'number');
-                if (validData.length > 0) {
-                    console.log(`Setting initial tick data: ${validData.length} points`, validData.slice(-5));
-                    lineSeries.setData(validData);
-                    chart.timeScale().fitContent();
-
-                    // Display the latest tick
-                    const latestTick = validData[validData.length - 1];
-                    const tickInfo = document.getElementById('tick-info');
-                    const timeString = new Date(latestTick.time * 1000).toLocaleString();
-                    tickInfo.textContent = `Latest Tick: Price = ${latestTick.value.toFixed(5)}, Time = ${timeString}`;
-                } else {
-                    console.error('No valid initial tick data:', data);
-                }
-            } else {
-                console.error('Invalid initial data or line series not initialized:', data);
-            }
-        }
-
-        // Connect to Deriv WebSocket and store ticks in Firebase
-        function connectToDerivWebSocket() {
-            const ws = new WebSocket(DERIV_WS_URL);
-
-            ws.onopen = () => {
-                console.log('Connected to Deriv WebSocket');
-                // Authorize
-                ws.send(JSON.stringify({ authorize: DERIV_API_TOKEN }));
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.msg_type === 'authorize' && data.authorize) {
-                    console.log(`Authorized: ${data.authorize.loginid}`);
-                    // Request historical ticks
-                    ws.send(JSON.stringify({
-                        ticks_history: SYMBOL,
-                        count: 100,
-                        end: "latest",
-                        style: "ticks"
-                    }));
-                    // Subscribe to real-time ticks
-                    ws.send(JSON.stringify({
-                        ticks: SYMBOL,
-                        subscribe: 1
-                    }));
-                } else if (data.msg_type === 'history' && data.prices) {
-                    const ticks = data.prices.map(t => ({
-                        time: parseInt(t.epoch),
-                        value: parseFloat(t.quote)
-                    }));
-                    console.log('Received historical ticks:', ticks.length);
-                    // Store historical ticks in Firebase
-                    ticks.forEach((tick, index) => {
-                        database.ref(`ticks/${SYMBOL}/${index}`).set(tick);
-                    });
-                    // Update chart with historical data
-                    setInitialChartData(ticks);
-                } else if (data.msg_type === 'tick') {
-                    const tick = {
-                        time: parseInt(data.tick.epoch),
-                        value: parseFloat(data.tick.quote)
-                    };
-                    console.log('Received tick:', tick);
-                    // Store tick in Firebase with timestamp as key
-                    database.ref(`ticks/${SYMBOL}/${tick.time}`).set(tick);
-                    // Update chart
-                    updateChart(tick);
-                } else if (data.error) {
-                    console.error('Deriv API Error:', data.error.message);
-                }
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
-
-            ws.onclose = () => {
-                console.log('Deriv WebSocket closed. Reconnecting in 5s...');
-                setTimeout(connectToDerivWebSocket, 5000);
-            };
-        }
-
-        // Listen for real-time updates from Firebase
-        function listenToFirebase() {
-            database.ref(`ticks/${SYMBOL}`).on('child_added', (snapshot) => {
-                const tick = snapshot.val();
-                console.log('Firebase tick update:', tick);
-                updateChart(tick);
-            });
-        }
-
-        // Initial setup
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing chart...');
-            createChart();
-            connectToDerivWebSocket();
-            listenToFirebase();
-
-            // Load initial data from Firebase
-            database.ref(`ticks/${SYMBOL}`).once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    const ticks = Object.values(data);
-                    setInitialChartData(ticks);
-                }
-            });
-        });
-    </script>
+  <h1>Volatility 75 Live Tick Feed</h1>
+  <div class="status {{ 'disconnected' if not status else '' }}">
+    WebSocket Status: {{ 'Connected' if status else 'Disconnected' }}
+  </div>
 </body>
 </html>
