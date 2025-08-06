@@ -38,11 +38,14 @@ def make_ws_on_message(symbol, granularity):
             if "candles" in data:
                 key = f"{symbol}_{granularity}"
                 candles = data["candles"]
+                
+                # Always limit to MAX_CANDLES (950)
                 if len(candles) > MAX_CANDLES:
                     candles = candles[-MAX_CANDLES:]
+                
                 CANDLES[key] = candles
                 store_to_firebase(f"candles/{symbol}/{granularity}", candles)
-                print(f"[WebSocket] Stored {len(candles)} candles for {key}")
+                print(f"[WebSocket] Stored {len(candles)} candles for {key} (max: {MAX_CANDLES})")
             elif "error" in data:
                 print(f"[WebSocket Error] {symbol}_{granularity}: {data['error']}")
         except Exception as e:
@@ -108,7 +111,14 @@ def api_candles():
     
     key = f"{symbol}_{granularity}"
     data = CANDLES.get(key, [])
-    print(f"[API] Returning {len(data)} candles for {key}")
+    
+    # Ensure we never return more than MAX_CANDLES
+    if len(data) > MAX_CANDLES:
+        data = data[-MAX_CANDLES:]
+        # Update the stored data to keep it trimmed
+        CANDLES[key] = data
+    
+    print(f"[API] Returning {len(data)} candles for {key} (max: {MAX_CANDLES})")
     return jsonify(data)
 
 @app.route("/api/status")
@@ -131,4 +141,4 @@ if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
     print(f"[App] Starting Flask server on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
