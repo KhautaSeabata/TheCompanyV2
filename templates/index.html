@@ -1,73 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Volatility 25 & 75 Live Charts</title>
+  <title>Deriv Live Tick Chart</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-      text-align: center;
-    }
-    canvas {
-      max-width: 100%;
-      margin: 30px auto;
-    }
-    .status {
-      margin: 20px;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 40px; }
+    canvas { width: 100%; max-width: 800px; height: 400px; }
   </style>
 </head>
 <body>
-  <h1>Live Volatility Index Ticks</h1>
-
-  <div class="status" id="status-25">
-    Volatility 25: <span id="conn-25">Loading...</span>
-  </div>
-  <canvas id="chart25" width="600" height="300"></canvas>
-
-  <div class="status" id="status-75">
-    Volatility 75: <span id="conn-75">Loading...</span>
-  </div>
-  <canvas id="chart75" width="600" height="300"></canvas>
+  <h1>Live Volatility 75 Chart (Direct from Deriv)</h1>
+  <canvas id="tickChart"></canvas>
 
   <script>
-    const chart25Ctx = document.getElementById('chart25').getContext('2d');
-    const chart75Ctx = document.getElementById('chart75').getContext('2d');
-
-    const chart25 = new Chart(chart25Ctx, {
+    const ctx = document.getElementById("tickChart").getContext("2d");
+    const tickChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: [],
         datasets: [{
-          label: 'Volatility 25 Price',
-          data: [],
-          borderColor: 'blue',
-          borderWidth: 1,
-          tension: 0.3
-        }]
-      },
-      options: {
-        animation: false,
-        scales: {
-          x: {
-            title: { display: true, text: 'Time' }
-          },
-          y: {
-            title: { display: true, text: 'Price' }
-          }
-        }
-      }
-    });
-
-    const chart75 = new Chart(chart75Ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Volatility 75 Price',
+          label: 'V75 Price',
           data: [],
           borderColor: 'green',
           borderWidth: 1,
@@ -77,58 +30,44 @@
       options: {
         animation: false,
         scales: {
-          x: {
-            title: { display: true, text: 'Time' }
-          },
-          y: {
-            title: { display: true, text: 'Price' }
-          }
+          x: { title: { display: true, text: 'Time' }},
+          y: { title: { display: true, text: 'Price' }}
         }
       }
     });
 
-    function updateChartData(chart, data) {
-      const labels = data.map(tick => {
-        const date = new Date(tick.epoch * 1000);
-        return date.toLocaleTimeString();
-      });
-      const prices = data.map(tick => tick.quote);
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = prices;
-      chart.update('none');
-    }
+    const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
 
-    async function fetchTicks(symbol) {
-      const url = `https://company-bdb78-default-rtdb.firebaseio.com/ticks/${symbol}.json`;
-      const response = await fetch(url);
-      return await response.json();
-    }
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ ticks: "R_75", subscribe: 1 }));
+    };
 
-    async function refreshCharts() {
-      try {
-        const [ticks25, ticks75] = await Promise.all([
-          fetchTicks("R_25"),
-          fetchTicks("R_75")
-        ]);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.tick) {
+        const price = data.tick.quote;
+        const time = new Date(data.tick.epoch * 1000).toLocaleTimeString();
 
-        document.getElementById("conn-25").textContent = "Connected";
-        document.getElementById("conn-25").style.color = "green";
-        document.getElementById("conn-75").textContent = "Connected";
-        document.getElementById("conn-75").style.color = "green";
+        tickChart.data.labels.push(time);
+        tickChart.data.datasets[0].data.push(price);
 
-        if (ticks25 && ticks25.length) updateChartData(chart25, ticks25.slice(-100));
-        if (ticks75 && ticks75.length) updateChartData(chart75, ticks75.slice(-100));
-      } catch (error) {
-        document.getElementById("conn-25").textContent = "Disconnected";
-        document.getElementById("conn-25").style.color = "red";
-        document.getElementById("conn-75").textContent = "Disconnected";
-        document.getElementById("conn-75").style.color = "red";
-        console.error("Error fetching data:", error);
+        // Keep only last 100 points
+        if (tickChart.data.labels.length > 100) {
+          tickChart.data.labels.shift();
+          tickChart.data.datasets[0].data.shift();
+        }
+
+        tickChart.update('none');
       }
-    }
+    };
 
-    // Refresh charts every 200ms (0.2 seconds)
-    setInterval(refreshCharts, 200);
+    ws.onclose = () => {
+      alert("WebSocket closed");
+    };
+
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
   </script>
 </body>
 </html>
