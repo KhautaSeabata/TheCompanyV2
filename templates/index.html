@@ -1,73 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Deriv Live Tick Chart</title>
+  <meta charset="UTF-8" />
+  <title>Volatility Live Candles</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 40px; }
-    canvas { width: 100%; max-width: 800px; height: 400px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+    canvas {
+      max-width: 900px;
+      margin: auto;
+      height: 400px;
+    }
   </style>
 </head>
 <body>
-  <h1>Live Volatility 75 Chart (Direct from Deriv)</h1>
-  <canvas id="tickChart"></canvas>
+  <h1>Volatility Live Candles</h1>
+
+  <div id="controls">
+    <label for="symbol">Symbol:</label>
+    <select id="symbol">
+      <option value="R_75" selected>Volatility 75</option>
+      <option value="R_25">Volatility 25</option>
+    </select>
+
+    <label for="interval">Interval:</label>
+    <select id="interval">
+      <option value="1m" selected>1 Minute</option>
+      <option value="5m">5 Minutes</option>
+      <option value="15m">15 Minutes</option>
+      <option value="1d">1 Day</option>
+      <option value="1w">1 Week</option>
+    </select>
+  </div>
+
+  <canvas id="candleChart"></canvas>
 
   <script>
-    const ctx = document.getElementById("tickChart").getContext("2d");
-    const tickChart = new Chart(ctx, {
-      type: 'line',
+    const ctx = document.getElementById("candleChart").getContext("2d");
+
+    let candleChart = null;
+
+    const config = {
+      type: 'candlestick',
       data: {
-        labels: [],
         datasets: [{
-          label: 'V75 Price',
-          data: [],
-          borderColor: 'green',
-          borderWidth: 1,
-          tension: 0.3
+          label: 'Candles',
+          data: []
         }]
       },
       options: {
-        animation: false,
+        responsive: true,
         scales: {
-          x: { title: { display: true, text: 'Time' }},
-          y: { title: { display: true, text: 'Price' }}
-        }
-      }
-    });
-
-    const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ ticks: "R_75", subscribe: 1 }));
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.tick) {
-        const price = data.tick.quote;
-        const time = new Date(data.tick.epoch * 1000).toLocaleTimeString();
-
-        tickChart.data.labels.push(time);
-        tickChart.data.datasets[0].data.push(price);
-
-        // Keep only last 100 points
-        if (tickChart.data.labels.length > 100) {
-          tickChart.data.labels.shift();
-          tickChart.data.datasets[0].data.shift();
-        }
-
-        tickChart.update('none');
+          x: {
+            time: {
+              unit: 'minute'
+            }
+          }
+        },
+        animation: false,
       }
     };
 
-    ws.onclose = () => {
-      alert("WebSocket closed");
-    };
+    // You will need to use a candlestick plugin for Chart.js
+    // Using chartjs-chart-financial plugin:
+    // https://github.com/chartjs/chartjs-chart-financial
+    // Load the plugin CDN first (insert in <head> or here):
+    // <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.4.0/dist/chartjs-chart-financial.min.js"></script>
 
-    ws.onerror = (err) => {
-      console.error("WebSocket error:", err);
-    };
+    // For now, let's just plot a simple line chart with close prices as a fallback:
+
+    if (!candleChart) {
+      candleChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Close Price',
+            data: [],
+            borderColor: 'blue',
+            borderWidth: 1,
+            tension: 0.3,
+          }]
+        },
+        options: {
+          animation: false,
+          scales: {
+            x: {
+              title: { display: true, text: 'Time' },
+            },
+            y: {
+              title: { display: true, text: 'Price' }
+            }
+          }
+        }
+      });
+    }
+
+    async function fetchCandles(symbol, interval) {
+      const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
+      const data = await res.json();
+      return data;
+    }
+
+    function updateChart(data) {
+      if (!data || data.length === 0) return;
+      candleChart.data.labels = data.map(c => {
+        const date = new Date(c.epoch * 1000);
+        return date.toLocaleString();
+      });
+      candleChart.data.datasets[0].data = data.map(c => c.close);
+      candleChart.update('none');
+    }
+
+    async function refresh() {
+      const symbol = document.getElementById("symbol").value;
+      const interval = document.getElementById("interval").value;
+      const candles = await fetchCandles(symbol, interval);
+      updateChart(candles);
+    }
+
+    document.getElementById("symbol").addEventListener("change", refresh);
+    document.getElementById("interval").addEventListener("change", refresh);
+
+    // Refresh every 200ms
+    setInterval(refresh, 200);
+    refresh();
   </script>
 </body>
 </html>
