@@ -3,60 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Volatility 75 Live Data</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Volatility 75 Live Chart</title>
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a202c;
-            color: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+            background-color: #FFFFFF;
+            color: #000000;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #000000;
         }
         .chart-container {
             width: 100%;
             height: 400px;
-            background-color: #2d3748;
-            border-radius: 0.5rem;
-            overflow: hidden;
-        }
-        .chart-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: #cbd5e0;
-        }
-        .alert-item {
-            background-color: #2d3748;
-            border-left: 4px solid;
-            border-color: #4CAF50;
-            padding: 1rem;
-            margin-bottom: 0.5rem;
-            border-radius: 0.25rem;
-        }
-        .alert-item.sell {
-            border-color: #EF5350;
-        }
-        .grid-cols-1-md-2 {
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-        }
-        @media (min-width: 768px) {
-            .grid-cols-1-md-2 {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+            background-color: #FFFFFF;
+            border: 1px solid #000000;
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <h1 class="text-3xl md:text-4xl font-bold text-center mb-8 text-blue-400">Volatility 75 Live Data</h1>
-
-    <div class="grid grid-cols-1-md-2 gap-6">
-        <div>
-            <h3 class="chart-title text-center text-lg">Volatility 75 - Tick Price vs Time</h3>
-            <div id="chart" class="chart-container"></div>
-        </div>
-        <div>
-            <h3 class="chart-title text-center text-lg">Trading Alerts</h3>
-            <div id="alerts" class="space-y-2"></div>
-        </div>
-    </div>
+<body>
+    <h1>Volatility 75 Live Chart</h1>
+    <div id="chart" class="chart-container"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -75,20 +47,20 @@
                 width: container.clientWidth,
                 height: container.clientHeight,
                 layout: {
-                    background: { color: '#2d3748' },
-                    textColor: '#cbd5e0',
+                    background: { color: '#FFFFFF' },
+                    textColor: '#000000',
                 },
                 grid: {
-                    vertLines: { color: '#4a5568' },
-                    horzLines: { color: '#4a5568' },
+                    vertLines: { color: '#000000' },
+                    horzLines: { color: '#000000' },
                 },
                 timeScale: {
                     timeVisible: true,
                     secondsVisible: true,
-                    borderColor: '#4a5568',
+                    borderColor: '#000000',
                 },
                 rightPriceScale: {
-                    borderColor: '#4a5568',
+                    borderColor: '#000000',
                 },
                 crosshair: {
                     mode: LightweightCharts.CrosshairMode.Normal,
@@ -96,8 +68,8 @@
             });
 
             lineSeries = chart.addLineSeries({
-                color: '#63b3ed',
-                lineWidth: 2,
+                color: '#000000',
+                lineWidth: 1,
                 title: 'R_75 Tick Price'
             });
 
@@ -137,25 +109,6 @@
             }
         }
 
-        // Handle alerts
-        function addAlert(alert) {
-            console.log('Received alert:', alert);
-            const alertsContainer = document.getElementById('alerts');
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert-item ${alert.direction.toLowerCase()}`;
-            alertDiv.innerHTML = `
-                <p><strong>${alert.type}</strong> (${alert.direction})</p>
-                <p>Price: ${alert.price.toFixed(5)}</p>
-                <p>Confidence: ${(alert.confidence * 100).toFixed(1)}%</p>
-                <p>${alert.description}</p>
-                <p class="text-sm text-gray-400">Expires: ${new Date(alert.expiry).toLocaleString()}</p>
-            `;
-            alertsContainer.prepend(alertDiv);
-            while (alertsContainer.children.length > 10) {
-                alertsContainer.removeChild(alertsContainer.lastChild);
-            }
-        }
-
         // Socket.IO handlers
         socket.on('connect', () => {
             console.log('Connected to Flask Socket.IO');
@@ -178,11 +131,6 @@
                 console.log('Received tick update:', msg.data);
                 updateChart(msg.data);
             }
-        });
-
-        socket.on('alert_update', (alert) => {
-            console.log('Received alert update:', alert);
-            addAlert(alert);
         });
 
         socket.on('disconnect', () => {
