@@ -24,11 +24,18 @@
             background-color: #FFFFFF;
             border: 1px solid #000000;
         }
+        .tick-info {
+            margin-top: 10px;
+            font-size: 16px;
+            text-align: center;
+            color: #000000;
+        }
     </style>
 </head>
 <body>
     <h1>Volatility 75 Live Chart</h1>
     <div id="chart" class="chart-container"></div>
+    <div id="tick-info" class="tick-info">Latest Tick: Waiting for data...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -82,12 +89,17 @@
             console.log('Chart initialized for Volatility 75');
         }
 
-        // Update chart data
+        // Update chart and tick info
         function updateChart(data) {
             if (lineSeries && data && typeof data.time === 'number' && typeof data.value === 'number') {
                 console.log('Updating chart with tick:', data);
                 lineSeries.update({ time: data.time, value: data.value });
                 chart.timeScale().fitContent();
+
+                // Update tick info display
+                const tickInfo = document.getElementById('tick-info');
+                const timeString = new Date(data.time * 1000).toLocaleString();
+                tickInfo.textContent = `Latest Tick: Price = ${data.value.toFixed(5)}, Time = ${timeString}`;
             } else {
                 console.error('Invalid tick data format:', data);
             }
@@ -101,6 +113,12 @@
                     console.log(`Setting initial tick data: ${validData.length} points`, validData.slice(-5));
                     lineSeries.setData(validData);
                     chart.timeScale().fitContent();
+
+                    // Display the latest tick from initial data
+                    const latestTick = validData[validData.length - 1];
+                    const tickInfo = document.getElementById('tick-info');
+                    const timeString = new Date(latestTick.time * 1000).toLocaleString();
+                    tickInfo.textContent = `Latest Tick: Price = ${latestTick.value.toFixed(5)}, Time = ${timeString}`;
                 } else {
                     console.error('No valid initial tick data:', data);
                 }
