@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Volatility Live Candles</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.4.0/dist/chartjs-chart-financial.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,7 +17,7 @@
     canvas {
       max-width: 900px;
       margin: auto;
-      height: 400px;
+      height: 500px;
     }
   </style>
 </head>
@@ -45,9 +46,7 @@
   <script>
     const ctx = document.getElementById("candleChart").getContext("2d");
 
-    let candleChart = null;
-
-    const config = {
+    let candleChart = new Chart(ctx, {
       type: 'candlestick',
       data: {
         datasets: [{
@@ -57,50 +56,39 @@
       },
       options: {
         responsive: true,
+        animation: false,
         scales: {
           x: {
             time: {
               unit: 'minute'
-            }
-          }
-        },
-        animation: false,
-      }
-    };
-
-    // You will need to use a candlestick plugin for Chart.js
-    // Using chartjs-chart-financial plugin:
-    // https://github.com/chartjs/chartjs-chart-financial
-    // Load the plugin CDN first (insert in <head> or here):
-    // <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@3.4.0/dist/chartjs-chart-financial.min.js"></script>
-
-    // For now, let's just plot a simple line chart with close prices as a fallback:
-
-    if (!candleChart) {
-      candleChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [{
-            label: 'Close Price',
-            data: [],
-            borderColor: 'blue',
-            borderWidth: 1,
-            tension: 0.3,
-          }]
-        },
-        options: {
-          animation: false,
-          scales: {
-            x: {
-              title: { display: true, text: 'Time' },
             },
-            y: {
-              title: { display: true, text: 'Price' }
+            adapters: {
+              date: {
+                locale: 'en-US'
+              }
+            },
+            ticks: {
+              source: 'auto'
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Price'
             }
           }
         }
-      });
+      }
+    });
+
+    function convertToChartData(candles) {
+      return candles.map(c => ({
+        x: new Date(c.epoch * 1000),
+        o: c.open,
+        h: c.high,
+        l: c.low,
+        c: c.close
+      }));
     }
 
     async function fetchCandles(symbol, interval) {
@@ -109,21 +97,14 @@
       return data;
     }
 
-    function updateChart(data) {
-      if (!data || data.length === 0) return;
-      candleChart.data.labels = data.map(c => {
-        const date = new Date(c.epoch * 1000);
-        return date.toLocaleString();
-      });
-      candleChart.data.datasets[0].data = data.map(c => c.close);
-      candleChart.update('none');
-    }
-
     async function refresh() {
       const symbol = document.getElementById("symbol").value;
       const interval = document.getElementById("interval").value;
       const candles = await fetchCandles(symbol, interval);
-      updateChart(candles);
+      if (candles && candles.length > 0) {
+        candleChart.data.datasets[0].data = convertToChartData(candles);
+        candleChart.update('none');
+      }
     }
 
     document.getElementById("symbol").addEventListener("change", refresh);
@@ -131,6 +112,8 @@
 
     // Refresh every 200ms
     setInterval(refresh, 200);
+
+    // Initial load
     refresh();
   </script>
 </body>
