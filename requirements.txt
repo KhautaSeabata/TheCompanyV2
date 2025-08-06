@@ -1,11 +1,4 @@
-flask==3.0.3
-flask-socketio==5.3.6
-websockets==12.0
-numpy==1.26.4
-requests==2.31.0
-gunicorn==23.0.0
-gevent==24.2.1
-gevent-websocket==0.10.1
-pandas
-scipy
-python-socketio==5.11.2
+flask
+flask_cors
+websocket-client
+requests
