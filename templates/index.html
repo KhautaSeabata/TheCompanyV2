@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <title>Volatility Live Candles</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/date-fns/2.29.3/index.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/2.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -107,8 +105,10 @@
   </div>
 
   <script>
-    // Wait for DOM and Chart.js to be ready
-    document.addEventListener('DOMContentLoaded', function() {
+    // Wait for all scripts to load
+    window.addEventListener('load', function() {
+      console.log('Window loaded, checking Chart.js...');
+      
       // Check if Chart.js is loaded
       if (typeof Chart === 'undefined') {
         console.error('Chart.js is not loaded!');
@@ -116,7 +116,7 @@
         return;
       }
       
-      console.log('Chart.js version:', Chart.version);
+      console.log('Chart.js loaded successfully');
       
       const ctx = document.getElementById("candleChart").getContext("2d");
     
@@ -399,7 +399,7 @@
     console.log('Starting app...');
     refresh();
     
-    }); // End of DOMContentLoaded event listener
+    }); // End of window load event listener
   </script>
 </body>
 </html>
