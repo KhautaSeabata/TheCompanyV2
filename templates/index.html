@@ -95,7 +95,7 @@
     <label for="chartType">Chart Type:</label>
     <select id="chartType">
       <option value="line" selected>Line Chart</option>
-      <option value="candlestick">Candlestick</option>
+      <option value="candlestick">OHLC Lines</option>
     </select>
   </div>
   
@@ -119,122 +119,13 @@
       console.log('Chart.js loaded successfully');
       
       const ctx = document.getElementById("candleChart").getContext("2d");
-    
-    let candleChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: 'Price',
-          data: [],
-          borderColor: '#26a69a',
-          backgroundColor: 'rgba(38, 166, 154, 0.1)',
-          borderWidth: 2,
-          fill: false,
-          tension: 0.1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 0
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index'
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top'
-          },
-          title: {
-            display: true,
-            text: 'Live Volatility Data'
-          }
-        },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'minute',
-              displayFormats: {
-                minute: 'HH:mm',
-                hour: 'HH:mm',
-                day: 'MMM dd',
-                week: 'MMM dd',
-                month: 'MMM yyyy'
-              }
-            },
-            title: {
-              display: true,
-              text: 'Time'
-            }
-          },
-          y: {
-            title: {
-              display: true,
-              text: 'Price'
-            },
-            beginAtZero: false
-          }
-        }
-      }
-    });
-
-    function convertToLineData(candles) {
-      console.log('Converting candles to line data:', candles.length);
-      return candles.map(c => ({
-        x: new Date(c.epoch * 1000),
-        y: parseFloat(c.close)
-      }));
-    }
-
-    function convertToCandlestickData(candles) {
-      console.log('Converting candles to candlestick data:', candles.length);
-      return candles.map(c => ({
-        x: new Date(c.epoch * 1000),
-        o: parseFloat(c.open),
-        h: parseFloat(c.high),
-        l: parseFloat(c.low),
-        c: parseFloat(c.close)
-      }));
-    }
-
-    async function fetchCandles(symbol, interval) {
-      try {
-        const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        const data = await res.json();
-        console.log('Fetched data:', data);
-        return data;
-      } catch (error) {
-        console.error('Fetch error:', error);
-        updateStatus(`Error: ${error.message}`, 'error');
-        return [];
-      }
-    }
-
-    function updateStatus(message, className = '') {
-      const statusEl = document.getElementById('status');
-      statusEl.textContent = message;
-      statusEl.className = className;
-    }
-
-    function updateChartType() {
-      const chartType = document.getElementById('chartType').value;
+      let candleChart = null;
       
-      // Destroy existing chart
-      if (candleChart) {
-        candleChart.destroy();
-      }
-      
-      if (chartType === 'line') {
-        candleChart = new Chart(ctx, {
+      function createLineChart() {
+        return new Chart(ctx, {
           type: 'line',
           data: {
+            labels: [],
             datasets: [{
               label: 'Price',
               data: [],
@@ -248,37 +139,49 @@
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 0 },
-            interaction: { intersect: false, mode: 'index' },
+            animation: {
+              duration: 0
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            },
             plugins: {
-              legend: { display: true, position: 'top' },
-              title: { display: true, text: 'Live Volatility Data' }
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              title: {
+                display: true,
+                text: 'Live Volatility Data'
+              }
             },
             scales: {
               x: {
-                type: 'time',
-                time: {
-                  unit: 'minute',
-                  displayFormats: {
-                    minute: 'HH:mm',
-                    hour: 'HH:mm',
-                    day: 'MMM dd'
-                  }
-                },
-                title: { display: true, text: 'Time' }
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Time'
+                }
               },
               y: {
-                title: { display: true, text: 'Price' },
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Price'
+                },
                 beginAtZero: false
               }
             }
           }
         });
-      } else {
-        // For candlestick, we'll use a simple OHLC representation with line chart
-        candleChart = new Chart(ctx, {
+      }
+      
+      function createOHLCChart() {
+        return new Chart(ctx, {
           type: 'line',
           data: {
+            labels: [],
             datasets: [
               {
                 label: 'High',
@@ -286,7 +189,8 @@
                 borderColor: '#26a69a',
                 backgroundColor: 'transparent',
                 borderWidth: 1,
-                fill: false
+                fill: false,
+                tension: 0.1
               },
               {
                 label: 'Low',
@@ -294,7 +198,8 @@
                 borderColor: '#ef5350',
                 backgroundColor: 'transparent',
                 borderWidth: 1,
-                fill: false
+                fill: false,
+                tension: 0.1
               },
               {
                 label: 'Close',
@@ -302,103 +207,195 @@
                 borderColor: '#2196f3',
                 backgroundColor: 'transparent',
                 borderWidth: 2,
-                fill: false
+                fill: false,
+                tension: 0.1
               }
             ]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: { duration: 0 },
-            interaction: { intersect: false, mode: 'index' },
+            animation: {
+              duration: 0
+            },
+            interaction: {
+              intersect: false,
+              mode: 'index'
+            },
             plugins: {
-              legend: { display: true, position: 'top' },
-              title: { display: true, text: 'Live Volatility OHLC Data' }
+              legend: {
+                display: true,
+                position: 'top'
+              },
+              title: {
+                display: true,
+                text: 'Live Volatility OHLC Data'
+              }
             },
             scales: {
               x: {
-                type: 'time',
-                time: {
-                  unit: 'minute',
-                  displayFormats: {
-                    minute: 'HH:mm',
-                    hour: 'HH:mm',
-                    day: 'MMM dd'
-                  }
-                },
-                title: { display: true, text: 'Time' }
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Time'
+                }
               },
               y: {
-                title: { display: true, text: 'Price' },
+                display: true,
+                title: {
+                  display: true,
+                  text: 'Price'
+                },
                 beginAtZero: false
               }
             }
           }
         });
       }
-      
-      // Refresh data with new chart type
-      refresh();
-    }
 
-    async function refresh() {
-      const symbol = document.getElementById("symbol").value;
-      const interval = document.getElementById("interval").value;
-      const chartType = document.getElementById("chartType").value;
-      
-      console.log('Refreshing:', symbol, interval, chartType);
-      updateStatus('Loading...', 'loading');
-      
-      try {
-        const candles = await fetchCandles(symbol, interval);
+      function convertToLineData(candles) {
+        console.log('Converting candles to line data:', candles.length);
+        const labels = [];
+        const data = [];
         
-        if (candles && candles.length > 0) {
-          if (chartType === 'line') {
-            const chartData = convertToLineData(candles);
-            candleChart.data.datasets[0].data = chartData;
-            candleChart.data.datasets[0].label = `${symbol} - ${interval}`;
-          } else {
-            // OHLC data
-            const timeData = candles.map(c => ({ x: new Date(c.epoch * 1000), y: parseFloat(c.high) }));
-            const lowData = candles.map(c => ({ x: new Date(c.epoch * 1000), y: parseFloat(c.low) }));
-            const closeData = candles.map(c => ({ x: new Date(c.epoch * 1000), y: parseFloat(c.close) }));
-            
-            candleChart.data.datasets[0].data = timeData;
-            candleChart.data.datasets[1].data = lowData;
-            candleChart.data.datasets[2].data = closeData;
-            
-            candleChart.data.datasets[0].label = `${symbol} High - ${interval}`;
-            candleChart.data.datasets[1].label = `${symbol} Low - ${interval}`;
-            candleChart.data.datasets[2].label = `${symbol} Close - ${interval}`;
-          }
-          
-          candleChart.update('none');
-          
-          const lastPrice = candles[candles.length - 1].close;
-          updateStatus(`${candles.length} candles loaded - Last: ${lastPrice} - Updated: ${new Date().toLocaleTimeString()}`, 'connected');
-          console.log('Chart updated with', candles.length, 'candles');
-        } else {
-          updateStatus('No data available', 'loading');
-          console.log('No candles received');
-        }
-      } catch (error) {
-        console.error('Refresh error:', error);
-        updateStatus(`Error: ${error.message}`, 'error');
+        candles.forEach((c, index) => {
+          const date = new Date(c.epoch * 1000);
+          const timeStr = date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          });
+          labels.push(timeStr);
+          data.push(parseFloat(c.close));
+        });
+        
+        return { labels, data };
       }
-    }
 
-    // Event listeners
-    document.getElementById("symbol").addEventListener("change", refresh);
-    document.getElementById("interval").addEventListener("change", refresh);
-    document.getElementById("chartType").addEventListener("change", updateChartType);
+      function convertToCandlestickData(candles) {
+        console.log('Converting candles to candlestick data:', candles.length);
+        const labels = [];
+        const highData = [];
+        const lowData = [];
+        const closeData = [];
+        
+        candles.forEach((c, index) => {
+          const date = new Date(c.epoch * 1000);
+          const timeStr = date.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          });
+          labels.push(timeStr);
+          highData.push(parseFloat(c.high));
+          lowData.push(parseFloat(c.low));
+          closeData.push(parseFloat(c.close));
+        });
+        
+        return { labels, highData, lowData, closeData };
+      }
 
-    // Auto-refresh every 5 seconds (reasonable for live data)
-    setInterval(refresh, 5000);
+      async function fetchCandles(symbol, interval) {
+        try {
+          const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          const data = await res.json();
+          console.log('Fetched data:', data);
+          return data;
+        } catch (error) {
+          console.error('Fetch error:', error);
+          updateStatus(`Error: ${error.message}`, 'error');
+          return [];
+        }
+      }
 
-    // Initial load
-    console.log('Starting app...');
-    refresh();
-    
+      function updateStatus(message, className = '') {
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = message;
+        statusEl.className = className;
+      }
+
+      function updateChartType() {
+        const chartType = document.getElementById('chartType').value;
+        
+        // Destroy existing chart
+        if (candleChart) {
+          candleChart.destroy();
+        }
+        
+        // Create new chart based on type
+        if (chartType === 'line') {
+          candleChart = createLineChart();
+        } else {
+          candleChart = createOHLCChart();
+        }
+        
+        // Refresh data with new chart type
+        refresh();
+      }
+
+      async function refresh() {
+        const symbol = document.getElementById("symbol").value;
+        const interval = document.getElementById("interval").value;
+        const chartType = document.getElementById("chartType").value;
+        
+        console.log('Refreshing:', symbol, interval, chartType);
+        updateStatus('Loading...', 'loading');
+        
+        try {
+          const candles = await fetchCandles(symbol, interval);
+          
+          if (candles && candles.length > 0) {
+            if (chartType === 'line') {
+              const chartData = convertToLineData(candles);
+              candleChart.data.labels = chartData.labels;
+              candleChart.data.datasets[0].data = chartData.data;
+              candleChart.data.datasets[0].label = `${symbol} - ${interval}`;
+            } else {
+              // OHLC data
+              const chartData = convertToCandlestickData(candles);
+              candleChart.data.labels = chartData.labels;
+              candleChart.data.datasets[0].data = chartData.highData;
+              candleChart.data.datasets[1].data = chartData.lowData;
+              candleChart.data.datasets[2].data = chartData.closeData;
+              
+              candleChart.data.datasets[0].label = `${symbol} High - ${interval}`;
+              candleChart.data.datasets[1].label = `${symbol} Low - ${interval}`;
+              candleChart.data.datasets[2].label = `${symbol} Close - ${interval}`;
+            }
+            
+            candleChart.update('none');
+            
+            const lastPrice = candles[candles.length - 1].close;
+            updateStatus(`${candles.length} candles loaded - Last: ${lastPrice} - Updated: ${new Date().toLocaleTimeString()}`, 'connected');
+            console.log('Chart updated with', candles.length, 'candles');
+          } else {
+            updateStatus('No data available', 'loading');
+            console.log('No candles received');
+          }
+        } catch (error) {
+          console.error('Refresh error:', error);
+          updateStatus(`Error: ${error.message}`, 'error');
+        }
+      }
+
+      // Initialize with line chart
+      candleChart = createLineChart();
+
+      // Event listeners
+      document.getElementById("symbol").addEventListener("change", refresh);
+      document.getElementById("interval").addEventListener("change", refresh);
+      document.getElementById("chartType").addEventListener("change", updateChartType);
+
+      // Auto-refresh every 5 seconds
+      setInterval(refresh, 5000);
+
+      // Initial load
+      console.log('Starting app...');
+      refresh();
+      
     }); // End of window load event listener
   </script>
 </body>
