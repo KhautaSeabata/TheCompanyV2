@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Volatility Live Candles</title>
+  <title>Volatility Live Candles - Real Market Data</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <style>
     body {
@@ -15,6 +15,12 @@
     h1 {
       color: #333;
       margin-bottom: 30px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 20px;
+      font-style: italic;
     }
     
     #controls {
@@ -31,11 +37,28 @@
       font-weight: bold;
     }
     
-    #controls select {
+    #controls select, #controls button {
       margin-right: 20px;
-      padding: 5px 10px;
+      padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    #controls button {
+      background: #26a69a;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    
+    #controls button:hover {
+      background: #2bbbad;
+    }
+    
+    #controls button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
     
     #chartContainer {
@@ -44,7 +67,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       padding: 20px;
       margin: 20px auto;
-      max-width: 1000px;
+      max-width: 1200px;
     }
     
     canvas {
@@ -53,43 +76,95 @@
     }
     
     #status {
-      margin-top: 10px;
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
       font-size: 14px;
-      color: #666;
+      font-weight: bold;
     }
     
     .loading {
-      color: orange;
+      background-color: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
     }
     
     .connected {
-      color: green;
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
     }
     
     .error {
-      color: red;
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    #priceInfo {
+      display: flex;
+      justify-content: space-around;
+      margin: 15px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .price-stat {
+      text-align: center;
+    }
+    
+    .price-label {
+      font-weight: bold;
+      color: #666;
+      display: block;
+    }
+    
+    .price-value {
+      font-size: 16px;
+      color: #333;
+      margin-top: 5px;
+    }
+    
+    .price-change {
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    
+    .positive { color: #26a69a; }
+    .negative { color: #ef5350; }
+    
+    .auto-refresh {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
     }
   </style>
 </head>
 <body>
   <h1>Volatility Live Candles</h1>
+  <div class="subtitle">Real-time Deriv Volatility Indices Market Data</div>
   
   <div id="controls">
     <label for="symbol">Symbol:</label>
     <select id="symbol">
-      <option value="R_75" selected>Volatility 75</option>
-      <option value="R_25">Volatility 25</option>
-      <option value="R_50">Volatility 50</option>
-      <option value="R_100">Volatility 100</option>
+      <option value="R_75" selected>Volatility 75 Index</option>
+      <option value="R_25">Volatility 25 Index</option>
+      <option value="R_50">Volatility 50 Index</option>
+      <option value="R_100">Volatility 100 Index</option>
+      <option value="R_10">Volatility 10 Index</option>
     </select>
     
-    <label for="interval">Interval:</label>
+    <label for="interval">Timeframe:</label>
     <select id="interval">
       <option value="1m" selected>1 Minute</option>
       <option value="5m">5 Minutes</option>
       <option value="15m">15 Minutes</option>
-      <option value="1d">1 Day</option>
-      <option value="1w">1 Week</option>
+      <option value="30m">30 Minutes</option>
+      <option value="1h">1 Hour</option>
+      <option value="4h">4 Hours</option>
+      <option value="1d">Daily</option>
     </select>
     
     <label for="chartType">Chart Type:</label>
@@ -97,22 +172,45 @@
       <option value="line" selected>Line Chart</option>
       <option value="candlestick">OHLC Lines</option>
     </select>
+    
+    <button id="refreshBtn" onclick="manualRefresh()">Refresh Now</button>
   </div>
   
   <div id="chartContainer">
+    <div id="priceInfo">
+      <div class="price-stat">
+        <span class="price-label">Current Price</span>
+        <div class="price-value" id="currentPrice">--</div>
+      </div>
+      <div class="price-stat">
+        <span class="price-label">24h High</span>
+        <div class="price-value" id="dayHigh">--</div>
+      </div>
+      <div class="price-stat">
+        <span class="price-label">24h Low</span>
+        <div class="price-value" id="dayLow">--</div>
+      </div>
+      <div class="price-stat">
+        <span class="price-label">Change</span>
+        <div class="price-value" id="priceChange">--</div>
+      </div>
+    </div>
+    
     <canvas id="candleChart"></canvas>
-    <div id="status">Loading...</div>
+    <div id="status" class="loading">Connecting to market data...</div>
+    <div class="auto-refresh">Auto-refresh: Every 10 seconds</div>
   </div>
 
   <script>
     // Wait for all scripts to load
     window.addEventListener('load', function() {
-      console.log('Window loaded, checking Chart.js...');
+      console.log('Application starting...');
       
       // Check if Chart.js is loaded
       if (typeof Chart === 'undefined') {
         console.error('Chart.js is not loaded!');
-        document.getElementById('status').textContent = 'Error: Chart.js failed to load';
+        document.getElementById('status').innerHTML = 'Error: Chart.js failed to load. Please refresh the page.';
+        document.getElementById('status').className = 'error';
         return;
       }
       
@@ -120,6 +218,9 @@
       
       const ctx = document.getElementById("candleChart").getContext("2d");
       let candleChart = null;
+      let lastRefreshTime = 0;
+      let refreshInterval = null;
+      let lastPrice = null;
       
       function createLineChart() {
         return new Chart(ctx, {
@@ -132,15 +233,17 @@
               borderColor: '#26a69a',
               backgroundColor: 'rgba(38, 166, 154, 0.1)',
               borderWidth: 2,
-              fill: false,
-              tension: 0.1
+              fill: true,
+              tension: 0.2,
+              pointRadius: 1,
+              pointHoverRadius: 4
             }]
           },
           options: {
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-              duration: 0
+              duration: 300
             },
             interaction: {
               intersect: false,
@@ -153,7 +256,7 @@
               },
               title: {
                 display: true,
-                text: 'Live Volatility Data'
+                text: 'Real-time Market Data'
               }
             },
             scales: {
@@ -162,6 +265,10 @@
                 title: {
                   display: true,
                   text: 'Time'
+                },
+                grid: {
+                  display: true,
+                  color: 'rgba(0,0,0,0.1)'
                 }
               },
               y: {
@@ -170,7 +277,11 @@
                   display: true,
                   text: 'Price'
                 },
-                beginAtZero: false
+                beginAtZero: false,
+                grid: {
+                  display: true,
+                  color: 'rgba(0,0,0,0.1)'
+                }
               }
             }
           }
@@ -188,18 +299,30 @@
                 data: [],
                 borderColor: '#26a69a',
                 backgroundColor: 'transparent',
-                borderWidth: 1,
+                borderWidth: 1.5,
                 fill: false,
-                tension: 0.1
+                tension: 0.1,
+                pointRadius: 0
               },
               {
                 label: 'Low',
                 data: [],
                 borderColor: '#ef5350',
                 backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                fill: false,
+                tension: 0.1,
+                pointRadius: 0
+              },
+              {
+                label: 'Open',
+                data: [],
+                borderColor: '#ff9800',
+                backgroundColor: 'transparent',
                 borderWidth: 1,
                 fill: false,
-                tension: 0.1
+                tension: 0.1,
+                pointRadius: 0
               },
               {
                 label: 'Close',
@@ -208,7 +331,8 @@
                 backgroundColor: 'transparent',
                 borderWidth: 2,
                 fill: false,
-                tension: 0.1
+                tension: 0.1,
+                pointRadius: 1
               }
             ]
           },
@@ -216,7 +340,7 @@
             responsive: true,
             maintainAspectRatio: false,
             animation: {
-              duration: 0
+              duration: 300
             },
             interaction: {
               intersect: false,
@@ -229,7 +353,7 @@
               },
               title: {
                 display: true,
-                text: 'Live Volatility OHLC Data'
+                text: 'Real-time OHLC Market Data'
               }
             },
             scales: {
@@ -238,6 +362,10 @@
                 title: {
                   display: true,
                   text: 'Time'
+                },
+                grid: {
+                  display: true,
+                  color: 'rgba(0,0,0,0.1)'
                 }
               },
               y: {
@@ -246,7 +374,11 @@
                   display: true,
                   text: 'Price'
                 },
-                beginAtZero: false
+                beginAtZero: false,
+                grid: {
+                  display: true,
+                  color: 'rgba(0,0,0,0.1)'
+                }
               }
             }
           }
@@ -254,7 +386,7 @@
       }
 
       function convertToLineData(candles) {
-        console.log('Converting candles to line data:', candles.length);
+        console.log('Converting', candles.length, 'candles to line data');
         const labels = [];
         const data = [];
         
@@ -273,8 +405,9 @@
       }
 
       function convertToCandlestickData(candles) {
-        console.log('Converting candles to candlestick data:', candles.length);
+        console.log('Converting', candles.length, 'candles to OHLC data');
         const labels = [];
+        const openData = [];
         const highData = [];
         const lowData = [];
         const closeData = [];
@@ -287,27 +420,68 @@
             hour12: false 
           });
           labels.push(timeStr);
+          openData.push(parseFloat(c.open));
           highData.push(parseFloat(c.high));
           lowData.push(parseFloat(c.low));
           closeData.push(parseFloat(c.close));
         });
         
-        return { labels, highData, lowData, closeData };
+        return { labels, openData, highData, lowData, closeData };
+      }
+
+      function updatePriceInfo(candles) {
+        if (!candles || candles.length === 0) return;
+        
+        const latest = candles[candles.length - 1];
+        const currentPrice = parseFloat(latest.close);
+        
+        // Calculate 24h high/low from available data
+        let dayHigh = Math.max(...candles.map(c => parseFloat(c.high)));
+        let dayLow = Math.min(...candles.map(c => parseFloat(c.low)));
+        
+        // Calculate price change
+        let priceChange = 0;
+        let changePercent = 0;
+        if (candles.length > 1) {
+          const firstPrice = parseFloat(candles[0].open);
+          priceChange = currentPrice - firstPrice;
+          changePercent = ((priceChange / firstPrice) * 100);
+        }
+        
+        // Update display
+        document.getElementById('currentPrice').textContent = currentPrice.toFixed(4);
+        document.getElementById('dayHigh').textContent = dayHigh.toFixed(4);
+        document.getElementById('dayLow').textContent = dayLow.toFixed(4);
+        
+        const changeEl = document.getElementById('priceChange');
+        const changeText = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(4)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`;
+        changeEl.textContent = changeText;
+        changeEl.className = `price-value ${priceChange >= 0 ? 'positive' : 'negative'}`;
+        
+        lastPrice = currentPrice;
       }
 
       async function fetchCandles(symbol, interval) {
         try {
+          updateStatus('Fetching real market data...', 'loading');
+          
           const res = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}`);
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
           const data = await res.json();
-          console.log('Fetched data:', data);
+          
+          if (!res.ok) {
+            throw new Error(data.error || `HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          
+          console.log('Fetched real market data:', data.length, 'candles');
           return data;
         } catch (error) {
           console.error('Fetch error:', error);
-          updateStatus(`Error: ${error.message}`, 'error');
-          return [];
+          updateStatus(`Connection Error: ${error.message}`, 'error');
+          throw error;
         }
       }
 
@@ -341,62 +515,167 @@
         const interval = document.getElementById("interval").value;
         const chartType = document.getElementById("chartType").value;
         
-        console.log('Refreshing:', symbol, interval, chartType);
-        updateStatus('Loading...', 'loading');
+        console.log('Refreshing real market data:', symbol, interval, chartType);
+        
+        // Disable refresh button temporarily
+        const refreshBtn = document.getElementById('refreshBtn');
+        refreshBtn.disabled = true;
         
         try {
           const candles = await fetchCandles(symbol, interval);
           
           if (candles && candles.length > 0) {
+            // Update price info
+            updatePriceInfo(candles);
+            
             if (chartType === 'line') {
               const chartData = convertToLineData(candles);
               candleChart.data.labels = chartData.labels;
               candleChart.data.datasets[0].data = chartData.data;
-              candleChart.data.datasets[0].label = `${symbol} - ${interval}`;
+              candleChart.data.datasets[0].label = `${symbol} Price - ${interval}`;
             } else {
               // OHLC data
               const chartData = convertToCandlestickData(candles);
               candleChart.data.labels = chartData.labels;
               candleChart.data.datasets[0].data = chartData.highData;
               candleChart.data.datasets[1].data = chartData.lowData;
-              candleChart.data.datasets[2].data = chartData.closeData;
+              candleChart.data.datasets[2].data = chartData.openData;
+              candleChart.data.datasets[3].data = chartData.closeData;
               
-              candleChart.data.datasets[0].label = `${symbol} High - ${interval}`;
-              candleChart.data.datasets[1].label = `${symbol} Low - ${interval}`;
-              candleChart.data.datasets[2].label = `${symbol} Close - ${interval}`;
+              candleChart.data.datasets[0].label = `${symbol} High`;
+              candleChart.data.datasets[1].label = `${symbol} Low`;
+              candleChart.data.datasets[2].label = `${symbol} Open`;
+              candleChart.data.datasets[3].label = `${symbol} Close`;
             }
             
             candleChart.update('none');
             
             const lastPrice = candles[candles.length - 1].close;
-            updateStatus(`${candles.length} candles loaded - Last: ${lastPrice} - Updated: ${new Date().toLocaleTimeString()}`, 'connected');
-            console.log('Chart updated with', candles.length, 'candles');
+            const now = new Date().toLocaleTimeString();
+            updateStatus(`✓ Real market data loaded: ${candles.length} candles - Last: ${lastPrice} - ${now}`, 'connected');
+            
+            lastRefreshTime = Date.now();
           } else {
-            updateStatus('No data available', 'loading');
-            console.log('No candles received');
+            updateStatus('No market data available', 'error');
           }
         } catch (error) {
-          console.error('Refresh error:', error);
-          updateStatus(`Error: ${error.message}`, 'error');
+          console.error('Refresh failed:', error);
+          updateStatus(`Failed to load data: ${error.message}`, 'error');
+        } finally {
+          // Re-enable refresh button after 2 seconds
+          setTimeout(() => {
+            refreshBtn.disabled = false;
+          }, 2000);
         }
       }
 
-      // Initialize with line chart
-      candleChart = createLineChart();
+      // Auto-refresh function
+      function startAutoRefresh() {
+        // Clear existing interval
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+        
+        // Set up new interval for auto-refresh every 10 seconds
+        refreshInterval = setInterval(() => {
+          const now = Date.now();
+          // Only refresh if more than 8 seconds have passed since last refresh
+          if (now - lastRefreshTime > 8000) {
+            console.log('Auto-refreshing data...');
+            refresh();
+          }
+        }, 10000);
+      }
 
-      // Event listeners
-      document.getElementById("symbol").addEventListener("change", refresh);
-      document.getElementById("interval").addEventListener("change", refresh);
-      document.getElementById("chartType").addEventListener("change", updateChartType);
+      // Manual refresh function (called by button)
+      window.manualRefresh = function() {
+        console.log('Manual refresh triggered');
+        refresh();
+      }
 
-      // Auto-refresh every 5 seconds
-      setInterval(refresh, 5000);
+      // Event listeners for controls
+      document.getElementById('symbol').addEventListener('change', function() {
+        console.log('Symbol changed to:', this.value);
+        refresh();
+      });
 
-      // Initial load
-      console.log('Starting app...');
-      refresh();
+      document.getElementById('interval').addEventListener('change', function() {
+        console.log('Interval changed to:', this.value);
+        refresh();
+      });
+
+      document.getElementById('chartType').addEventListener('change', function() {
+        console.log('Chart type changed to:', this.value);
+        updateChartType();
+      });
+
+      // Initialize the chart
+      function init() {
+        console.log('Initializing application...');
+        
+        // Create initial chart
+        candleChart = createLineChart();
+        
+        // Load initial data
+        refresh();
+        
+        // Start auto-refresh
+        startAutoRefresh();
+        
+        console.log('Application initialized successfully');
+      }
+
+      // Test API connectivity first
+      async function testAPI() {
+        try {
+          console.log('Testing API connectivity...');
+          const response = await fetch('/api/test');
+          console.log('API Response status:', response.status);
+          console.log('API Response headers:', response.headers.get('content-type'));
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response received:', text.substring(0, 200));
+            throw new Error('Server returned HTML instead of JSON - Flask server may not be running properly');
+          }
+          
+          const data = await response.json();
+          console.log('API Test Result:', data);
+          
+          if (data.status) {
+            updateStatus('API connection verified, initializing...', 'loading');
+            // Small delay to show the message
+            setTimeout(init, 500);
+          } else {
+            throw new Error('API test failed - invalid response');
+          }
+        } catch (error) {
+          console.error('API test failed:', error);
+          updateStatus(`API Error: ${error.message}. Make sure Flask server is running on port 5000.`, 'error');
+          
+          // Try to initialize anyway after showing error for a few seconds
+          setTimeout(() => {
+            updateStatus('Attempting to connect anyway...', 'loading');
+            init();
+          }, 3000);
+        }
+      }
+
+      // Start the application
+      testAPI();
       
-    }); // End of window load event listener
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', function() {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+      });
+    });
   </script>
 </body>
 </html>
