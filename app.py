@@ -10,42 +10,64 @@ CORS(app)
 def index():
     return render_template("index.html")
 
+@app.route("/api/test")
+def test_api():
+    """Test endpoint to check if API is working"""
+    return jsonify({
+        "status": "API is working",
+        "timestamp": int(time.time()),
+        "message": "Flask server is running correctly"
+    })
+
 @app.route("/api/candles")
 def get_candles():
-    symbol = request.args.get("symbol", "R_75")
-    interval = request.args.get("interval", "1m")
-    
-    # Define granularity based on interval
-    granularity_map = {
-        "1m": 60,
-        "5m": 300,
-        "15m": 900,
-        "1d": 86400,
-        "1w": 604800
-    }
-    
-    granularity = granularity_map.get(interval, 60)
-    
-    # Get more data points for better chart display
-    end_time = int(time.time())
-    start_time = end_time - (granularity * 100)  # Get last 100 candles
-    
-    payload = {
-        "ticks_history": symbol,
-        "start": start_time,
-        "end": end_time,
-        "style": "candles",
-        "granularity": granularity,
-        "count": 100
-    }
-    
     try:
-        print(f"Fetching candles for {symbol} with interval {interval} (granularity: {granularity})")
-        res = requests.get("https://api.deriv.com/api/explorer/ticks_history", params=payload)
+        symbol = request.args.get("symbol", "R_75")
+        interval = request.args.get("interval", "1m")
+        
+        print(f"Received request for symbol: {symbol}, interval: {interval}")
+        
+        # Define granularity based on interval
+        granularity_map = {
+            "1m": 60,
+            "5m": 300,
+            "15m": 900,
+            "1d": 86400,
+            "1w": 604800
+        }
+        
+        granularity = granularity_map.get(interval, 60)
+        print(f"Using granularity: {granularity}")
+        
+        # Get more data points for better chart display
+        end_time = int(time.time())
+        start_time = end_time - (granularity * 50)  # Get last 50 candles
+        
+        payload = {
+            "ticks_history": symbol,
+            "start": start_time,
+            "end": end_time,
+            "style": "candles",
+            "granularity": granularity,
+            "count": 50
+        }
+        
+        print(f"API payload: {payload}")
+        
+        # Make request to Deriv API
+        api_url = "https://api.deriv.com/api/explorer/ticks_history"
+        print(f"Making request to: {api_url}")
+        
+        res = requests.get(api_url, params=payload, timeout=10)
+        print(f"API response status: {res.status_code}")
+        
         res.raise_for_status()
         data = res.json()
         
-        print(f"API Response keys: {data.keys()}")
+        print(f"API Response keys: {list(data.keys())}")
+        if 'error' in data:
+            print(f"API Error: {data['error']}")
+            return jsonify({"error": f"API Error: {data['error']}"}), 400
         
         if "candles" in data and data["candles"]:
             candles = []
@@ -63,6 +85,7 @@ def get_candles():
         
         # If no candles, try to get ticks and convert to simple line data
         elif "history" in data and "prices" in data["history"]:
+            print("No candles found, converting from ticks")
             prices = data["history"]["prices"]
             times = data["history"]["times"]
             
@@ -82,11 +105,17 @@ def get_candles():
             return jsonify(candles)
         
         print("No data found in API response")
+        print(f"Full API response: {data}")
         return jsonify([])
         
+    except requests.exceptions.RequestException as e:
+        print(f"Request error: {str(e)}")
+        return jsonify({"error": f"Request failed: {str(e)}"}), 500
     except Exception as e:
-        print(f"Error fetching data: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"Unexpected error in get_candles: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 @app.route("/api/data")
 def get_data():
