@@ -1,841 +1,272 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Volatility 75 Live Chart - Real Market Data</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 20px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-    
-    .header {
-      background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-      color: white;
-      padding: 30px;
-      text-align: center;
-    }
-    
-    .header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 10px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    .header .subtitle {
-      font-size: 1.1rem;
-      opacity: 0.9;
-      font-weight: 300;
-    }
-    
-    .price-dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
-      padding: 30px;
-      background: rgba(255, 255, 255, 0.5);
-    }
-    
-    .price-card {
-      background: white;
-      border-radius: 15px;
-      padding: 25px;
-      text-align: center;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
-    }
-    
-    .price-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-    }
-    
-    .price-card.current {
-      border-color: #3498db;
-      background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
-      color: white;
-    }
-    
-    .price-label {
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-      opacity: 0.8;
-    }
-    
-    .price-value {
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-bottom: 5px;
-    }
-    
-    .price-change {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    
-    .positive { color: #27ae60; }
-    .negative { color: #e74c3c; }
-    .current .positive, .current .negative { color: #ddd; }
-    
-    .controls {
-      padding: 0 30px 20px 30px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    
-    .control-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .control-group label {
-      font-weight: 600;
-      color: #2c3e50;
-      font-size: 0.9rem;
-    }
-    
-    select, button {
-      padding: 12px 16px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      transition: all 0.3s ease;
-      background: white;
-    }
-    
-    select:focus, button:focus {
-      outline: none;
-      border-color: #3498db;
-      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-    }
-    
-    button {
-      background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-      min-width: 120px;
-    }
-    
-    button:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
-    }
-    
-    button:disabled {
-      background: #95a5a6;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .chart-container {
-      padding: 30px;
-      background: white;
-    }
-    
-    .chart-wrapper {
-      position: relative;
-      height: 500px;
-      background: white;
-      border-radius: 15px;
-      padding: 20px;
-      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    #status {
-      margin-top: 20px;
-      padding: 15px 20px;
-      border-radius: 10px;
-      font-weight: 600;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-    
-    .loading {
-      background: linear-gradient(135deg, #f39c12 0%, #f1c40f 100%);
-      color: white;
-    }
-    
-    .connected {
-      background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-      color: white;
-    }
-    
-    .error {
-      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-      color: white;
-    }
-    
-    .auto-refresh {
-      text-align: center;
-      margin-top: 15px;
-      padding: 10px;
-      background: rgba(52, 152, 219, 0.1);
-      border-radius: 8px;
-      font-size: 0.9rem;
-      color: #2c3e50;
-      font-weight: 500;
-    }
-    
-    .pulse {
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-    
-    @media (max-width: 768px) {
-      .header h1 {
-        font-size: 2rem;
-      }
-      
-      .price-dashboard {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        padding: 20px;
-        gap: 15px;
-      }
-      
-      .controls {
-        flex-direction: column;
-        gap: 15px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAUUSD Live Chart</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .price-display {
+            font-size: 1.5em;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .btn.active {
+            background: #ffd700;
+            color: #1e3c72;
+            font-weight: bold;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,255,0,0.1);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+        
+        .loading {
+            text-align: center;
+            font-size: 1.2em;
+            padding: 50px;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
     <div class="header">
-      <h1>📈 Volatility 75 Index</h1>
-      <div class="subtitle">Real-time Deriv Market Data</div>
+        <h1>🏆 XAUUSD Live Chart</h1>
+        <div class="price-display">
+            <div>Current Price: $<span id="current-price">Loading...</span></div>
+            <div style="font-size: 0.8em; margin-top: 5px;">
+                Last Update: <span id="last-update">--</span>
+            </div>
+        </div>
     </div>
-    
-    <div class="price-dashboard">
-      <div class="price-card current">
-        <div class="price-label">Current Price</div>
-        <div class="price-value" id="currentPrice">--</div>
-        <div class="price-change" id="priceChange">Connecting...</div>
-      </div>
-      <div class="price-card">
-        <div class="price-label">Session High</div>
-        <div class="price-value" id="dayHigh">--</div>
-      </div>
-      <div class="price-card">
-        <div class="price-label">Session Low</div>
-        <div class="price-value" id="dayLow">--</div>
-      </div>
-      <div class="price-card">
-        <div class="price-label">Total Points</div>
-        <div class="price-value" id="totalCandles">--</div>
-      </div>
-    </div>
-    
+
     <div class="controls">
-      <div class="control-group">
-        <label for="interval">📊 Timeframe:</label>
-        <select id="interval">
-          <option value="1m" selected>1 Minute</option>
-          <option value="5m">5 Minutes</option>
-          <option value="15m">15 Minutes</option>
-          <option value="30m">30 Minutes</option>
-          <option value="1h">1 Hour</option>
-        </select>
-      </div>
-      
-      <div class="control-group">
-        <label for="chartType">📈 Chart Type:</label>
-        <select id="chartType">
-          <option value="line" selected>Line Chart</option>
-          <option value="candlestick">OHLC Chart</option>
-        </select>
-      </div>
-      
-      <button id="refreshBtn" onclick="manualRefresh()">🔄 Refresh Now</button>
+        <button class="btn active" onclick="changeInterval('1m')" id="btn-1m">1M</button>
+        <button class="btn" onclick="changeInterval('5m')" id="btn-5m">5M</button>
+        <button class="btn" onclick="changeInterval('15m')" id="btn-15m">15M</button>
+        <button class="btn" onclick="changeInterval('30m')" id="btn-30m">30M</button>
+        <button class="btn" onclick="changeInterval('1h')" id="btn-1h">1H</button>
     </div>
-    
+
     <div class="chart-container">
-      <div class="chart-wrapper">
-        <canvas id="v75Chart"></canvas>
-      </div>
-      <div id="status" class="loading">🔌 Connecting to Volatility 75 market data...</div>
-      <div class="auto-refresh">⚡ Auto-refresh: Every 8 seconds | 🎯 Symbol: V75 (R_75)</div>
+        <canvas id="priceChart"></canvas>
     </div>
-  </div>
 
-  <script>
-    window.addEventListener('load', function() {
-      console.log('🚀 V75 Live Chart initializing...');
-      
-      if (typeof Chart === 'undefined') {
-        console.error('❌ Chart.js failed to load');
-        document.getElementById('status').innerHTML = '❌ Chart library failed to load. Please refresh the page.';
-        document.getElementById('status').className = 'error';
-        return;
-      }
-      
-      console.log('✅ Chart.js loaded successfully');
-      
-      const ctx = document.getElementById("v75Chart").getContext("2d");
-      let v75Chart = null;
-      let lastRefreshTime = 0;
-      let refreshInterval = null;
-      let lastPrice = null;
-      const SYMBOL = "R_75"; // Fixed to V75 only
-      
-      // Enhanced chart colors for V75
-      const V75_COLORS = {
-        primary: '#3498db',
-        success: '#27ae60',
-        danger: '#e74c3c',
-        warning: '#f39c12',
-        gradient: {
-          primary: ['rgba(52, 152, 219, 0.2)', 'rgba(52, 152, 219, 0.05)'],
-          success: ['rgba(39, 174, 96, 0.2)', 'rgba(39, 174, 96, 0.05)']
-        }
-      };
-      
-      function createLineChart() {
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-        gradient.addColorStop(0, V75_COLORS.gradient.primary[0]);
-        gradient.addColorStop(1, V75_COLORS.gradient.primary[1]);
+    <div class="status" id="status">
+        📊 Connecting to XAUUSD data feed...
+    </div>
+
+    <script>
+        let chart;
+        let currentInterval = '1m';
+        let chartData = [];
         
-        return new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: [],
-            datasets: [{
-              label: 'V75 Price',
-              data: [],
-              borderColor: V75_COLORS.primary,
-              backgroundColor: gradient,
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 2,
-              pointHoverRadius: 6,
-              pointBackgroundColor: V75_COLORS.primary,
-              pointBorderColor: '#fff',
-              pointBorderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-              duration: 750,
-              easing: 'easeInOutQuart'
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            },
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  usePointStyle: true,
-                  padding: 20,
-                  font: {
-                    size: 14,
-                    weight: '600'
-                  }
+        // Initialize chart
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        
+        function initChart() {
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'XAUUSD Price',
+                        data: [],
+                        borderColor: '#ffd700',
+                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointBackgroundColor: '#ffd700',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'white'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: 'white',
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000
+                    }
                 }
-              },
-              title: {
-                display: true,
-                text: 'Volatility 75 Index - Real-time Price Movement',
-                font: {
-                  size: 16,
-                  weight: '700'
-                },
-                padding: 20
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                titleColor: '#fff',
-                bodyColor: '#fff',
-                borderColor: V75_COLORS.primary,
-                borderWidth: 2,
-                cornerRadius: 8,
-                displayColors: false,
-                callbacks: {
-                  label: function(context) {
-                    return `V75: ${context.parsed.y.toFixed(4)}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Time',
-                  font: { weight: '600' }
-                },
-                grid: {
-                  color: 'rgba(0,0,0,0.05)',
-                  lineWidth: 1
-                },
-                ticks: {
-                  maxTicksLimit: 10
-                }
-              },
-              y: {
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Price',
-                  font: { weight: '600' }
-                },
-                beginAtZero: false,
-                grid: {
-                  color: 'rgba(0,0,0,0.05)',
-                  lineWidth: 1
-                },
-                ticks: {
-                  callback: function(value) {
-                    return value.toFixed(4);
-                  }
-                }
-              }
+            });
+        }
+
+        function updateStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.background = isError ? 'rgba(255,0,0,0.1)' : 'rgba(0,255,0,0.1)';
+        }
+
+        function formatTime(epoch) {
+            const date = new Date(epoch * 1000);
+            return date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateChart(data) {
+            if (!data || data.length === 0) {
+                updateStatus('⚠️ No data available', true);
+                return;
             }
-          }
-        });
-      }
-      
-      function createOHLCChart() {
-        return new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: [],
-            datasets: [
-              {
-                label: 'High',
-                data: [],
-                borderColor: V75_COLORS.success,
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.2,
-                pointRadius: 1
-              },
-              {
-                label: 'Low',
-                data: [],
-                borderColor: V75_COLORS.danger,
-                backgroundColor: 'transparent',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.2,
-                pointRadius: 1
-              },
-              {
-                label: 'Open',
-                data: [],
-                borderColor: V75_COLORS.warning,
-                backgroundColor: 'transparent',
-                borderWidth: 1.5,
-                fill: false,
-                tension: 0.2,
-                pointRadius: 0
-              },
-              {
-                label: 'Close',
-                data: [],
-                borderColor: V75_COLORS.primary,
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                fill: false,
-                tension: 0.2,
-                pointRadius: 2
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-              duration: 750,
-              easing: 'easeInOutQuart'
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            },
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                  usePointStyle: true,
-                  padding: 20,
-                  font: {
-                    size: 12,
-                    weight: '600'
-                  }
-                }
-              },
-              title: {
-                display: true,
-                text: 'Volatility 75 Index - OHLC Chart',
-                font: {
-                  size: 16,
-                  weight: '700'
-                },
-                padding: 20
-              },
-              tooltip: {
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                titleColor: '#fff',
-                bodyColor: '#fff',
-                borderColor: V75_COLORS.primary,
-                borderWidth: 2,
-                cornerRadius: 8
-              }
-            },
-            scales: {
-              x: {
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Time',
-                  font: { weight: '600' }
-                },
-                grid: {
-                  color: 'rgba(0,0,0,0.05)'
-                },
-                ticks: {
-                  maxTicksLimit: 10
-                }
-              },
-              y: {
-                display: true,
-                title: {
-                  display: true,
-                  text: 'Price',
-                  font: { weight: '600' }
-                },
-                beginAtZero: false,
-                grid: {
-                  color: 'rgba(0,0,0,0.05)'
-                },
-                ticks: {
-                  callback: function(value) {
-                    return value.toFixed(4);
-                  }
-                }
-              }
-            }
-          }
-        });
-      }
 
-      function convertToLineData(candles) {
-        console.log('📊 Processing', candles.length, 'V75 candles for line chart');
-        const labels = [];
-        const data = [];
-        
-        candles.forEach((candle) => {
-          const date = new Date(candle.epoch * 1000);
-          const timeStr = date.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false 
-          });
-          labels.push(timeStr);
-          data.push(parseFloat(candle.close));
-        });
-        
-        return { labels, data };
-      }
-
-      function convertToCandlestickData(candles) {
-        console.log('📊 Processing', candles.length, 'V75 candles for OHLC chart');
-        const labels = [];
-        const openData = [];
-        const highData = [];
-        const lowData = [];
-        const closeData = [];
-        
-        candles.forEach((candle) => {
-          const date = new Date(candle.epoch * 1000);
-          const timeStr = date.toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false 
-          });
-          labels.push(timeStr);
-          openData.push(parseFloat(candle.open));
-          highData.push(parseFloat(candle.high));
-          lowData.push(parseFloat(candle.low));
-          closeData.push(parseFloat(candle.close));
-        });
-        
-        return { labels, openData, highData, lowData, closeData };
-      }
-
-      function updatePriceInfo(candles) {
-        if (!candles || candles.length === 0) return;
-        
-        const latest = candles[candles.length - 1];
-        const currentPrice = parseFloat(latest.close);
-        
-        // Calculate session high/low from available data
-        let dayHigh = Math.max(...candles.map(c => parseFloat(c.high)));
-        let dayLow = Math.min(...candles.map(c => parseFloat(c.low)));
-        
-        // Calculate price change from first candle
-        let priceChange = 0;
-        let changePercent = 0;
-        if (candles.length > 1) {
-          const firstPrice = parseFloat(candles[0].open);
-          priceChange = currentPrice - firstPrice;
-          changePercent = ((priceChange / firstPrice) * 100);
-        }
-        
-        // Update display with animation
-        document.getElementById('currentPrice').textContent = currentPrice.toFixed(4);
-        document.getElementById('dayHigh').textContent = dayHigh.toFixed(4);
-        document.getElementById('dayLow').textContent = dayLow.toFixed(4);
-        document.getElementById('totalCandles').textContent = candles.length;
-        
-        const changeEl = document.getElementById('priceChange');
-        const changeText = `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(4)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)`;
-        changeEl.textContent = changeText;
-        changeEl.className = `price-change ${priceChange >= 0 ? 'positive' : 'negative'}`;
-        
-        // Add pulse animation for price updates
-        if (lastPrice && lastPrice !== currentPrice) {
-          const priceCard = document.querySelector('.price-card.current');
-          priceCard.classList.add('pulse');
-          setTimeout(() => priceCard.classList.remove('pulse'), 2000);
-        }
-        
-        lastPrice = currentPrice;
-      }
-
-      async function fetchV75Data(interval) {
-        try {
-          updateStatus('🔄 Fetching fresh V75 market data...', 'loading');
-          
-          const res = await fetch(`/api/candles?symbol=${SYMBOL}&interval=${interval}`);
-          
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          }
-          
-          const data = await res.json();
-          
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          
-          if (!Array.isArray(data) || data.length === 0) {
-            throw new Error('No V75 data received from server');
-          }
-          
-          console.log('✅ Fresh V75 data received:', data.length, 'candles');
-          return data;
-          
-        } catch (error) {
-          console.error('❌ V75 fetch error:', error);
-          updateStatus(`❌ Connection Error: ${error.message}`, 'error');
-          throw error;
-        }
-      }
-
-      function updateStatus(message, className = '') {
-        const statusEl = document.getElementById('status');
-        statusEl.textContent = message;
-        statusEl.className = className;
-      }
-
-      function updateChartType() {
-        const chartType = document.getElementById('chartType').value;
-        
-        if (v75Chart) {
-          v75Chart.destroy();
-        }
-        
-        if (chartType === 'line') {
-          v75Chart = createLineChart();
-        } else {
-          v75Chart = createOHLCChart();
-        }
-        
-        refresh();
-      }
-
-      async function refresh() {
-        const interval = document.getElementById("interval").value;
-        const chartType = document.getElementById("chartType").value;
-        
-        console.log('🔄 Refreshing V75 data:', interval, chartType);
-        
-        const refreshBtn = document.getElementById('refreshBtn');
-        refreshBtn.disabled = true;
-        refreshBtn.textContent = '🔄 Loading...';
-        
-        try {
-          const candles = await fetchV75Data(interval);
-          
-          if (candles && candles.length > 0) {
-            updatePriceInfo(candles);
+            const labels = data.map(candle => formatTime(candle.epoch));
+            const prices = data.map(candle => candle.close);
             
-            if (chartType === 'line') {
-              const chartData = convertToLineData(candles);
-              v75Chart.data.labels = chartData.labels;
-              v75Chart.data.datasets[0].data = chartData.data;
-              v75Chart.data.datasets[0].label = `V75 Price - ${interval}`;
-            } else {
-              const chartData = convertToCandlestickData(candles);
-              v75Chart.data.labels = chartData.labels;
-              v75Chart.data.datasets[0].data = chartData.highData;
-              v75Chart.data.datasets[1].data = chartData.lowData;
-              v75Chart.data.datasets[2].data = chartData.openData;
-              v75Chart.data.datasets[3].data = chartData.closeData;
-            }
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = prices;
+            chart.update();
             
-            v75Chart.update('active');
+            // Update current price display
+            const latestPrice = prices[prices.length - 1];
+            document.getElementById('current-price').textContent = latestPrice.toFixed(2);
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
             
-            const lastPrice = candles[candles.length - 1].close;
-            const now = new Date().toLocaleTimeString();
-            updateStatus(`✅ V75 data loaded: ${candles.length} points | Last: ${lastPrice} | ${now}`, 'connected');
+            updateStatus(`✅ Chart updated with ${data.length} candles`);
+        }
+
+        function loadData() {
+            updateStatus('📊 Loading XAUUSD data...');
             
-            lastRefreshTime = Date.now();
-          }
-        } catch (error) {
-          console.error('❌ Refresh failed:', error);
-          updateStatus(`❌ Failed to load V75 data: ${error.message}`, 'error');
-        } finally {
-          setTimeout(() => {
-            refreshBtn.disabled = false;
-            refreshBtn.textContent = '🔄 Refresh Now';
-          }, 2000);
+            fetch(`/api/candles?interval=${currentInterval}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateChart(data);
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    updateStatus('❌ Failed to load data: ' + error.message, true);
+                });
         }
-      }
 
-      function startAutoRefresh() {
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
+        function changeInterval(interval) {
+            // Update button states
+            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${interval}`).classList.add('active');
+            
+            currentInterval = interval;
+            loadData();
         }
-        
-        // Auto-refresh every 8 seconds
-        refreshInterval = setInterval(() => {
-          const now = Date.now();
-          if (now - lastRefreshTime > 7000) {
-            console.log('⚡ Auto-refreshing V75 data...');
-            refresh();
-          }
-        }, 8000);
-        
-        console.log('⚡ Auto-refresh started for V75');
-      }
 
-      // Global function for manual refresh button
-      window.manualRefresh = function() {
-        console.log('👆 Manual refresh triggered');
-        refresh();
-      }
-
-      // Event listeners
-      document.getElementById('interval').addEventListener('change', function() {
-        console.log('📊 Interval changed to:', this.value);
-        refresh();
-      });
-
-      document.getElementById('chartType').addEventListener('change', function() {
-        console.log('📈 Chart type changed to:', this.value);
-        updateChartType();
-      });
-
-      function init() {
-        console.log('🚀 Initializing V75 Live Chart...');
-        
-        v75Chart = createLineChart();
-        refresh();
-        startAutoRefresh();
-        
-        console.log('✅ V75 Live Chart initialized successfully');
-      }
-
-      async function testConnection() {
-        try {
-          console.log('🔌 Testing V75 API connection...');
-          updateStatus('🔌 Testing connection to V75 market data...', 'loading');
-          
-          const response = await fetch('/api/test');
-          
-          if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('✅ API connection test successful:', data);
-          
-          updateStatus('✅ Connection verified, loading V75 data...', 'loading');
-          setTimeout(init, 500);
-          
-        } catch (error) {
-          console.error('❌ API connection test failed:', error);
-          updateStatus('❌ Connection failed. Ensure Flask server is running on port 5000.', 'error');
-          
-          // Try to initialize anyway after showing error
-          setTimeout(() => {
-            updateStatus('🔄 Attempting to connect anyway...', 'loading');
-            init();
-          }, 3000);
+        function testAPI() {
+            fetch('/api/test')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API Test:', data);
+                    updateStatus('🔗 Connected to XAUUSD API');
+                })
+                .catch(error => {
+                    console.error('API Test failed:', error);
+                    updateStatus('❌ API connection failed', true);
+                });
         }
-      }
 
-      // Start the V75 application
-      testConnection();
-      
-      // Cleanup on page unload
-      window.addEventListener('beforeunload', function() {
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-        }
-        if (v75Chart) {
-          v75Chart.destroy();
-        }
-      });
-    });
-  </script>
+        // Initialize everything
+        window.onload = function() {
+            initChart();
+            testAPI();
+            loadData();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(loadData, 30000);
+        };
+    </script>
 </body>
 </html>
