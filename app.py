@@ -6,40 +6,34 @@ import time
 app = Flask(__name__)
 CORS(app)
 
-# Deriv API endpoint for candles
-DERIV_API_URL = "https://api.deriv.com/api/explorer/api/v1"
-
 @app.route("/")
 def index():
     return render_template("index.html")
 
-@app.route("/api/candles")
-def get_candles():
+@app.route("/api/data")
+def get_data():
     symbol = request.args.get("symbol", "R_75")
-    interval = request.args.get("interval", "1m")
+    dtype = request.args.get("type", "ticks")
 
-    # Map UI intervals to Deriv API durations
-    interval_map = {
-        "1m": 60,
-        "5m": 300,
-        "15m": 900,
-        "1d": 86400,
-        "1w": 604800
-    }
-
-    if interval not in interval_map:
-        return jsonify({"error": "Invalid interval"}), 400
+    # Define granularity
+    if dtype == "ticks":
+        granularity = 0
+    elif dtype == "1m":
+        granularity = 60
+    elif dtype == "5m":
+        granularity = 300
+    else:
+        return jsonify([])
 
     end_time = int(time.time())
-    start_time = end_time - (100 * interval_map[interval])  # last 100 candles
+    start_time = end_time - (60 * 100)  # last ~100 minutes or ticks
 
     payload = {
         "ticks_history": symbol,
         "start": start_time,
         "end": end_time,
-        "style": "candles",
-        "granularity": interval_map[interval],
-        "adjust_start_time": 1,
+        "style": "ticks" if granularity == 0 else "candles",
+        "granularity": granularity,
         "count": 100
     }
 
@@ -48,25 +42,19 @@ def get_candles():
         res.raise_for_status()
         data = res.json()
 
-        if "candles" not in data:
-            return jsonify([])
+        if granularity == 0:  # ticks
+            if "history" in data and "prices" in data["history"]:
+                prices = data["history"]["prices"]
+                times = data["history"]["times"]
+                return jsonify([{"epoch": t, "price": p} for t, p in zip(times, prices)])
+        else:  # candles
+            if "candles" in data:
+                return jsonify([{"epoch": c["epoch"], "price": c["close"]} for c in data["candles"]])
 
-        candles = [
-            {
-                "epoch": c["epoch"],
-                "open": c["open"],
-                "high": c["high"],
-                "low": c["low"],
-                "close": c["close"]
-            }
-            for c in data["candles"]
-        ]
-
-        return jsonify(candles)
+        return jsonify([])
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
