@@ -14,7 +14,7 @@
         
         body {
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
             color: white;
             min-height: 100vh;
             padding: 20px;
@@ -28,64 +28,93 @@
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .price-display {
             font-size: 1.5em;
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
+            background: rgba(255,215,0,0.1);
+            border: 1px solid rgba(255,215,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
             margin-bottom: 20px;
             backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(255, 215, 0, 0.1);
         }
+        
+        .price-change {
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .positive { color: #00ff88; }
+        .negative { color: #ff6b6b; }
         
         .chart-container {
             position: relative;
             height: 500px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
         }
         
         .controls {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
         
         .btn {
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 25px;
+            padding: 12px 25px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 30px;
             color: white;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             backdrop-filter: blur(10px);
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
         
         .btn:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
+            background: rgba(255,215,0,0.2);
+            border-color: rgba(255,215,0,0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255,215,0,0.2);
         }
         
         .btn.active {
-            background: #ffd700;
-            color: #1e3c72;
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #1a1a2e;
             font-weight: bold;
+            border-color: #ffd700;
+            box-shadow: 0 8px 25px rgba(255,215,0,0.3);
         }
         
         .status {
             text-align: center;
-            margin-top: 20px;
-            padding: 10px;
+            margin-top: 25px;
+            padding: 15px;
             background: rgba(0,255,0,0.1);
-            border-radius: 10px;
-            font-size: 0.9em;
+            border: 1px solid rgba(0,255,0,0.2);
+            border-radius: 15px;
+            font-size: 0.95em;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status.error {
+            background: rgba(255,0,0,0.1);
+            border-color: rgba(255,0,0,0.2);
         }
         
         .loading {
@@ -93,14 +122,65 @@
             font-size: 1.2em;
             padding: 50px;
         }
+        
+        .market-info {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .info-card {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 120px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .info-card .label {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+        
+        .info-card .value {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 10px 18px;
+                font-size: 0.9em;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .price-display {
+                font-size: 1.3em;
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🏆 XAUUSD Live Chart</h1>
+        <h1>📈 XAUUSD Live Chart</h1>
         <div class="price-display">
-            <div>Current Price: $<span id="current-price">Loading...</span></div>
-            <div style="font-size: 0.8em; margin-top: 5px;">
+            <div>Gold Price: $<span id="current-price">Loading...</span></div>
+            <div class="price-change" id="price-change">
+                Change: <span id="change-value">--</span> (<span id="change-percent">--%</span>)
+            </div>
+            <div style="font-size: 0.7em; margin-top: 8px; opacity: 0.8;">
                 Last Update: <span id="last-update">--</span>
             </div>
         </div>
@@ -112,20 +192,41 @@
         <button class="btn" onclick="changeInterval('15m')" id="btn-15m">15M</button>
         <button class="btn" onclick="changeInterval('30m')" id="btn-30m">30M</button>
         <button class="btn" onclick="changeInterval('1h')" id="btn-1h">1H</button>
+        <button class="btn" onclick="changeInterval('4h')" id="btn-4h">4H</button>
     </div>
 
     <div class="chart-container">
         <canvas id="priceChart"></canvas>
     </div>
 
+    <div class="market-info">
+        <div class="info-card">
+            <div class="label">24h High</div>
+            <div class="value" id="high-24h">$--</div>
+        </div>
+        <div class="info-card">
+            <div class="label">24h Low</div>
+            <div class="value" id="low-24h">$--</div>
+        </div>
+        <div class="info-card">
+            <div class="label">Volume</div>
+            <div class="value" id="volume">--</div>
+        </div>
+        <div class="info-card">
+            <div class="label">Market</div>
+            <div class="value" id="market-status">FOREX</div>
+        </div>
+    </div>
+
     <div class="status" id="status">
-        📊 Connecting to XAUUSD data feed...
+        📊 Connecting to XAUUSD market data...
     </div>
 
     <script>
         let chart;
         let currentInterval = '1m';
         let chartData = [];
+        let previousPrice = null;
         
         // Initialize chart
         const ctx = document.getElementById('priceChart').getContext('2d');
@@ -136,17 +237,27 @@
                 data: {
                     labels: [],
                     datasets: [{
-                        label: 'XAUUSD Price',
+                        label: 'XAUUSD Price (USD)',
                         data: [],
                         borderColor: '#ffd700',
-                        backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                        borderWidth: 2,
+                        backgroundColor: (context) => {
+                            const ctx = context.chart.ctx;
+                            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
+                            gradient.addColorStop(1, 'rgba(255, 215, 0, 0.05)');
+                            return gradient;
+                        },
+                        borderWidth: 3,
                         fill: true,
-                        tension: 0.1,
+                        tension: 0.4,
                         pointBackgroundColor: '#ffd700',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 2,
-                        pointRadius: 3
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#ffed4e',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 3
                     }]
                 },
                 options: {
@@ -155,33 +266,54 @@
                     plugins: {
                         legend: {
                             labels: {
-                                color: 'white'
+                                color: 'white',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
                             }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleColor: '#ffd700',
+                            bodyColor: 'white',
+                            borderColor: '#ffd700',
+                            borderWidth: 1,
+                            cornerRadius: 8
                         }
                     },
                     scales: {
                         x: {
                             ticks: {
-                                color: 'white'
+                                color: 'rgba(255,255,255,0.8)',
+                                font: { size: 12 }
                             },
                             grid: {
-                                color: 'rgba(255,255,255,0.1)'
+                                color: 'rgba(255,255,255,0.1)',
+                                drawBorder: false
                             }
                         },
                         y: {
                             ticks: {
-                                color: 'white',
+                                color: 'rgba(255,255,255,0.8)',
+                                font: { size: 12 },
                                 callback: function(value) {
                                     return '$' + value.toFixed(2);
                                 }
                             },
                             grid: {
-                                color: 'rgba(255,255,255,0.1)'
+                                color: 'rgba(255,255,255,0.1)',
+                                drawBorder: false
                             }
                         }
                     },
                     animation: {
-                        duration: 1000
+                        duration: 1500,
+                        easing: 'easeInOutCubic'
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     }
                 }
             });
@@ -190,20 +322,53 @@
         function updateStatus(message, isError = false) {
             const status = document.getElementById('status');
             status.textContent = message;
-            status.style.background = isError ? 'rgba(255,0,0,0.1)' : 'rgba(0,255,0,0.1)';
+            status.className = isError ? 'status error' : 'status';
         }
 
         function formatTime(epoch) {
             const date = new Date(epoch * 1000);
             return date.toLocaleTimeString('en-US', {
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
             });
+        }
+
+        function updatePriceDisplay(currentPrice) {
+            document.getElementById('current-price').textContent = currentPrice.toFixed(2);
+            
+            if (previousPrice !== null) {
+                const change = currentPrice - previousPrice;
+                const changePercent = (change / previousPrice) * 100;
+                
+                const changeValueEl = document.getElementById('change-value');
+                const changePercentEl = document.getElementById('change-percent');
+                const priceChangeEl = document.getElementById('price-change');
+                
+                changeValueEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2);
+                changePercentEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
+                
+                priceChangeEl.className = change >= 0 ? 'price-change positive' : 'price-change negative';
+            }
+            
+            previousPrice = currentPrice;
+        }
+
+        function updateMarketInfo(data) {
+            if (data && data.length > 0) {
+                const prices = data.map(candle => candle.close);
+                const high = Math.max(...prices);
+                const low = Math.min(...prices);
+                
+                document.getElementById('high-24h').textContent = '$' + high.toFixed(2);
+                document.getElementById('low-24h').textContent = '$' + low.toFixed(2);
+                document.getElementById('volume').textContent = 'Active';
+            }
         }
 
         function updateChart(data) {
             if (!data || data.length === 0) {
-                updateStatus('⚠️ No data available', true);
+                updateStatus('⚠️ No XAUUSD data available', true);
                 return;
             }
 
@@ -212,27 +377,36 @@
             
             chart.data.labels = labels;
             chart.data.datasets[0].data = prices;
-            chart.update();
+            chart.update('none'); // Smooth update without animation
             
-            // Update current price display
+            // Update displays
             const latestPrice = prices[prices.length - 1];
-            document.getElementById('current-price').textContent = latestPrice.toFixed(2);
-            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            updatePriceDisplay(latestPrice);
+            updateMarketInfo(data);
             
-            updateStatus(`✅ Chart updated with ${data.length} candles`);
+            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            updateStatus(`✅ XAUUSD chart updated with ${data.length} candles`);
         }
 
         function loadData() {
-            updateStatus('📊 Loading XAUUSD data...');
+            updateStatus('📊 Loading XAUUSD market data...');
             
             fetch(`/api/candles?interval=${currentInterval}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
                     updateChart(data);
                 })
                 .catch(error => {
-                    console.error('Error loading data:', error);
-                    updateStatus('❌ Failed to load data: ' + error.message, true);
+                    console.error('Error loading XAUUSD data:', error);
+                    updateStatus('❌ Failed to load XAUUSD data: ' + error.message, true);
                 });
         }
 
@@ -242,6 +416,7 @@
             document.getElementById(`btn-${interval}`).classList.add('active');
             
             currentInterval = interval;
+            updateStatus(`📊 Switching to ${interval.toUpperCase()} timeframe...`);
             loadData();
         }
 
@@ -250,12 +425,35 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('API Test:', data);
-                    updateStatus('🔗 Connected to XAUUSD API');
+                    updateStatus('🔗 Connected to XAUUSD data server');
                 })
                 .catch(error => {
                     console.error('API Test failed:', error);
-                    updateStatus('❌ API connection failed', true);
+                    updateStatus('❌ XAUUSD server connection failed', true);
                 });
+        }
+
+        // Auto-refresh functionality
+        let autoRefreshInterval;
+        
+        function startAutoRefresh() {
+            // Clear existing interval
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            // Set refresh rate based on timeframe
+            const refreshRates = {
+                '1m': 30000,   // 30 seconds for 1-minute charts
+                '5m': 60000,   // 1 minute for 5-minute charts
+                '15m': 180000, // 3 minutes for 15-minute charts
+                '30m': 300000, // 5 minutes for 30-minute charts
+                '1h': 600000,  // 10 minutes for 1-hour charts
+                '4h': 1800000  // 30 minutes for 4-hour charts
+            };
+            
+            const refreshRate = refreshRates[currentInterval] || 60000;
+            autoRefreshInterval = setInterval(loadData, refreshRate);
         }
 
         // Initialize everything
@@ -263,10 +461,27 @@
             initChart();
             testAPI();
             loadData();
-            
-            // Auto-refresh every 30 seconds
-            setInterval(loadData, 30000);
+            startAutoRefresh();
         };
+
+        // Update auto-refresh when interval changes
+        const originalChangeInterval = changeInterval;
+        changeInterval = function(interval) {
+            originalChangeInterval(interval);
+            startAutoRefresh();
+        };
+
+        // Handle page visibility changes for better performance
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+            } else {
+                startAutoRefresh();
+                loadData(); // Refresh immediately when page becomes visible
+            }
+        });
     </script>
 </body>
 </html>
