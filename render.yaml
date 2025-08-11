@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: xauusd-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Optional: Add your API keys here or set them in Render dashboard
+      # - key: ALPHA_VANTAGE_API_KEY
+      #   value: your_key_here
+      # - key: TWELVE_DATA_API_KEY
+      #   value: your_key_here
+      # - key: FMP_API_KEY
+      #   value: your_key_here
+    autoDeploy: true
