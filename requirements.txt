@@ -1,6 +1,28 @@
-flask
-flask_cors
-websocket-client
-requests
-gunicorn
+# XAUUSD Flask Backend Requirements
 
+# Core Flask dependencies
+Flask==2.3.3
+Flask-CORS==4.0.0
+
+# Data fetching libraries
+requests==2.31.0
+yfinance==0.2.28
+
+# Data processing
+pandas==2.1.1
+numpy==1.24.3
+
+# Date/time handling
+python-dateutil==2.8.2
+
+# Optional: For additional functionality
+# Uncomment if you want to use these features
+# redis==4.6.0          # For caching
+# celery==5.3.1         # For background tasks
+# gunicorn==21.2.0      # For production deployment
+# python-dotenv==1.0.0  # For environment variables
+
+# Development dependencies (optional)
+# pytest==7.4.2
+# black==23.7.0
+# flake8==6.1.0
