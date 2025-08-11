@@ -5,20 +5,18 @@ import time
 import json
 import os
 from datetime import datetime, timedelta
-import websocket
+import random
+import math
 import threading
-import queue
+from collections import deque
 
 app = Flask(__name__)
 CORS(app)
 
-# Global variables for real-time data
+# Global variables for XAUUSD data
 current_xauusd_price = None
-xauusd_data_queue = queue.Queue()
-ws_connected = False
-
-# XAUUSD Symbol constant
-XAUUSD_SYMBOL = "frxXAUUSD"  # Deriv's XAUUSD symbol
+xauusd_base_price = 2650.00  # Approximate current XAUUSD price
+price_history = deque(maxlen=1000)  # Keep last 1000 price points
 
 @app.route("/")
 def index():
@@ -29,491 +27,565 @@ def index():
 def test_api():
     """Test endpoint to check if API is working"""
     return jsonify({
-        "status": "XAUUSD API is working",
+        "status": "XAUUSD API Server Online",
         "timestamp": int(time.time()),
-        "message": "Flask server ready for Gold/USD data",
-        "symbol": XAUUSD_SYMBOL
+        "message": "Flask server ready for Gold/USD market data",
+        "symbol": "XAUUSD",
+        "market": "FOREX/Commodities",
+        "base_price": xauusd_base_price,
+        "data_sources": ["Yahoo Finance", "Alpha Vantage", "Twelve Data", "Realistic Simulation"]
     })
 
 @app.route("/api/candles")
 def get_xauusd_candles():
-    """Get XAUUSD candles data with multiple fallback methods"""
+    """Get XAUUSD candles data with multiple data sources"""
     try:
-        # Always use XAUUSD symbol regardless of request parameter
-        symbol = XAUUSD_SYMBOL
         interval = request.args.get("interval", "1m")
         
         print(f"🔍 Fetching XAUUSD data for interval: {interval}")
         
-        # Map intervals to granularity (seconds)
-        granularity_map = {
-            "1m": 60,
-            "5m": 300,
-            "15m": 900,
-            "30m": 1800,
-            "1h": 3600
+        # Map intervals to parameters
+        interval_config = {
+            "1m": {"granularity": 60, "count": 60},
+            "5m": {"granularity": 300, "count": 50},
+            "15m": {"granularity": 900, "count": 40},
+            "30m": {"granularity": 1800, "count": 48},
+            "1h": {"granularity": 3600, "count": 24},
+            "4h": {"granularity": 14400, "count": 24}
         }
         
-        granularity = granularity_map.get(interval, 60)
-        count = 50  # Good balance for chart display
+        config = interval_config.get(interval, {"granularity": 60, "count": 60})
+        granularity = config["granularity"]
+        count = config["count"]
         
-        # Method 1: Try multiple Forex APIs for XAUUSD
-        candles = try_forex_apis(symbol, granularity, count)
+        # Try multiple methods to get XAUUSD data
+        
+        # Method 1: Try Yahoo Finance (most reliable for XAUUSD)
+        candles = try_yahoo_finance(interval, count)
         if candles:
-            print(f"✅ Got {len(candles)} XAUUSD candles from Forex APIs")
+            print(f"✅ Got {len(candles)} XAUUSD candles from Yahoo Finance")
             return jsonify(candles)
         
-        # Method 2: Try Deriv API with XAUUSD
-        candles = try_deriv_api(symbol, granularity, count)
+        # Method 2: Try Alpha Vantage (if you have API key)
+        candles = try_alpha_vantage(interval, count)
         if candles:
-            print(f"✅ Got {len(candles)} XAUUSD candles from Deriv API")
+            print(f"✅ Got {len(candles)} XAUUSD candles from Alpha Vantage")
             return jsonify(candles)
         
-        # Method 3: Try financial data providers
-        candles = try_financial_apis(symbol, granularity, count)
+        # Method 3: Try Financial APIs
+        candles = try_financial_apis(interval, count)
         if candles:
-            print(f"✅ Got {len(candles)} XAUUSD candles from financial APIs")
+            print(f"✅ Got {len(candles)} XAUUSD candles from Financial APIs")
             return jsonify(candles)
         
-        # Method 4: Generate realistic XAUUSD data (always works)
-        print("📊 Generating realistic XAUUSD data (market may be closed)")
+        # Method 4: Generate realistic XAUUSD data (fallback)
+        print("📊 Generating realistic XAUUSD market data")
         candles = generate_realistic_xauusd_candles(granularity, count)
-        print(f"✅ Generated {len(candles)} XAUUSD candles")
+        print(f"✅ Generated {len(candles)} realistic XAUUSD candles")
         return jsonify(candles)
         
     except Exception as e:
         print(f"❌ Error in get_xauusd_candles: {str(e)}")
-        # Even on error, return realistic data
+        # Always return realistic data as fallback
         candles = generate_realistic_xauusd_candles(60, 50)
         return jsonify(candles)
 
-def try_forex_apis(symbol, granularity, count):
-    """Try multiple Forex/Gold APIs"""
+def try_yahoo_finance(interval, count):
+    """Try Yahoo Finance for XAUUSD data"""
     try:
-        print("🔄 Trying Forex APIs for XAUUSD...")
+        print("🔄 Trying Yahoo Finance API for XAUUSD...")
         
-        # Method 1: Try Alpha Vantage (free tier available)
-        try:
-            # Note: You'd need to get a free API key from Alpha Vantage
-            # For demo purposes, we'll simulate the call
-            print("🔄 Checking Alpha Vantage API...")
-            # This would be the actual API call:
-            # url = f"https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=XAU&to_symbol=USD&interval=1min&apikey=YOUR_KEY"
-            pass
-        except Exception as e:
-            print(f"Alpha Vantage failed: {e}")
+        # Yahoo Finance symbols for Gold
+        symbols = ["GC=F", "XAUUSD=X"]  # Gold futures and XAUUSD
         
-        # Method 2: Try Yahoo Finance (free)
-        try:
-            print("🔄 Trying Yahoo Finance API...")
-            import yfinance as yf
+        for symbol in symbols:
+            try:
+                # Note: This requires yfinance package
+                # Install with: pip install yfinance
+                import yfinance as yf
+                
+                ticker = yf.Ticker(symbol)
+                
+                # Map intervals
+                yf_interval_map = {
+                    "1m": "1m",
+                    "5m": "5m", 
+                    "15m": "15m",
+                    "30m": "30m",
+                    "1h": "1h",
+                    "4h": "4h"
+                }
+                
+                period_map = {
+                    "1m": "1d",    # 1 minute data for 1 day
+                    "5m": "5d",    # 5 minute data for 5 days
+                    "15m": "5d",   # 15 minute data for 5 days
+                    "30m": "5d",   # 30 minute data for 5 days
+                    "1h": "5d",    # 1 hour data for 5 days
+                    "4h": "30d"    # 4 hour data for 30 days
+                }
+                
+                yf_interval = yf_interval_map.get(interval, "1m")
+                period = period_map.get(interval, "1d")
+                
+                print(f"📊 Fetching {symbol} data: period={period}, interval={yf_interval}")
+                hist = ticker.history(period=period, interval=yf_interval)
+                
+                if not hist.empty and len(hist) > 0:
+                    candles = []
+                    for index, row in hist.tail(count).iterrows():
+                        # Convert to XAUUSD if needed
+                        price_multiplier = 1.0
+                        if symbol == "GC=F":
+                            # Gold futures are typically quoted per troy ounce
+                            price_multiplier = 1.0
+                        
+                        candles.append({
+                            "epoch": int(index.timestamp()),
+                            "open": float(row['Open']) * price_multiplier,
+                            "high": float(row['High']) * price_multiplier,
+                            "low": float(row['Low']) * price_multiplier,
+                            "close": float(row['Close']) * price_multiplier
+                        })
+                    
+                    if candles:
+                        print(f"✅ Got {len(candles)} candles from Yahoo Finance ({symbol})")
+                        return candles
+                        
+            except Exception as e:
+                print(f"❌ Yahoo Finance ({symbol}) failed: {e}")
+                continue
+        
+        return None
+        
+    except ImportError:
+        print("⚠️ yfinance not installed. Install with: pip install yfinance")
+        return None
+    except Exception as e:
+        print(f"❌ Yahoo Finance failed: {str(e)}")
+        return None
+
+def try_alpha_vantage(interval, count):
+    """Try Alpha Vantage API for XAUUSD data"""
+    try:
+        print("🔄 Trying Alpha Vantage API...")
+        
+        # You need to get a free API key from: https://www.alphavantage.co/support/#api-key
+        api_key = os.environ.get('ALPHA_VANTAGE_API_KEY')
+        
+        if not api_key:
+            print("⚠️ Alpha Vantage API key not found. Set ALPHA_VANTAGE_API_KEY environment variable")
+            return None
+        
+        # Map intervals for Alpha Vantage
+        av_interval_map = {
+            "1m": "1min",
+            "5m": "5min",
+            "15m": "15min",
+            "30m": "30min",
+            "1h": "60min",
+            "4h": "60min"  # Use hourly and aggregate
+        }
+        
+        av_interval = av_interval_map.get(interval, "1min")
+        
+        # Alpha Vantage FX endpoint for XAUUSD
+        url = f"https://www.alphavantage.co/query"
+        params = {
+            "function": "FX_INTRADAY",
+            "from_symbol": "XAU",
+            "to_symbol": "USD",
+            "interval": av_interval,
+            "apikey": api_key,
+            "outputsize": "compact"
+        }
+        
+        response = requests.get(url, params=params, timeout=15)
+        
+        if response.status_code == 200:
+            data = response.json()
             
-            # Convert symbol for Yahoo Finance
-            yahoo_symbol = "GC=F"  # Gold futures symbol
-            ticker = yf.Ticker(yahoo_symbol)
+            # Check for API errors
+            if "Error Message" in data:
+                print(f"❌ Alpha Vantage error: {data['Error Message']}")
+                return None
             
-            # Get recent data
-            period_map = {
-                60: "1d",    # 1 minute
-                300: "5d",   # 5 minutes  
-                900: "5d",   # 15 minutes
-                1800: "5d",  # 30 minutes
-                3600: "5d"   # 1 hour
-            }
+            if "Note" in data:
+                print(f"⚠️ Alpha Vantage note: {data['Note']}")
+                return None
             
-            period = period_map.get(granularity, "1d")
-            interval_map = {
-                60: "1m",
-                300: "5m", 
-                900: "15m",
-                1800: "30m",
-                3600: "1h"
-            }
-            
-            yf_interval = interval_map.get(granularity, "1m")
-            
-            hist = ticker.history(period=period, interval=yf_interval)
-            
-            if not hist.empty and len(hist) > 0:
+            # Extract time series data
+            time_series_key = f"Time Series FX ({av_interval})"
+            if time_series_key in data:
+                time_series = data[time_series_key]
+                
                 candles = []
-                for index, row in hist.tail(count).iterrows():
+                for timestamp, ohlc in list(time_series.items())[:count]:
+                    epoch = int(datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
+                    
                     candles.append({
-                        "epoch": int(index.timestamp()),
-                        "open": float(row['Open']),
-                        "high": float(row['High']),
-                        "low": float(row['Low']),
-                        "close": float(row['Close'])
+                        "epoch": epoch,
+                        "open": float(ohlc["1. open"]),
+                        "high": float(ohlc["2. high"]),
+                        "low": float(ohlc["3. low"]),
+                        "close": float(ohlc["4. close"])
                     })
                 
-                if candles:
-                    print(f"✅ Got {len(candles)} candles from Yahoo Finance")
-                    return candles
-            
-        except ImportError:
-            print("⚠️ yfinance not installed, skipping Yahoo Finance")
-        except Exception as e:
-            print(f"❌ Yahoo Finance failed: {e}")
+                # Sort by timestamp (oldest first)
+                candles.sort(key=lambda x: x["epoch"])
+                return candles
         
         return None
         
     except Exception as e:
-        print(f"❌ Forex APIs failed: {str(e)}")
+        print(f"❌ Alpha Vantage failed: {str(e)}")
         return None
 
-def try_financial_apis(symbol, granularity, count):
-    """Try financial data APIs"""
+def try_financial_apis(interval, count):
+    """Try other financial APIs for XAUUSD data"""
     try:
-        print("🔄 Trying financial APIs...")
+        print("🔄 Trying additional financial APIs...")
         
-        # Method 1: Try Twelve Data API (has free tier)
-        try:
-            print("🔄 Checking Twelve Data API...")
-            # Free tier available at twelvedata.com
-            # url = f"https://api.twelvedata.com/time_series?symbol=XAUUSD&interval=1min&apikey=YOUR_KEY"
-            pass
-        except Exception as e:
-            print(f"Twelve Data failed: {e}")
+        # Method 1: Try Twelve Data (has free tier)
+        api_key = os.environ.get('TWELVE_DATA_API_KEY')
+        if api_key:
+            try:
+                url = "https://api.twelvedata.com/time_series"
+                params = {
+                    "symbol": "XAUUSD",
+                    "interval": interval,
+                    "outputsize": count,
+                    "apikey": api_key
+                }
+                
+                response = requests.get(url, params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if "values" in data:
+                        candles = []
+                        for item in reversed(data["values"]):  # Reverse to get chronological order
+                            epoch = int(datetime.strptime(item["datetime"], "%Y-%m-%d %H:%M:%S").timestamp())
+                            candles.append({
+                                "epoch": epoch,
+                                "open": float(item["open"]),
+                                "high": float(item["high"]),
+                                "low": float(item["low"]),
+                                "close": float(item["close"])
+                            })
+                        
+                        if candles:
+                            return candles
+            except Exception as e:
+                print(f"Twelve Data failed: {e}")
         
-        # Method 2: Try Fixer.io for current rates
+        # Method 2: Try Financial Modeling Prep (free tier available)
+        fmp_key = os.environ.get('FMP_API_KEY')
+        if fmp_key:
+            try:
+                url = f"https://financialmodelingprep.com/api/v3/historical-chart/{interval}/XAUUSD"
+                params = {"apikey": fmp_key}
+                
+                response = requests.get(url, params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data and len(data) > 0:
+                        candles = []
+                        for item in data[:count]:
+                            epoch = int(datetime.strptime(item["date"], "%Y-%m-%d %H:%M:%S").timestamp())
+                            candles.append({
+                                "epoch": epoch,
+                                "open": float(item["open"]),
+                                "high": float(item["high"]),
+                                "low": float(item["low"]),
+                                "close": float(item["close"])
+                            })
+                        
+                        if candles:
+                            return sorted(candles, key=lambda x: x["epoch"])
+            except Exception as e:
+                print(f"Financial Modeling Prep failed: {e}")
+        
+        # Method 3: Try a simple forex API for current rates
         try:
-            print("🔄 Trying Fixer.io API...")
-            # This API provides currency rates but not historical OHLC for gold
-            # url = "http://data.fixer.io/api/latest?access_key=YOUR_KEY&symbols=XAU,USD"
-            pass
+            url = "https://api.exchangerate-api.com/v4/latest/USD"
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                # This won't have XAU, but we can use it as a template
+                # Skip this for now as it doesn't have gold data
+                pass
         except Exception as e:
-            print(f"Fixer.io failed: {e}")
+            print(f"Exchange rate API failed: {e}")
         
         return None
         
     except Exception as e:
         print(f"❌ Financial APIs failed: {str(e)}")
         return None
-    """Try to get data from Deriv API"""
-    try:
-        print("🔄 Trying Deriv API...")
-        
-        # Official Deriv API endpoint
-        url = "https://api.deriv.com/v1/api"
-        
-        payload = {
-            "ticks_history": symbol,
-            "adjust_start_time": 1,
-            "count": count,
-            "end": "latest",
-            "granularity": granularity,
-            "style": "candles",
-            "req_id": 1
-        }
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'User-Agent': 'V75-Chart/1.0'
-        }
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            print(f"📊 Deriv API response keys: {list(data.keys()) if isinstance(data, dict) else 'Invalid response'}")
-            
-            if isinstance(data, dict) and not data.get('error'):
-                # Check for candles data
-                candles_data = data.get('candles', [])
-                if not candles_data and 'history' in data:
-                    candles_data = data['history'].get('candles', [])
-                
-                if candles_data:
-                    return format_candles_data(candles_data)
-                
-                # Check for prices data (ticks)
-                if 'history' in data and 'prices' in data['history']:
-                    return convert_ticks_to_candles(data['history'], granularity)
-            
-            # Log any error from API
-            if data.get('error'):
-                print(f"⚠️ Deriv API error: {data['error']}")
-        
-        return None
-        
-    except Exception as e:
-        print(f"❌ Deriv API failed: {str(e)}")
-        return None
 
-def try_binary_api(symbol, granularity, count):
-    """Try to get data from Binary.com API"""
-    try:
-        print("🔄 Trying Binary.com API...")
-        
-        url = "https://api.binaryws.com/websockets/v3"
-        
-        payload = {
-            "ticks_history": symbol,
-            "adjust_start_time": 1,
-            "count": count,
-            "end": "latest",
-            "granularity": granularity,
-            "style": "candles"
-        }
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Origin': 'https://app.deriv.com'
-        }
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            data = response.json()
-            print(f"📊 Binary API response keys: {list(data.keys()) if isinstance(data, dict) else 'Invalid response'}")
-            
-            if isinstance(data, dict) and not data.get('error'):
-                # Check for candles data
-                candles_data = data.get('candles', [])
-                if not candles_data and 'history' in data:
-                    candles_data = data['history'].get('candles', [])
-                
-                if candles_data:
-                    return format_candles_data(candles_data)
-                
-                # Check for prices data (ticks)
-                if 'history' in data and 'prices' in data['history']:
-                    return convert_ticks_to_candles(data['history'], granularity)
-            
-            if data.get('error'):
-                print(f"⚠️ Binary API error: {data['error']}")
-        
-        return None
-        
-    except Exception as e:
-        print(f"❌ Binary API failed: {str(e)}")
-        return None
-
-def try_tick_to_candles(symbol, granularity, count):
-    """Try to get current tick and generate historical candles"""
-    try:
-        print("🔄 Trying tick-to-candles conversion...")
-        
-        # Get current tick
-        url = "https://api.binaryws.com/websockets/v3"
-        payload = {
-            "ticks": symbol,
-            "subscribe": 0
-        }
-        
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
-        
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            if 'tick' in data and 'quote' in data['tick']:
-                current_price = float(data['tick']['quote'])
-                current_time = int(time.time())
-                
-                # Generate realistic V75 candles based on current price
-                return generate_realistic_v75_candles(current_price, current_time, granularity, count)
-        
-        return None
-        
-    except Exception as e:
-        print(f"❌ Tick conversion failed: {str(e)}")
-        return None
-
-def format_candles_data(candles_data):
-    """Format candles data to consistent structure"""
-    candles = []
+def generate_realistic_xauusd_candles(granularity, count):
+    """Generate realistic XAUUSD market data based on actual market patterns"""
+    global current_xauusd_price
     
-    for candle in candles_data:
-        try:
-            if isinstance(candle, list) and len(candle) >= 5:
-                # Format: [epoch, open, high, low, close, volume?]
-                candles.append({
-                    "epoch": int(candle[0]),
-                    "open": float(candle[1]),
-                    "high": float(candle[2]),
-                    "low": float(candle[3]),
-                    "close": float(candle[4])
-                })
-            elif isinstance(candle, dict):
-                # Dict format
-                candles.append({
-                    "epoch": int(candle.get("epoch", 0)),
-                    "open": float(candle.get("open", 0)),
-                    "high": float(candle.get("high", 0)),
-                    "low": float(candle.get("low", 0)),
-                    "close": float(candle.get("close", 0))
-                })
-        except (ValueError, TypeError) as e:
-            print(f"⚠️ Skipping invalid candle data: {e}")
-            continue
-    
-    return candles if candles else None
-
-def convert_ticks_to_candles(history_data, granularity):
-    """Convert tick data to candles"""
     try:
-        prices = history_data.get('prices', [])
-        times = history_data.get('times', [])
+        print(f"📊 Generating {count} realistic XAUUSD candles with {granularity}s granularity")
         
-        if not prices or not times or len(prices) != len(times):
-            return None
+        # Start from current time and work backwards
+        end_time = int(time.time())
+        start_time = end_time - (granularity * count)
         
-        # Group ticks into candle periods
+        # Initialize base price if not set
+        if current_xauusd_price is None:
+            current_xauusd_price = xauusd_base_price
+        
         candles = []
-        current_time = int(times[0])
-        period_start = (current_time // granularity) * granularity
         
-        i = 0
-        while i < len(prices):
-            period_end = period_start + granularity
-            period_prices = []
-            period_times = []
+        # Generate realistic market data
+        for i in range(count):
+            timestamp = start_time + (i * granularity)
             
-            # Collect all ticks in this period
-            while i < len(prices) and times[i] < period_end:
-                period_prices.append(float(prices[i]))
-                period_times.append(int(times[i]))
-                i += 1
+            # Create realistic price movement
+            # Gold tends to move in cycles with some volatility
+            time_factor = i / count
             
-            if period_prices:
-                candles.append({
-                    "epoch": period_start,
-                    "open": period_prices[0],
-                    "high": max(period_prices),
-                    "low": min(period_prices),
-                    "close": period_prices[-1]
-                })
+            # Add daily cycle (gold often moves with Asian/European markets)
+            daily_cycle = math.sin(time_factor * 2 * math.pi) * 5
             
-            period_start = period_end
+            # Add random walk component
+            random_walk = random.uniform(-8, 8)
+            
+            # Add trend component (slight upward bias for gold)
+            trend = (time_factor - 0.5) * 2
+            
+            # Add volatility spikes occasionally
+            volatility_spike = 0
+            if random.random() < 0.1:  # 10% chance of volatility spike
+                volatility_spike = random.uniform(-15, 15)
+            
+            # Calculate price change
+            price_change = daily_cycle + random_walk + trend + volatility_spike
+            
+            # Update current price
+            current_xauusd_price += price_change * 0.1  # Scale the movement
+            
+            # Keep price within realistic bounds (gold doesn't move too wildly)
+            if current_xauusd_price < xauusd_base_price * 0.95:
+                current_xauusd_price = xauusd_base_price * 0.95
+            elif current_xauusd_price > xauusd_base_price * 1.05:
+                current_xauusd_price = xauusd_base_price * 1.05
+            
+            # Generate OHLC based on the timeframe
+            base_price = current_xauusd_price
+            
+            # Create intrabar movement
+            tick_range = random.uniform(0.5, 3.0)  # Gold typically moves in small increments
+            
+            # Generate open price (close of previous candle or slight gap)
+            if i == 0:
+                open_price = base_price
+            else:
+                # Small gap up or down from previous close
+                gap = random.uniform(-1, 1)
+                open_price = candles[-1]["close"] + gap
+            
+            # Generate high and low with realistic spread
+            high_offset = random.uniform(0, tick_range)
+            low_offset = random.uniform(0, tick_range)
+            
+            high_price = max(open_price, base_price) + high_offset
+            low_price = min(open_price, base_price) - low_offset
+            
+            # Generate close price within the range
+            close_price = random.uniform(low_price, high_price)
+            
+            # Ensure OHLC relationships are maintained
+            high_price = max(high_price, open_price, close_price)
+            low_price = min(low_price, open_price, close_price)
+            
+            candle = {
+                "epoch": timestamp,
+                "open": round(open_price, 2),
+                "high": round(high_price, 2),
+                "low": round(low_price, 2),
+                "close": round(close_price, 2)
+            }
+            
+            candles.append(candle)
+            
+            # Update current price for next iteration
+            current_xauusd_price = close_price
         
-        return candles if candles else None
+        print(f"✅ Generated {len(candles)} realistic XAUUSD candles")
+        print(f"📈 Price range: ${candles[0]['close']:.2f} - ${candles[-1]['close']:.2f}")
+        
+        return candles
         
     except Exception as e:
-        print(f"❌ Tick conversion error: {str(e)}")
-        return None
-
-def generate_realistic_v75_candles(base_price, end_time, granularity, count):
-    """Generate realistic V75 candles for demonstration"""
-    import random
-    
-    candles = []
-    current_price = base_price
-    current_time = end_time - (count * granularity)
-    
-    # V75 typical volatility parameters
-    volatility = 0.02  # 2% base volatility
-    spike_probability = 0.1  # 10% chance of volatility spike
-    
-    for _ in range(count):
-        # Calculate price movement
-        if random.random() < spike_probability:
-            # Volatility spike (V75 characteristic)
-            price_change = random.gauss(0, volatility * 5)
-        else:
-            # Normal movement
-            price_change = random.gauss(0, volatility)
-        
-        open_price = current_price
-        
-        # Generate OHLC for this period
-        close_price = open_price * (1 + price_change)
-        
-        # High and low with some randomness
-        high_offset = abs(random.gauss(0, volatility * 0.5))
-        low_offset = abs(random.gauss(0, volatility * 0.5))
-        
-        high_price = max(open_price, close_price) * (1 + high_offset)
-        low_price = min(open_price, close_price) * (1 - low_offset)
-        
-        candles.append({
+        print(f"❌ Error generating realistic XAUUSD data: {str(e)}")
+        # Return minimal fallback data
+        current_time = int(time.time())
+        return [{
             "epoch": current_time,
-            "open": round(open_price, 4),
-            "high": round(high_price, 4),
-            "low": round(low_price, 4),
-            "close": round(close_price, 4)
+            "open": xauusd_base_price,
+            "high": xauusd_base_price + 5,
+            "low": xauusd_base_price - 5,
+            "close": xauusd_base_price
+        }]
+
+@app.route("/api/current-price")
+def get_current_price():
+    """Get current XAUUSD price"""
+    try:
+        # Try to get real-time price first
+        current_price = get_realtime_xauusd_price()
+        
+        if current_price is None:
+            # Fallback to simulated price
+            if current_xauusd_price is None:
+                current_price = xauusd_base_price
+            else:
+                current_price = current_xauusd_price
+        
+        return jsonify({
+            "symbol": "XAUUSD",
+            "price": round(current_price, 2),
+            "timestamp": int(time.time()),
+            "currency": "USD"
         })
         
-        current_price = close_price
-        current_time += granularity
-    
-    return candles
+    except Exception as e:
+        print(f"❌ Error getting current XAUUSD price: {str(e)}")
+        return jsonify({
+            "symbol": "XAUUSD",
+            "price": xauusd_base_price,
+            "timestamp": int(time.time()),
+            "currency": "USD"
+        }), 500
 
-@app.route("/api/current_price")
-def get_current_v75_price():
-    """Get current V75 price"""
+def get_realtime_xauusd_price():
+    """Try to get real-time XAUUSD price from various sources"""
     try:
-        symbol = V75_SYMBOL
+        # Method 1: Try Yahoo Finance for current price
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker("GC=F")
+            info = ticker.history(period="1d", interval="1m").tail(1)
+            if not info.empty:
+                return float(info['Close'].iloc[0])
+        except Exception as e:
+            print(f"Yahoo Finance real-time failed: {e}")
         
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        }
+        # Method 2: Try financial APIs
+        api_key = os.environ.get('TWELVE_DATA_API_KEY')
+        if api_key:
+            try:
+                url = "https://api.twelvedata.com/price"
+                params = {
+                    "symbol": "XAUUSD",
+                    "apikey": api_key
+                }
+                response = requests.get(url, params=params, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    if "price" in data:
+                        return float(data["price"])
+            except Exception as e:
+                print(f"Twelve Data real-time failed: {e}")
         
-        payload = {
-            "ticks": symbol,
-            "subscribe": 0
-        }
-        
-        response = requests.post("https://api.binaryws.com/websockets/v3", 
-                               json=payload, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if 'tick' in data and 'quote' in data['tick']:
-                price = float(data['tick']['quote'])
-                global current_v75_price
-                current_v75_price = price
-                
-                return jsonify({
-                    "symbol": symbol,
-                    "price": price,
-                    "timestamp": int(time.time())
-                })
-        
-        # Fallback to last known price if available
-        if current_v75_price:
-            return jsonify({
-                "symbol": symbol,
-                "price": current_v75_price,
-                "timestamp": int(time.time()),
-                "note": "Last known price"
-            })
-        
-        return jsonify({"error": "Unable to fetch current V75 price"}), 503
+        return None
         
     except Exception as e:
-        print(f"❌ Current price error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error getting real-time XAUUSD price: {str(e)}")
+        return None
 
+@app.route("/api/market-status")
+def get_market_status():
+    """Get market status information"""
+    try:
+        # Check if it's during market hours (Forex markets are 24/5)
+        now = datetime.now()
+        weekday = now.weekday()  # 0 = Monday, 6 = Sunday
+        
+        # Forex market is closed from Friday evening to Sunday evening (EST)
+        is_open = not (weekday == 5 and now.hour >= 17) and not (weekday == 6)  # Not Sat evening or Sunday
+        
+        return jsonify({
+            "market": "FOREX",
+            "symbol": "XAUUSD",
+            "status": "OPEN" if is_open else "CLOSED",
+            "timezone": "EST",
+            "last_update": int(time.time())
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting market status: {str(e)}")
+        return jsonify({
+            "market": "FOREX",
+            "symbol": "XAUUSD", 
+            "status": "UNKNOWN",
+            "error": str(e)
+        }), 500
+
+# Background price update system
+def price_update_worker():
+    """Background worker to update prices periodically"""
+    global current_xauusd_price
+    
+    while True:
+        try:
+            # Try to get real-time price
+            real_price = get_realtime_xauusd_price()
+            if real_price:
+                current_xauusd_price = real_price
+                print(f"📈 Updated XAUUSD price: ${real_price:.2f}")
+            else:
+                # Simulate small price movements
+                if current_xauusd_price:
+                    change = random.uniform(-2, 2)
+                    current_xauusd_price += change
+                    print(f"📊 Simulated XAUUSD price: ${current_xauusd_price:.2f}")
+            
+            time.sleep(30)  # Update every 30 seconds
+            
+        except Exception as e:
+            print(f"❌ Price update worker error: {str(e)}")
+            time.sleep(60)  # Wait longer on error
+
+# Error handlers
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({"error": "Endpoint not found"}), 404
+    return jsonify({"error": "Endpoint not found", "message": "XAUUSD API endpoint not available"}), 404
 
 @app.errorhandler(500)
-def server_error(error):
-    return jsonify({"error": "Internal server error"}), 500
+def internal_error(error):
+    return jsonify({"error": "Internal server error", "message": "XAUUSD API encountered an error"}), 500
 
-def log_startup_info():
-    """Print startup information"""
-    print("🚀 Volatility 75 Live Chart Server Starting...")
-    print(f"📊 Target Symbol: {V75_SYMBOL}")
-    print(f"🌐 Server URL: http://localhost:5000")
-    print(f"🔗 API Test: http://localhost:5000/api/test")
-    print("✅ Server ready for V75 market data!")
+# Health check endpoint
+@app.route("/health")
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "XAUUSD API",
+        "timestamp": int(time.time()),
+        "uptime": "running"
+    })
 
 if __name__ == "__main__":
-    log_startup_info()
+    print("🚀 Starting XAUUSD Flask API Server...")
+    print("📊 Gold/USD market data server initializing...")
     
-    # Run the Flask app
-    app.run(
-        host="0.0.0.0", 
-        port=5000, 
-        debug=True,
-        threaded=True
-    )
+    # Start background price update worker
+    price_thread = threading.Thread(target=price_update_worker, daemon=True)
+    price_thread.start()
+    
+    print("✅ XAUUSD API Server ready!")
+    print("📡 Available endpoints:")
+    print("   GET /api/test - Test API connection")
+    print("   GET /api/candles?interval=1m - Get XAUUSD candles")
+    print("   GET /api/current-price - Get current XAUUSD price")
+    print("   GET /api/market-status - Get market status")
+    print("   GET /health - Health check")
+    print()
+    print("🌐 Server starting on http://localhost:5000")
+    
+    app.run(host="0.0.0.0", port=5000, debug=True)
