@@ -25,6 +25,7 @@
             align-items: center;
             overflow-x: hidden;
             position: relative;
+            padding: 20px;
         }
 
         .poster-container {
@@ -93,11 +94,13 @@
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
+            text-decoration: none;
         }
 
         .price-tag:hover {
             transform: rotate(12deg) scale(1.02);
             box-shadow: 0 10px 20px rgba(255,107,53,0.5);
+            color: white;
         }
 
         .body {
@@ -415,12 +418,37 @@
             font-style: italic;
         }
 
+        /* Admin Button */
+        .admin-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #2d5a27, #4a7c59);
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(45,90,39,0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .admin-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(45,90,39,0.6);
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
+            body { padding: 10px; }
             .poster { width: 350px; height: 580px; }
             .main-title { font-size: 32px; }
             .modal-content { width: 95%; margin: 5% auto; max-height: 90vh; }
             .modal-body { padding: 20px; }
+            .admin-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 20px; }
         }
 
         @media (max-height: 600px) {
@@ -429,12 +457,17 @@
     </style>
 </head>
 <body>
+    <!-- Admin Button -->
+    <button class="admin-btn" onclick="window.open('admin.html', '_blank')" title="Admin Access">
+        <i class="fas fa-cog"></i>
+    </button>
+
     <div class="poster-container">
         <div class="poster">
             <div class="header">
                 <h1 class="main-title">Kesfeng</h1>
                 <p class="subtitle">Your Trusted Delivery Partner</p>
-                <div class="price-tag">R34.99</div>
+                <a href="admin.html" class="price-tag" title="Admin Access">R34.99</a>
             </div>
             
             <div class="body">
