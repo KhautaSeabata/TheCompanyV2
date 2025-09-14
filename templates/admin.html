@@ -1572,4 +1572,302 @@
                 if (requestTable === 'rideRequests') {
                     displayRideRequests();
                 } else {
-                    displayParcel
+                    displayParcelRequests();
+                }
+                displayRides();
+                updateStats();
+                showNotification(`Request ${newStatus} successfully!`);
+            }
+        }
+
+        // Communication functions
+        function sendWhatsAppUpdate(requestId, requestType) {
+            const requests = requestType === 'ride' ? rideRequests : parcelRequests;
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                alert('Request not found');
+                return;
+            }
+
+            let message = '';
+            if (requestType === 'ride') {
+                message = `Hi ${request.fullName}, your ride request from ${request.currentLocation} to ${request.destination} has been ${request.status}.`;
+                if (request.assignedRide) {
+                    message += ` Your driver: ${request.assignedRide}`;
+                }
+            } else {
+                message = `Hi ${request.fullName}, your parcel delivery to ${request.parcelDestination} has been ${request.status}.`;
+                if (request.assignedRide) {
+                    message += ` Your driver: ${request.assignedRide}`;
+                }
+            }
+
+            const whatsappUrl = `https://wa.me/${request.phoneNumber.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+            showNotification('WhatsApp opened for customer communication');
+        }
+
+        function sendAssignmentNotification(ride, request) {
+            console.log(`Assignment notification sent for request ${request.id} to ride ${ride.id}`);
+            // In a real implementation, this would send SMS/WhatsApp notifications
+            showNotification('Assignment notifications sent to customer and driver');
+        }
+
+        function sendCollectingNotification(rideId) {
+            const ride = rides.find(r => r.id === rideId);
+            if (ride && ride.status === 'collecting') {
+                console.log(`Collecting notification sent for ride ${rideId}`);
+                // In a real implementation, this would notify users about the new collecting ride
+                showNotification('Collecting ride notification sent to users');
+            }
+        }
+
+        // Real-time listeners setup (for Firebase integration)
+        function setupRealtimeListeners() {
+            // In a real Firebase implementation, you would set up listeners like:
+            /*
+            database.ref('rides').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    rides = Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    }));
+                    displayRides();
+                    updateStats();
+                }
+            });
+
+            database.ref('rideRequests').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    rideRequests = Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    }));
+                    displayRideRequests();
+                    updateStats();
+                    playNotificationSound();
+                }
+            });
+
+            database.ref('parcelRequests').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    parcelRequests = Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    }));
+                    displayParcelRequests();
+                    updateStats();
+                    playNotificationSound();
+                }
+            });
+            */
+
+            // For demo purposes, we'll simulate real-time updates
+            setInterval(() => {
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+                
+                // Simulate occasional new requests
+                if (Math.random() < 0.1) { // 10% chance every 30 seconds
+                    simulateNewRequest();
+                }
+            }, 30000); // Update every 30 seconds
+        }
+
+        // Simulate new requests for demo
+        function simulateNewRequest() {
+            if (Math.random() < 0.5) {
+                // Add a new ride request
+                const newRequest = {
+                    id: 'req' + Date.now(),
+                    fullName: ['John Smith', 'Sarah Johnson', 'Mike Brown', 'Lisa Davis'][Math.floor(Math.random() * 4)],
+                    email: 'demo@email.com',
+                    phoneNumber: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
+                    currentLocation: ['Maseru Central', 'Teyateyaneng', 'Maputsoe', 'Butha-Buthe'][Math.floor(Math.random() * 4)],
+                    destination: ['Roma', 'NUL', 'Thaba-Tseka', 'Mohale\'s Hoek'][Math.floor(Math.random() * 4)],
+                    timestamp: new Date().toISOString(),
+                    status: 'pending'
+                };
+                rideRequests.push(newRequest);
+                displayRideRequests();
+            } else {
+                // Add a new parcel request
+                const newRequest = {
+                    id: 'parcel' + Date.now(),
+                    fullName: ['Emma Wilson', 'Tom Clark', 'Amy Taylor', 'Jack White'][Math.floor(Math.random() * 4)],
+                    email: 'demo@email.com',
+                    phoneNumber: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
+                    collectionTime: new Date(Date.now() + 86400000).toISOString(),
+                    parcelDestination: ['Maseru', 'Leribe', 'Mafeteng', 'Quthing'][Math.floor(Math.random() * 4)],
+                    receiverPhone: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
+                    parcelDescription: ['Documents', 'Electronics', 'Clothing', 'Books'][Math.floor(Math.random() * 4)],
+                    timestamp: new Date().toISOString(),
+                    status: 'pending'
+                };
+                parcelRequests.push(newRequest);
+                displayParcelRequests();
+            }
+            
+            updateStats();
+            playNotificationSound();
+            showNotification('New request received!');
+        }
+
+        // Utility functions
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function playNotificationSound() {
+            try {
+                const audio = document.getElementById('notificationSound');
+                if (audio) {
+                    audio.play().catch(e => console.log('Audio play failed:', e));
+                }
+            } catch (error) {
+                console.log('Notification sound not available');
+            }
+        }
+
+        // Modal click outside to close
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        };
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // ESC key to close modals
+            if (event.key === 'Escape') {
+                const openModals = document.querySelectorAll('.modal[style*="display: block"]');
+                openModals.forEach(modal => {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                });
+            }
+            
+            // Ctrl+N for new ride
+            if (event.ctrlKey && event.key === 'n') {
+                event.preventDefault();
+                openAddRideModal();
+            }
+            
+            // Ctrl+R to refresh data
+            if (event.ctrlKey && event.key === 'r') {
+                event.preventDefault();
+                loadData();
+                showNotification('Data refreshed!');
+            }
+        });
+
+        // Handle form submissions with Enter key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && event.target.classList.contains('login-input')) {
+                login();
+            }
+        });
+
+        // Error handling
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.error('Error:', message, 'at', source, lineno);
+            showNotification('An error occurred. Please refresh the page.', 'error');
+            return false;
+        };
+
+        // Auto-logout after inactivity (30 minutes)
+        let inactivityTimer;
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                if (confirm('Session expired due to inactivity. Click OK to continue or Cancel to logout.')) {
+                    resetInactivityTimer();
+                } else {
+                    location.reload();
+                }
+            }, 30 * 60 * 1000); // 30 minutes
+        }
+
+        // Track user activity
+        ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+            document.addEventListener(event, resetInactivityTimer, { passive: true });
+        });
+
+        // Initialize the inactivity timer when app starts
+        document.addEventListener('DOMContentLoaded', function() {
+            resetInactivityTimer();
+        });
+
+        // Check if user is already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+            if (isLoggedIn) {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                initializeApp();
+            }
+        });
+
+        // Save login state
+        function saveLoginState() {
+            sessionStorage.setItem('adminLoggedIn', 'true');
+        }
+
+        // Update login function to save state
+        const originalLogin = login;
+        login = function() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            if (email === 'admin@catcharide.com' && password === 'admin123') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                saveLoginState();
+                initializeApp();
+                addLogoutButton();
+            } else {
+                alert('Invalid credentials. Use admin@catcharide.com / admin123');
+            }
+        };
+
+        // Logout function
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('adminLoggedIn');
+                location.reload();
+            }
+        }
+
+        // Add logout button to header
+        function addLogoutButton() {
+            const header = document.querySelector('.admin-header');
+            if (header && !header.querySelector('.logout-btn')) {
+                const logoutBtn = document.createElement('button');
+                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+                logoutBtn.className = 'btn btn-secondary logout-btn';
+                logoutBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; padding: 8px 15px; font-size: 12px;';
+                logoutBtn.onclick = logout;
+                header.appendChild(logoutBtn);
+            }
+        }
+
+        console.log('Catch A Ride Admin Dashboard initialized');
+    </script>
+</body>
+</html>
