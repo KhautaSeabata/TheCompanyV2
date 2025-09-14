@@ -227,6 +227,30 @@
             cursor: not-allowed;
         }
 
+        /* Status Button */
+        .status-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(108,92,231,0.4);
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .status-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 30px rgba(108,92,231,0.6);
+        }
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -450,10 +474,10 @@
 <body>
     <!-- Access buttons -->
     <div class="access-buttons">
-        <button class="access-btn admin-access" onclick="window.open('templates/admin.html', '_blank')" title="Admin Access">
+        <button class="access-btn admin-access" onclick="window.open('admin.html', '_blank')" title="Admin Access">
             <i class="fas fa-cog"></i>
         </button>
-        <button class="access-btn driver-access" onclick="window.open('templates/driver.html', '_blank')" title="Driver Access">
+        <button class="access-btn driver-access" onclick="window.open('driver.html', '_blank')" title="Driver Access">
             <i class="fas fa-car"></i>
         </button>
     </div>
@@ -463,7 +487,7 @@
             <div class="header">
                 <h1 class="main-title">Catch A Ride</h1>
                 <p class="subtitle">Your Reliable Transport Solution</p>
-                <a href="templates/admin.html" class="admin-tag" title="Admin Access">ADMIN</a>
+                <a href="admin.html" class="admin-tag" title="Admin Access">ADMIN</a>
             </div>
             
             <div class="body">
@@ -501,6 +525,10 @@
                 <button class="main-btn" onclick="openRequestModal()">
                     <i class="fas fa-plus"></i> <span id="mainBtnText">Book a Ride</span>
                 </button>
+
+                <a href="status.html" class="status-btn">
+                    <i class="fas fa-search"></i> Check Request Status
+                </a>
             </div>
         </div>
     </div>
@@ -882,7 +910,8 @@
             try {
                 // Submit request to Firebase
                 const requestRef = database.ref(currentService === 'ride' ? 'rideRequests' : 'parcelRequests');
-                await requestRef.push(requestData);
+                const newRequestRef = await requestRef.push(requestData);
+                const requestId = newRequestRef.key;
                 
                 // Send WhatsApp notification to admin
                 sendWhatsAppNotification(requestData);
@@ -890,9 +919,16 @@
                 alert(`✅ ${currentService === 'ride' ? 'Ride' : 'Parcel delivery'} request submitted successfully!`);
                 closeRequestModal();
                 
-                // Redirect to support page
-                const customerId = `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                window.location.href = `templates/support.html?customerId=${encodeURIComponent(customerId)}&type=${currentService}`;
+                // Redirect to status page with request details
+                const customerInfo = encodeURIComponent(JSON.stringify({
+                    name: fullName,
+                    email: email,
+                    phone: phoneNumber,
+                    requestId: requestId,
+                    type: currentService
+                }));
+                
+                window.location.href = `status.html?customer=${customerInfo}`;
                 
             } catch (error) {
                 console.error('Error submitting request:', error);
