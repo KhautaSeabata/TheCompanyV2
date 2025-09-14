@@ -3,484 +3,867 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XAUUSD Live Chart</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>Admin Dashboard - Kesfeng Delivery</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
-            color: white;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f4c75 0%, #3282b8 25%, #bbe1fa 75%, #e8f5e8 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .price-display {
-            font-size: 1.5em;
-            background: rgba(255,215,0,0.1);
-            border: 1px solid rgba(255,215,0,0.3);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(255, 215, 0, 0.1);
-        }
-        
-        .price-change {
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-        
-        .positive { color: #00ff88; }
-        .negative { color: #ff6b6b; }
-        
-        .chart-container {
-            position: relative;
-            height: 500px;
-            background: rgba(0,0,0,0.3);
+
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.95);
             border-radius: 20px;
-            padding: 25px;
-            backdrop-filter: blur(15px);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
         }
-        
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 12px 25px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 30px;
+
+        .admin-header {
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 50%, #2e7d32 100%);
             color: white;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(10px);
-            font-weight: 500;
-            letter-spacing: 0.5px;
-        }
-        
-        .btn:hover {
-            background: rgba(255,215,0,0.2);
-            border-color: rgba(255,215,0,0.5);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(255,215,0,0.2);
-        }
-        
-        .btn.active {
-            background: linear-gradient(45deg, #ffd700, #ffed4e);
-            color: #1a1a2e;
-            font-weight: bold;
-            border-color: #ffd700;
-            box-shadow: 0 8px 25px rgba(255,215,0,0.3);
-        }
-        
-        .status {
+            padding: 30px;
             text-align: center;
-            margin-top: 25px;
-            padding: 15px;
-            background: rgba(0,255,0,0.1);
-            border: 1px solid rgba(0,255,0,0.2);
+            position: relative;
+        }
+
+        .admin-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .admin-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
             border-radius: 15px;
-            font-size: 0.95em;
-            backdrop-filter: blur(10px);
-        }
-        
-        .status.error {
-            background: rgba(255,0,0,0.1);
-            border-color: rgba(255,0,0,0.2);
-        }
-        
-        .loading {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
             text-align: center;
-            font-size: 1.2em;
-            padding: 50px;
+            transition: transform 0.3s ease;
         }
-        
-        .market-info {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-            gap: 15px;
-            flex-wrap: wrap;
+
+        .stat-card:hover {
+            transform: translateY(-5px);
         }
-        
-        .info-card {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            min-width: 120px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.1);
+
+        .stat-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #2e7d32;
         }
-        
-        .info-card .label {
-            font-size: 0.8em;
-            opacity: 0.7;
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2d5a27;
             margin-bottom: 5px;
         }
-        
-        .info-card .value {
-            font-size: 1.1em;
-            font-weight: bold;
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
         }
-        
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .requests-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d5a27;
+        }
+
+        .status-filter {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #2e7d32;
+            background: white;
+            color: #2e7d32;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .request-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #2e7d32;
+            transition: all 0.3s ease;
+        }
+
+        .request-item:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+
+        .request-item.pending {
+            border-left-color: #ff9800;
+        }
+
+        .request-item.in-progress {
+            border-left-color: #2196f3;
+        }
+
+        .request-item.completed {
+            border-left-color: #4caf50;
+        }
+
+        .request-item.cancelled {
+            border-left-color: #f44336;
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .request-customer {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d5a27;
+        }
+
+        .request-status {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-in-progress {
+            background: #e3f2fd;
+            color: #0277bd;
+        }
+
+        .status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .request-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            font-size: 14px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-accept {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-progress {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-complete {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-message {
+            background: #9c27b0;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .chat-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .users-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .user-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .user-item:hover {
+            background: #f5f5f5;
+        }
+
+        .user-item.active {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #2d5a27;
+            margin-bottom: 3px;
+        }
+
+        .user-email {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .unread-badge {
+            background: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        .chat-window {
+            display: none;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: #2e7d32;
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            height: 280px;
+            overflow-y: auto;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.admin {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.customer .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.admin .message-bubble {
+            background: #2e7d32;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d5a27;
+            margin-bottom: 20px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
-            .controls {
-                gap: 8px;
+            .main-content {
+                grid-template-columns: 1fr;
             }
             
-            .btn {
-                padding: 10px 18px;
-                font-size: 0.9em;
+            .stats-container {
+                grid-template-columns: 1fr;
             }
             
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .price-display {
-                font-size: 1.3em;
-                padding: 15px;
+            .request-details {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>📈 XAUUSD Live Chart</h1>
-        <div class="price-display">
-            <div>Gold Price: $<span id="current-price">Loading...</span></div>
-            <div class="price-change" id="price-change">
-                Change: <span id="change-value">--</span> (<span id="change-percent">--%</span>)
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-form">
+            <h2 class="login-title">🔒 Admin Login</h2>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" value="ericseabata@gmail.com">
+            <input type="password" id="adminPassword" class="login-input" placeholder="Password">
+            <button onclick="login()" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+        </div>
+    </div>
+
+    <div class="admin-container" id="adminContent" style="display: none;">
+        <div class="admin-header">
+            <h1 class="admin-title">🚛 Kesfeng Admin Dashboard</h1>
+            <p class="admin-subtitle">Manage delivery requests and customer communications</p>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="stat-label">Pending Requests</div>
             </div>
-            <div style="font-size: 0.7em; margin-top: 8px; opacity: 0.8;">
-                Last Update: <span id="last-update">--</span>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-truck"></i></div>
+                <div class="stat-number" id="inProgressCount">0</div>
+                <div class="stat-label">In Progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-number" id="totalUsers">0</div>
+                <div class="stat-label">Total Users</div>
             </div>
         </div>
-    </div>
 
-    <div class="controls">
-        <button class="btn active" onclick="changeInterval('1m')" id="btn-1m">1M</button>
-        <button class="btn" onclick="changeInterval('5m')" id="btn-5m">5M</button>
-        <button class="btn" onclick="changeInterval('15m')" id="btn-15m">15M</button>
-        <button class="btn" onclick="changeInterval('30m')" id="btn-30m">30M</button>
-        <button class="btn" onclick="changeInterval('1h')" id="btn-1h">1H</button>
-        <button class="btn" onclick="changeInterval('4h')" id="btn-4h">4H</button>
-    </div>
+        <div class="main-content">
+            <div class="requests-section">
+                <div class="section-header">
+                    <h2 class="section-title">📦 Delivery Requests</h2>
+                    <div class="status-filter">
+                        <button class="filter-btn active" onclick="filterRequests('all')">All</button>
+                        <button class="filter-btn" onclick="filterRequests('pending')">Pending</button>
+                        <button class="filter-btn" onclick="filterRequests('in-progress')">In Progress</button>
+                        <button class="filter-btn" onclick="filterRequests('completed')">Completed</button>
+                    </div>
+                </div>
+                <div id="requestsList"></div>
+            </div>
 
-    <div class="chart-container">
-        <canvas id="priceChart"></canvas>
-    </div>
-
-    <div class="market-info">
-        <div class="info-card">
-            <div class="label">24h High</div>
-            <div class="value" id="high-24h">$--</div>
+            <div class="chat-section">
+                <div class="section-header">
+                    <h2 class="section-title">💬 Customer Chat</h2>
+                </div>
+                <div class="users-list" id="usersList"></div>
+                <div class="chat-window" id="chatWindow">
+                    <div class="chat-header" id="chatHeader">Select a customer</div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input">
+                        <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="info-card">
-            <div class="label">24h Low</div>
-            <div class="value" id="low-24h">$--</div>
-        </div>
-        <div class="info-card">
-            <div class="label">Volume</div>
-            <div class="value" id="volume">--</div>
-        </div>
-        <div class="info-card">
-            <div class="label">Market</div>
-            <div class="value" id="market-status">FOREX</div>
-        </div>
-    </div>
-
-    <div class="status" id="status">
-        📊 Connecting to XAUUSD market data...
     </div>
 
     <script>
-        let chart;
-        let currentInterval = '1m';
-        let chartData = [];
-        let previousPrice = null;
-        
-        // Initialize chart
-        const ctx = document.getElementById('priceChart').getContext('2d');
-        
-        function initChart() {
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'XAUUSD Price (USD)',
-                        data: [],
-                        borderColor: '#ffd700',
-                        backgroundColor: (context) => {
-                            const ctx = context.chart.ctx;
-                            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-                            gradient.addColorStop(0, 'rgba(255, 215, 0, 0.3)');
-                            gradient.addColorStop(1, 'rgba(255, 215, 0, 0.05)');
-                            return gradient;
-                        },
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointBackgroundColor: '#ffd700',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointHoverBackgroundColor: '#ffed4e',
-                        pointHoverBorderColor: '#fff',
-                        pointHoverBorderWidth: 3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: 'white',
-                                font: {
-                                    size: 14,
-                                    weight: 'bold'
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(0,0,0,0.8)',
-                            titleColor: '#ffd700',
-                            bodyColor: 'white',
-                            borderColor: '#ffd700',
-                            borderWidth: 1,
-                            cornerRadius: 8
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: 'rgba(255,255,255,0.8)',
-                                font: { size: 12 }
-                            },
-                            grid: {
-                                color: 'rgba(255,255,255,0.1)',
-                                drawBorder: false
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                color: 'rgba(255,255,255,0.8)',
-                                font: { size: 12 },
-                                callback: function(value) {
-                                    return '$' + value.toFixed(2);
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(255,255,255,0.1)',
-                                drawBorder: false
-                            }
-                        }
-                    },
-                    animation: {
-                        duration: 1500,
-                        easing: 'easeInOutCubic'
-                    },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYour-api-key-here",
+            authDomain: "casino-93903.firebaseapp.com",
+            databaseURL: "https://casino-93903-default-rtdb.firebaseio.com/",
+            projectId: "casino-93903",
+            storageBucket: "casino-93903.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:your-app-id-here"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentFilter = 'all';
+        let currentChatUser = null;
+        let requests = [];
+        let users = [];
+
+        // Admin authentication
+        function login() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (email === 'ericseabata@gmail.com' && password === 'admin123') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                initializeAdmin();
+            } else {
+                alert('Invalid credentials!');
+            }
+        }
+
+        function initializeAdmin() {
+            loadRequests();
+            loadUsers();
+            setupRealtimeListeners();
+        }
+
+        function setupRealtimeListeners() {
+            // Listen for new requests
+            database.ref('deliveryRequests').on('value', (snapshot) => {
+                const data = snapshot.val();
+                requests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayRequests();
+                updateStats();
+            });
+
+            // Listen for users
+            database.ref('users').on('value', (snapshot) => {
+                const data = snapshot.val();
+                users = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayUsers();
+                updateStats();
+            });
+
+            // Listen for messages
+            database.ref('messages').on('value', (snapshot) => {
+                if (currentChatUser) {
+                    displayMessages(currentChatUser);
                 }
             });
         }
 
-        function updateStatus(message, isError = false) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = isError ? 'status error' : 'status';
-        }
-
-        function formatTime(epoch) {
-            const date = new Date(epoch * 1000);
-            return date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
+        function loadRequests() {
+            database.ref('deliveryRequests').once('value', (snapshot) => {
+                const data = snapshot.val();
+                requests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayRequests();
+                updateStats();
             });
         }
 
-        function updatePriceDisplay(currentPrice) {
-            document.getElementById('current-price').textContent = currentPrice.toFixed(2);
-            
-            if (previousPrice !== null) {
-                const change = currentPrice - previousPrice;
-                const changePercent = (change / previousPrice) * 100;
-                
-                const changeValueEl = document.getElementById('change-value');
-                const changePercentEl = document.getElementById('change-percent');
-                const priceChangeEl = document.getElementById('price-change');
-                
-                changeValueEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2);
-                changePercentEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
-                
-                priceChangeEl.className = change >= 0 ? 'price-change positive' : 'price-change negative';
-            }
-            
-            previousPrice = currentPrice;
+        function loadUsers() {
+            database.ref('users').once('value', (snapshot) => {
+                const data = snapshot.val();
+                users = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayUsers();
+            });
         }
 
-        function updateMarketInfo(data) {
-            if (data && data.length > 0) {
-                const prices = data.map(candle => candle.close);
-                const high = Math.max(...prices);
-                const low = Math.min(...prices);
-                
-                document.getElementById('high-24h').textContent = '$' + high.toFixed(2);
-                document.getElementById('low-24h').textContent = '$' + low.toFixed(2);
-                document.getElementById('volume').textContent = 'Active';
-            }
+        function updateStats() {
+            const pending = requests.filter(r => r.status === 'pending').length;
+            const inProgress = requests.filter(r => r.status === 'in-progress').length;
+            const completed = requests.filter(r => r.status === 'completed').length;
+
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('inProgressCount').textContent = inProgress;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('totalUsers').textContent = users.length;
         }
 
-        function updateChart(data) {
-            if (!data || data.length === 0) {
-                updateStatus('⚠️ No XAUUSD data available', true);
+        function displayRequests() {
+            const container = document.getElementById('requestsList');
+            const filteredRequests = currentFilter === 'all' 
+                ? requests 
+                : requests.filter(r => r.status === currentFilter);
+
+            if (filteredRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No requests found</div>';
                 return;
             }
 
-            const labels = data.map(candle => formatTime(candle.epoch));
-            const prices = data.map(candle => candle.close);
-            
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = prices;
-            chart.update('none'); // Smooth update without animation
-            
-            // Update displays
-            const latestPrice = prices[prices.length - 1];
-            updatePriceDisplay(latestPrice);
-            updateMarketInfo(data);
-            
-            document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
-            updateStatus(`✅ XAUUSD chart updated with ${data.length} candles`);
+            container.innerHTML = filteredRequests.map(request => `
+                <div class="request-item ${request.status}">
+                    <div class="request-header">
+                        <div class="request-customer">${request.fullName}</div>
+                        <div class="request-status status-${request.status}">${request.status}</div>
+                    </div>
+                    <div class="request-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Email:</div>
+                            <div class="detail-value">${request.email}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Phone:</div>
+                            <div class="detail-value">${request.phoneNumber}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">From:</div>
+                            <div class="detail-value">${request.fromDistrict}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">To:</div>
+                            <div class="detail-value">${request.toDistrict}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Package:</div>
+                            <div class="detail-value">${request.packageDescription}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Date:</div>
+                            <div class="detail-value">${new Date(request.timestamp).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="request-actions">
+                        ${request.status === 'pending' ? `
+                            <button class="action-btn btn-accept" onclick="updateRequestStatus('${request.id}', 'in-progress')">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                        ` : ''}
+                        ${request.status === 'in-progress' ? `
+                            <button class="action-btn btn-complete" onclick="updateRequestStatus('${request.id}', 'completed')">
+                                <i class="fas fa-flag-checkered"></i> Complete
+                            </button>
+                        ` : ''}
+                        ${request.status !== 'completed' && request.status !== 'cancelled' ? `
+                            <button class="action-btn btn-cancel" onclick="updateRequestStatus('${request.id}', 'cancelled')">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        ` : ''}
+                        <button class="action-btn btn-message" onclick="openChat('${request.email}', '${request.fullName}')">
+                            <i class="fas fa-comment"></i> Message
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function loadData() {
-            updateStatus('📊 Loading XAUUSD market data...');
+        function displayUsers() {
+            const container = document.getElementById('usersList');
             
-            fetch(`/api/candles?interval=${currentInterval}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    updateChart(data);
-                })
-                .catch(error => {
-                    console.error('Error loading XAUUSD data:', error);
-                    updateStatus('❌ Failed to load XAUUSD data: ' + error.message, true);
-                });
-        }
-
-        function changeInterval(interval) {
-            // Update button states
-            document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`btn-${interval}`).classList.add('active');
-            
-            currentInterval = interval;
-            updateStatus(`📊 Switching to ${interval.toUpperCase()} timeframe...`);
-            loadData();
-        }
-
-        function testAPI() {
-            fetch('/api/test')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('API Test:', data);
-                    updateStatus('🔗 Connected to XAUUSD data server');
-                })
-                .catch(error => {
-                    console.error('API Test failed:', error);
-                    updateStatus('❌ XAUUSD server connection failed', true);
-                });
-        }
-
-        // Auto-refresh functionality
-        let autoRefreshInterval;
-        
-        function startAutoRefresh() {
-            // Clear existing interval
-            if (autoRefreshInterval) {
-                clearInterval(autoRefreshInterval);
+            if (users.length === 0) {
+                container.innerHTML = '<div class="no-data">No users found</div>';
+                return;
             }
-            
-            // Set refresh rate based on timeframe
-            const refreshRates = {
-                '1m': 30000,   // 30 seconds for 1-minute charts
-                '5m': 60000,   // 1 minute for 5-minute charts
-                '15m': 180000, // 3 minutes for 15-minute charts
-                '30m': 300000, // 5 minutes for 30-minute charts
-                '1h': 600000,  // 10 minutes for 1-hour charts
-                '4h': 1800000  // 30 minutes for 4-hour charts
-            };
-            
-            const refreshRate = refreshRates[currentInterval] || 60000;
-            autoRefreshInterval = setInterval(loadData, refreshRate);
+
+            container.innerHTML = users.map(user => `
+                <div class="user-item" onclick="openChat('${user.email}', '${user.fullName}')">
+                    <div class="user-name">${user.fullName}</div>
+                    <div class="user-email">${user.email}</div>
+                </div>
+            `).join('');
         }
 
-        // Initialize everything
-        window.onload = function() {
-            initChart();
-            testAPI();
-            loadData();
-            startAutoRefresh();
-        };
+        function filterRequests(status) {
+            currentFilter = status;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayRequests();
+        }
 
-        // Update auto-refresh when interval changes
-        const originalChangeInterval = changeInterval;
-        changeInterval = function(interval) {
-            originalChangeInterval(interval);
-            startAutoRefresh();
-        };
+        async function updateRequestStatus(requestId, status) {
+            try {
+                await database.ref(`deliveryRequests/${requestId}`).update({
+                    status: status,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                // Send notification message to customer
+                const request = requests.find(r => r.id === requestId);
+                if (request) {
+                    const statusMessage = {
+                        pending: 'Your request is being reviewed',
+                        'in-progress': 'Your delivery is now in progress! 🚛',
+                        completed: 'Your delivery has been completed! ✅',
+                        cancelled: 'Your delivery request has been cancelled. Please contact us for more information.'
+                    };
 
-        // Handle page visibility changes for better performance
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                if (autoRefreshInterval) {
-                    clearInterval(autoRefreshInterval);
+                    await sendSystemMessage(request.email, statusMessage[status]);
                 }
-            } else {
-                startAutoRefresh();
-                loadData(); // Refresh immediately when page becomes visible
+
+                alert(`Request ${status} successfully!`);
+            } catch (error) {
+                console.error('Error updating request:', error);
+                alert('Error updating request');
             }
+        }
+
+        function openChat(userEmail, userName) {
+            currentChatUser = userEmail;
+            document.getElementById('chatWindow').style.display = 'block';
+            document.getElementById('chatHeader').textContent = `💬 Chat with ${userName}`;
+            
+            // Mark user as active
+            document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.user-item').classList.add('active');
+            
+            displayMessages(userEmail);
+        }
+
+        function displayMessages(userEmail) {
+            database.ref('messages').orderByChild('participants').equalTo(`admin_${userEmail}`).once('value', (snapshot) => {
+                const container = document.getElementById('chatMessages');
+                const data = snapshot.val();
+                const messages = data ? Object.values(data).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) : [];
+
+                if (messages.length === 0) {
+                    container.innerHTML = '<div class="no-data">No messages yet. Start the conversation!</div>';
+                    return;
+                }
+
+                container.innerHTML = messages.map(msg => `
+                    <div class="message ${msg.sender}">
+                        <div class="message-bubble">
+                            ${msg.text}
+                            <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text || !currentChatUser) return;
+
+            try {
+                await database.ref('messages').push({
+                    sender: 'admin',
+                    recipient: currentChatUser,
+                    participants: `admin_${currentChatUser}`,
+                    text: text,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+
+                input.value = '';
+                displayMessages(currentChatUser);
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Error sending message');
+            }
+        }
+
+        async function sendSystemMessage(userEmail, message) {
+            try {
+                await database.ref('messages').push({
+                    sender: 'system',
+                    recipient: userEmail,
+                    participants: `admin_${userEmail}`,
+                    text: message,
+                    timestamp: new Date().toISOString(),
+                    read: false
+                });
+            } catch (error) {
+                console.error('Error sending system message:', error);
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            // Check if already logged in (you can implement session storage here)
+            // For now, always show login
         });
     </script>
 </body>
