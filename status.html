@@ -1,0 +1,238 @@
+}
+
+        async function getDriverCard(rideId) {
+            try {
+                const rideSnapshot = await database.ref(`rides/${rideId}`).once('value');
+                const ride = rideSnapshot.val();
+                
+                if (!ride) return '';
+
+                return `
+                    <div class="driver-card">
+                        <div class="driver-header">
+                            <div class="driver-avatar">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="driver-info">
+                                <h3>${ride.driverName}</h3>
+                                <p>Your assigned driver</p>
+                            </div>
+                        </div>
+                        
+                        <div class="driver-details">
+                            <div class="driver-detail">
+                                <div class="driver-detail-label">Vehicle</div>
+                                <div class="driver-detail-value">${ride.carColor} ${ride.carModel}</div>
+                            </div>
+                            <div class="driver-detail">
+                                <div class="driver-detail-label">License Plate</div>
+                                <div class="driver-detail-value">${ride.numberPlate}</div>
+                            </div>
+                            <div class="driver-detail">
+                                <div class="driver-detail-label">Car Type</div>
+                                <div class="driver-detail-value">${ride.carType}</div>
+                            </div>
+                            <div class="driver-detail">
+                                <div class="driver-detail-label">Capacity</div>
+                                <div class="driver-detail-value">${ride.passengerCapacity} passengers</div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-buttons">
+                            <a href="tel:${ride.contact1}" class="contact-btn">
+                                <i class="fas fa-phone"></i> Call Driver
+                            </a>
+                            <a href="https://wa.me/${ride.contact1.replace(/[^0-9]/g, '')}?text=Hello, I'm your assigned ${currentCustomer?.name || 'customer'}. Regarding my ${getCurrentRequestType()} request." class="contact-btn">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                            ${ride.contact2 ? `
+                                <a href="tel:${ride.contact2}" class="contact-btn">
+                                    <i class="fas fa-phone-alt"></i> Alt. Contact
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error fetching driver info:', error);
+                return '';
+            }
+        }
+
+        function getCurrentRequestType() {
+            const latestRequest = customerRequests[0];
+            return latestRequest ? latestRequest.type : 'ride';
+        }
+
+        function displayCollectingRides() {
+            const container = document.getElementById('collectingRides');
+            const section = document.getElementById('collectingSection');
+
+            if (collectingRides.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+
+            container.innerHTML = collectingRides.map(ride => {
+                const passengerCount = ride.currentPassengers || 0;
+                const capacity = ride.passengerCapacity || 0;
+                const spotsLeft = capacity - passengerCount;
+
+                return `
+                    <div class="ride-card">
+                        <div class="ride-header">
+                            <div class="ride-title">${ride.driverName} - ${ride.numberPlate}</div>
+                            <div class="passenger-count">
+                                <i class="fas fa-users"></i>
+                                ${passengerCount}/${capacity} passengers
+                            </div>
+                        </div>
+                        
+                        <div class="ride-details">
+                            <div class="info-item">
+                                <div class="info-label">Destination</div>
+                                <div class="info-value">${ride.collectingDestination}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Vehicle</div>
+                                <div class="info-value">${ride.carColor} ${ride.carModel} (${ride.carType})</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Departure Time</div>
+                                <div class="info-value">${new Date(ride.departureTime).toLocaleString()}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Current Location</div>
+                                <div class="info-value">${ride.currentLocation || 'Contact driver'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="ride-actions">
+                            ${spotsLeft > 0 ? `
+                                <a href="tel:${ride.contact1}" class="action-btn btn-primary">
+                                    <i class="fas fa-phone"></i> Call (${spotsLeft} spots left)
+                                </a>
+                                <a href="https://wa.me/${ride.contact1.replace(/[^0-9]/g, '')}?text=Hi! I'd like to book a seat to ${ride.collectingDestination}. Departure: ${new Date(ride.departureTime).toLocaleString()}" class="action-btn btn-success">
+                                    <i class="fab fa-whatsapp"></i> Book Seat
+                                </a>
+                            ` : `
+                                <div class="action-btn" style="background: #e0e0e0; color: #666; cursor: not-allowed;">
+                                    <i class="fas fa-users"></i> Fully Booked
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadCollectingRides() {
+            try {
+                const ridesSnapshot = await database.ref('rides').once('value');
+                const ridesData = ridesSnapshot.val();
+                
+                collectingRides = ridesData ? Object.keys(ridesData)
+                    .map(key => ({id: key, ...ridesData[key]}))
+                    .filter(ride => ride.status === 'collecting') : [];
+                
+                displayCollectingRides();
+            } catch (error) {
+                console.error('Error loading collecting rides:', error);
+            }
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Pending Review',
+                'assigned': 'Driver Assigned',
+                'completed': 'Completed',
+                'cancelled': 'Cancelled'
+            };
+            return statusMap[status] || 'Pending Review';
+        }
+
+        function getTimelineItems(request) {
+            const items = [
+                {
+                    text: 'Request submitted',
+                    time: new Date(request.timestamp).toLocaleString(),
+                    active: true
+                }
+            ];
+
+            if (request.status === 'assigned' || request.status === 'completed') {
+                items.push({
+                    text: request.assignedRide ? 
+                        `Driver assigned: ${request.assignedRide}` :
+                        'Driver assigned',
+                    time: request.assignedAt ? new Date(request.assignedAt).toLocaleString() : null,
+                    active: true
+                });
+            }
+
+            if (request.status === 'completed') {
+                items.push({
+                    text: request.type === 'ride' ? 'Trip completed' : 'Delivery completed',
+                    time: request.completedAt ? new Date(request.completedAt).toLocaleString() : null,
+                    active: true
+                });
+            } else if (request.status === 'cancelled') {
+                items.push({
+                    text: 'Request was cancelled',
+                    time: request.updatedAt ? new Date(request.updatedAt).toLocaleString() : null,
+                    active: true
+                });
+            } else {
+                // Add future steps
+                if (request.status !== 'assigned') {
+                    items.push({
+                        text: 'Waiting for driver assignment',
+                        active: false
+                    });
+                }
+                
+                items.push({
+                    text: request.type === 'ride' ? 'Trip completion' : 'Delivery completion',
+                    active: false
+                });
+            }
+
+            return items;
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            notificationText.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        function playNotificationSound() {
+            const audio = document.getElementById('notificationSound');
+            audio.play().catch(e => console.log('Could not play notification sound:', e));
+        }
+
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+
+        // Allow enter key to search
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        searchRequests();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
