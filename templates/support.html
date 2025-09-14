@@ -1,1000 +1,900 @@
-<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Khasino - South African Casino Card Game{% endblock %}</title>
+    <title>Support - Kesfeng Delivery</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a472a, #2d5a3d, #0f3820);
-            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f4c75 0%, #3282b8 25%, #bbe1fa 75%, #e8f5e8 100%);
             min-height: 100vh;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
             padding: 20px;
         }
-        
-        .navbar {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 1rem 0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 3px solid #ffd700;
+
+        .support-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.6s ease-out;
         }
-        
-        .navbar .container {
+
+        .support-header {
+            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 50%, #2e7d32 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .support-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            transform: rotate(45deg);
+            animation: shine 4s infinite;
+        }
+
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-out;
+            position: relative;
+            z-index: 2;
+        }
+
+        .support-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .support-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        .request-status-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d5a27;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+            border: 2px solid #4caf50;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .status-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4caf50, #66bb6a, #81c784);
+            animation: progressBar 3s ease-in-out infinite;
+        }
+
+        .status-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 15px;
         }
-        
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+
+        .status-badge {
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            animation: pulse 2s infinite;
         }
-        
-        .nav-links a {
-            color: #fff;
-            text-decoration: none;
-            margin-left: 20px;
-            padding: 8px 16px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
         }
-        
-        .nav-links a:hover {
-            background-color: rgba(255, 215, 0, 0.2);
+
+        .status-in-progress {
+            background: #e3f2fd;
+            color: #0277bd;
         }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
+
+        .status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
         }
-        
-        .btn-primary {
-            background: linear-gradient(45deg, #ffd700, #ff8c00);
-            color: #000;
-            font-weight: bold;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border: 2px solid #ffd700;
-        }
-        
-        .btn-secondary:hover {
-            background: #ffd700;
-            color: #000;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(45deg, #dc3545, #c82333);
-            color: #fff;
-        }
-        
-        .card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #ffd700;
-            font-weight: bold;
-        }
-        
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            font-size: 16px;
-            color: #000;
-        }
-        
-        .balance-display {
-            background: linear-gradient(45deg, #ffd700, #ff8c00);
-            color: #000;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .stats-grid {
+
+        .request-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .detail-item:hover {
+            transform: translateY(-3px);
+        }
+
+        .detail-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d5a27;
+        }
+
+        .timeline {
+            position: relative;
+            margin: 30px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e0e0e0;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 60px;
             margin-bottom: 30px;
         }
-        
-        .stat-card {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
+
+        .timeline-dot {
+            position: absolute;
+            left: 10px;
+            top: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4caf50;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .timeline-dot.pending {
+            background: #ff9800;
+        }
+
+        .timeline-content {
+            background: white;
+            padding: 15px 20px;
             border-radius: 10px;
-            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #ffd700;
+
+        .timeline-title {
+            font-weight: 600;
+            color: #2d5a27;
+            margin-bottom: 5px;
         }
-        
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
+
+        .timeline-desc {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .chat-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .chat-window {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            height: 500px;
+            overflow: hidden;
             margin-bottom: 20px;
         }
-        
-        .alert-success {
-            background: rgba(40, 167, 69, 0.2);
-            border: 1px solid #28a745;
-            color: #28a745;
+
+        .chat-header {
+            background: #2e7d32;
+            color: white;
+            padding: 20px;
+            font-weight: 600;
+            text-align: center;
         }
-        
-        .alert-error {
-            background: rgba(220, 53, 69, 0.2);
-            border: 1px solid #dc3545;
-            color: #dc3545;
+
+        .chat-messages {
+            height: 360px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
         }
-        
-        .playing-card {
-            width: 80px;
-            height: 110px;
-            border-radius: 8px;
-            border: 2px solid #333;
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        .message.customer {
+            justify-content: flex-end;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .message.admin .message-bubble {
+            background: #2e7d32;
+            color: white;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message.customer .message-bubble {
             background: white;
-            color: #000;
-            display: inline-flex;
-            flex-direction: column;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.system .message-bubble {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc02;
+            text-align: center;
+            border-radius: 15px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .message.admin .message-time {
+            text-align: left;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            gap: 15px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #4caf50;
+        }
+
+        .chat-input button {
+            padding: 15px 25px;
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(76,175,80,0.4);
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .action-btn {
+            padding: 15px 25px;
+            border: 2px solid #4caf50;
+            background: white;
+            color: #4caf50;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
             align-items: center;
             justify-content: center;
-            margin: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-        
-        .playing-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .playing-card.selected {
-            border-color: #ffd700;
-            background: #fffbcc;
-        }
-        
-        .playing-card.spades, .playing-card.clubs {
-            color: #000;
-        }
-        
-        .playing-card.hearts, .playing-card.diamonds {
-            color: #dc3545;
-        }
-        
-        .card-value {
-            font-size: 16px;
-        }
-        
-        .card-suit {
-            font-size: 20px;
-            margin-top: 5px;
-        }
-        
-        .game-area {
-            min-height: 400px;
-            background: rgba(0, 100, 0, 0.3);
-            border-radius: 15px;
-            padding: 20px;
-            margin: 20px 0;
-            border: 3px solid #2d5a3d;
-        }
-        
-        .layout-cards {
-            min-height: 150px;
-            background: rgba(0, 150, 0, 0.2);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 2px dashed #4a7c59;
-            text-align: center;
-        }
-        
-        .hand-area {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-        }
-        
-        .game-controls {
-            display: flex;
             gap: 10px;
-            justify-content: center;
-            margin: 20px 0;
-            flex-wrap: wrap;
         }
-        
-        .players-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+
+        .action-btn:hover {
+            background: #4caf50;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(76,175,80,0.3);
         }
-        
-        .player-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
+
+        .action-btn.primary {
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            color: white;
+            border-color: #4caf50;
+        }
+
+        .action-btn.primary:hover {
+            background: linear-gradient(45deg, #388e3c, #4caf50);
+        }
+
+        .contact-info {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+            border: 1px solid #4caf50;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 25px;
             text-align: center;
         }
-        
-        .player-info.current-turn {
-            border: 3px solid #ffd700;
-            background: rgba(255, 215, 0, 0.1);
+
+        .contact-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d5a27;
+            margin-bottom: 15px;
         }
-        
-        .waiting-games {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+            color: #2e7d32;
+            font-weight: 500;
         }
-        
-        .game-card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
+
+        .no-messages {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading {
+            text-align: center;
             padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #666;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 60%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            80% { transform: translateY(-5px); }
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes progressBar {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        @keyframes messageSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            
+            .support-header {
+                padding: 30px 20px;
+            }
+            
+            .support-title {
+                font-size: 28px;
+            }
+            
+            .success-icon {
+                font-size: 60px;
+            }
+            
+            .request-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <div class="logo">🃏 Khasino</div>
-            <div class="nav-links">
-                {% if session.get('user_id') %}
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/rules">Rules</a>
-                    <a href="/logout">Logout</a>
-                {% else %}
-                    <a href="/rules">Rules</a>
-                    <a href="/login">Login</a>
-                    <a href="/register">Register</a>
-                {% endif %}
+    <div class="support-container">
+        <div class="support-header">
+            <div class="success-icon">✅</div>
+            <h1 class="support-title">Request Submitted!</h1>
+            <p class="support-subtitle">Your delivery request has been received and is being processed</p>
+        </div>
+
+        <div class="main-content">
+            <div class="request-status-section">
+                <h2 class="section-title">
+                    <i class="fas fa-truck"></i>
+                    Delivery Status & Timeline
+                </h2>
+
+                <div class="status-card">
+                    <div class="status-info">
+                        <div>
+                            <h3>Current Status</h3>
+                            <p id="statusDescription">Your request is being reviewed by our team</p>
+                        </div>
+                        <div class="status-badge status-pending" id="statusBadge">Pending</div>
+                    </div>
+                </div>
+
+                <div class="request-details" id="requestDetails">
+                    <div class="loading">Loading your request details...</div>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">Request Submitted</div>
+                            <div class="timeline-desc" id="submissionTime">Just now</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot pending"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">Under Review</div>
+                            <div class="timeline-desc">Our team is reviewing your request</div>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot pending"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">Pickup & Delivery</div>
+                            <div class="timeline-desc">Your package will be collected and delivered</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <a href="index.html" class="action-btn">
+                        <i class="fas fa-home"></i>
+                        Back to Home
+                    </a>
+                    <a href="#" class="action-btn primary" onclick="trackDelivery()">
+                        <i class="fas fa-search"></i>
+                        Track Delivery
+                    </a>
+                </div>
+            </div>
+
+            <div class="chat-section">
+                <h2 class="section-title">
+                    <i class="fas fa-comments"></i>
+                    Live Support Chat
+                </h2>
+
+                <div class="chat-window">
+                    <div class="chat-header">
+                        💬 Chat with Kesfeng Support
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="no-messages">
+                            <i class="fas fa-comment-alt" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                            <p>No messages yet. Start a conversation with our support team!</p>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="contact-info">
+                    <div class="contact-title">Need Immediate Help?</div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <span>+266 5190 1995</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>ericseabata@gmail.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fab fa-whatsapp"></i>
+                        <span>WhatsApp Support</span>
+                    </div>
+                </div>
             </div>
         </div>
-    </nav>
-    
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
-    
+    </div>
+
     <script>
-        function showAlert(message, type = 'success') {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCYour-api-key-here",
+            authDomain: "casino-93903.firebaseapp.com",
+            databaseURL: "https://casino-93903-default-rtdb.firebaseio.com/",
+            projectId: "casino-93903",
+            storageBucket: "casino-93903.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:your-app-id-here"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let userEmail = '';
+        let userName = '';
+        let currentRequest = null;
+
+        // Get user information from URL parameters
+        function getUserFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            userEmail = urlParams.get('email') || '';
+            const customerId = urlParams.get('customerId') || '';
             
-            const main = document.querySelector('main');
-            main.insertBefore(alertDiv, main.firstChild);
+            if (!userEmail && !customerId) {
+                // Redirect back to home if no identifier provided
+                window.location.href = 'index.html';
+                return;
+            }
             
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 5000);
+            if (userEmail) {
+                loadUserData();
+                loadUserRequest();
+            } else if (customerId) {
+                loadGuestData(customerId);
+                loadGuestRequest(customerId);
+            }
+            
+            setupRealtimeListeners();
         }
-        
-        function formatCurrency(amount) {
-            return `R${amount.toLocaleString()}`;
+
+        async function loadGuestData(customerId) {
+            try {
+                const guestRef = database.ref('guestUsers').orderByChild('customerId').equalTo(customerId);
+                const snapshot = await guestRef.once('value');
+                const guestData = snapshot.val();
+                
+                if (guestData) {
+                    const guestKey = Object.keys(guestData)[0];
+                    const guest = guestData[guestKey];
+                    userName = guest.fullName;
+                    userEmail = customerId; // Use customerId as identifier for chat
+                }
+            } catch (error) {
+                console.error('Error loading guest data:', error);
+            }
         }
-        
-        function getSuitSymbol(suit) {
-            const symbols = {
-                'spades': '♠',
-                'hearts': '♥',
-                'diamonds': '♦',
-                'clubs': '♣'
+
+        async function loadGuestRequest(customerId) {
+            try {
+                const requestRef = database.ref('deliveryRequests').orderByChild('customerId').equalTo(customerId);
+                const snapshot = await requestRef.once('value');
+                const requestData = snapshot.val();
+                
+                if (requestData) {
+                    const requestKeys = Object.keys(requestData);
+                    const latestRequestKey = requestKeys[requestKeys.length - 1];
+                    currentRequest = requestData[latestRequestKey];
+                    currentRequest.id = latestRequestKey;
+                    
+                    displayRequestDetails();
+                    updateStatusDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading guest request:', error);
+                document.getElementById('requestDetails').innerHTML = '<div class="no-messages">Unable to load request details</div>';
+            }
+        }
+
+        async function loadUserData() {
+            try {
+                const userRef = database.ref('users').orderByChild('email').equalTo(userEmail);
+                const snapshot = await userRef.once('value');
+                const userData = snapshot.val();
+                
+                if (userData) {
+                    const userKey = Object.keys(userData)[0];
+                    const user = userData[userKey];
+                    userName = user.fullName;
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        async function loadUserRequest() {
+            try {
+                const requestRef = database.ref('deliveryRequests').orderByChild('email').equalTo(userEmail);
+                const snapshot = await requestRef.once('value');
+                const requestData = snapshot.val();
+                
+                if (requestData) {
+                    const requestKeys = Object.keys(requestData);
+                    const latestRequestKey = requestKeys[requestKeys.length - 1]; // Get the most recent request
+                    currentRequest = requestData[latestRequestKey];
+                    currentRequest.id = latestRequestKey;
+                    
+                    displayRequestDetails();
+                    updateStatusDisplay();
+                }
+            } catch (error) {
+                console.error('Error loading user request:', error);
+                document.getElementById('requestDetails').innerHTML = '<div class="no-messages">Unable to load request details</div>';
+            }
+        }
+
+        function displayRequestDetails() {
+            if (!currentRequest) return;
+            
+            const container = document.getElementById('requestDetails');
+            container.innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Request ID</div>
+                    <div class="detail-value">#${currentRequest.id.substr(-6).toUpperCase()}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">From District</div>
+                    <div class="detail-value">${currentRequest.fromDistrict}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">To District</div>
+                    <div class="detail-value">${currentRequest.toDistrict}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Package</div>
+                    <div class="detail-value">${currentRequest.packageDescription}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Estimated Cost</div>
+                    <div class="detail-value">R34.99</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Submitted</div>
+                    <div class="detail-value">${new Date(currentRequest.timestamp).toLocaleDateString()}</div>
+                </div>
+            `;
+
+            // Update submission time in timeline
+            document.getElementById('submissionTime').textContent = new Date(currentRequest.timestamp).toLocaleString();
+        }
+
+        function updateStatusDisplay() {
+            if (!currentRequest) return;
+            
+            const statusBadge = document.getElementById('statusBadge');
+            const statusDescription = document.getElementById('statusDescription');
+            
+            const statusInfo = {
+                'pending': {
+                    class: 'status-pending',
+                    text: 'Pending',
+                    description: 'Your request is being reviewed by our team'
+                },
+                'in-progress': {
+                    class: 'status-in-progress',
+                    text: 'In Progress',
+                    description: 'Your delivery is currently in progress!'
+                },
+                'completed': {
+                    class: 'status-completed',
+                    text: 'Completed',
+                    description: 'Your delivery has been completed successfully!'
+                },
+                'cancelled': {
+                    class: 'status-cancelled',
+                    text: 'Cancelled',
+                    description: 'Your delivery request has been cancelled'
+                }
             };
-            return symbols[suit] || '';
+
+            const status = currentRequest.status || 'pending';
+            const info = statusInfo[status];
+            
+            statusBadge.className = `status-badge ${info.class}`;
+            statusBadge.textContent = info.text;
+            statusDescription.textContent = info.description;
         }
-        
-        function getCardDisplay(card) {
-            let value = card.value;
-            if (value === 1) value = 'A';
-            return value;
+
+        function setupRealtimeListeners() {
+            // Listen for request updates
+            if (currentRequest) {
+                database.ref(`deliveryRequests/${currentRequest.id}`).on('value', (snapshot) => {
+                    const updatedRequest = snapshot.val();
+                    if (updatedRequest) {
+                        currentRequest = { ...updatedRequest, id: currentRequest.id };
+                        updateStatusDisplay();
+                    }
+                });
+            }
+
+            // Listen for new messages
+            database.ref('messages').on('value', (snapshot) => {
+                loadMessages();
+            });
         }
+
+        function loadMessages() {
+            if (!userEmail) return;
+            
+            database.ref('messages').orderByChild('participants').equalTo(`admin_${userEmail}`).once('value', (snapshot) => {
+                const container = document.getElementById('chatMessages');
+                const data = snapshot.val();
+                const messages = data ? Object.values(data).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) : [];
+
+                if (messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-messages">
+                            <i class="fas fa-comment-alt" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                            <p>No messages yet. Start a conversation with our support team!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = messages.map(msg => `
+                    <div class="message ${msg.sender}">
+                        <div class="message-bubble">
+                            ${msg.text}
+                            <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            
+            if (!text || !userEmail) return;
+
+            try {
+                await database.ref('messages').push({
+                    sender: 'customer',
+                    recipient: 'admin',
+                    participants: `admin_${userEmail}`,
+                    text: text,
+                    timestamp: new Date().toISOString(),
+                    read: false,
+                    customerName: userName || 'Customer'
+                });
+
+                input.value = '';
+                loadMessages();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Error sending message. Please try again.');
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function trackDelivery() {
+            if (currentRequest) {
+                alert(`Delivery ID: #${currentRequest.id.substr(-6).toUpperCase()}\nStatus: ${currentRequest.status || 'pending'}\n\nYou can track your delivery in real-time here. Updates will appear automatically.`);
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', getUserFromUrl);
+
+        // Auto-refresh messages every 30 seconds
+        setInterval(() => {
+            if (userEmail) {
+                loadMessages();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
-
-<!-- templates/index.html -->
-{% extends "base.html" %}
-
-{% block content %}
-<div class="card" style="text-align: center; margin-top: 50px;">
-    <h1 style="font-size: 3rem; margin-bottom: 30px; background: linear-gradient(45deg, #ffd700, #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        🃏 Welcome to Khasino! 🃏
-    </h1>
-    <p style="font-size: 1.2rem; margin-bottom: 40px; opacity: 0.9;">
-        The authentic South African Casino card game! Join now and get 1000 ZAR to start playing.
-    </p>
-    
-    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-        <a href="/register" class="btn btn-primary" style="font-size: 1.2rem;">
-            🎲 Join Now - Get R1000 Free!
-        </a>
-        <a href="/login" class="btn btn-secondary" style="font-size: 1.2rem;">
-            🔑 Login
-        </a>
-        <a href="/rules" class="btn btn-secondary" style="font-size: 1.2rem;">
-            📋 Game Rules
-        </a>
-    </div>
-    
-    <div style="margin-top: 50px;">
-        <h3 style="color: #ffd700; margin-bottom: 20px;">🎮 About Khasino</h3>
-        <p style="max-width: 600px; margin: 0 auto; line-height: 1.6;">
-            Khasino is the traditional South African card game played with a 40-card deck. 
-            Capture cards, build combinations, and score points to win! Play with 2-4 players 
-            and experience the authentic casino atmosphere.
-        </p>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; max-width: 800px; margin-left: auto; margin-right: auto;">
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🏆</div>
-                <h4>Authentic Rules</h4>
-                <p>Based on traditional South African Casino game rules</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">👥</div>
-                <h4>2-4 Players</h4>
-                <p>Play with friends or join waiting games</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">💰</div>
-                <h4>Real Stakes</h4>
-                <p>Bet your ZAR and win from other players</p>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-<!-- templates/register.html -->
-{% extends "base.html" %}
-
-{% block title %}Register - Khasino Casino{% endblock %}
-
-{% block content %}
-<div class="card" style="max-width: 500px; margin: 50px auto;">
-    <h2 style="text-align: center; margin-bottom: 30px; color: #ffd700;">
-        🃏 Join Khasino
-    </h2>
-    
-    <form id="registerForm">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        
-        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.2rem;">
-            🎲 Register & Get R1000 Free!
-        </button>
-    </form>
-    
-    <p style="text-align: center; margin-top: 20px;">
-        Already have an account? <a href="/login" style="color: #ffd700;">Login here</a>
-    </p>
-</div>
-
-<script>
-document.getElementById('registerForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = {
-        username: document.getElementById('username').value,
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value
-    };
-    
-    try {
-        const response = await fetch('/register', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert('Registration successful! Please login to continue.', 'success');
-            setTimeout(() => {
-                window.location.href = '/login';
-            }, 2000);
-        } else {
-            showAlert(result.message, 'error');
-        }
-    } catch (error) {
-        showAlert('Registration failed. Please try again.', 'error');
-    }
-});
-</script>
-{% endblock %}
-
-<!-- templates/login.html -->
-{% extends "base.html" %}
-
-{% block title %}Login - Khasino Casino{% endblock %}
-
-{% block content %}
-<div class="card" style="max-width: 500px; margin: 50px auto;">
-    <h2 style="text-align: center; margin-bottom: 30px; color: #ffd700;">
-        🔑 Login to Khasino
-    </h2>
-    
-    <form id="loginForm">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        
-        <button type="submit" class="btn btn-primary" style="width: 100%; font-size: 1.2rem;">
-            🃏 Login & Play
-        </button>
-    </form>
-    
-    <p style="text-align: center; margin-top: 20px;">
-        Don't have an account? <a href="/register" style="color: #ffd700;">Register here</a>
-    </p>
-</div>
-
-<script>
-document.getElementById('loginForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = {
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value
-    };
-    
-    try {
-        const response = await fetch('/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert('Login successful! Redirecting to dashboard...', 'success');
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1000);
-        } else {
-            showAlert(result.message, 'error');
-        }
-    } catch (error) {
-        showAlert('Login failed. Please try again.', 'error');
-    }
-});
-</script>
-{% endblock %}
-
-<!-- templates/dashboard.html -->
-{% extends "base.html" %}
-
-{% block title %}Dashboard - Khasino Casino{% endblock %}
-
-{% block content %}
-<h1 style="text-align: center; margin-bottom: 30px; color: #ffd700;">
-    🃏 Welcome back, {{ user.username }}!
-</h1>
-
-<div class="balance-display">
-    💰 Balance: {{ "R{:,}".format(user.balance) }}
-</div>
-
-<div class="stats-grid">
-    <div class="stat-card">
-        <div class="stat-value">{{ user.get('total_games', 0) }}</div>
-        <div>Total Games</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ user.get('games_won', 0) }}</div>
-        <div>Games Won</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ "%.1f"|format(user.get('games_won', 0) / max(user.get('total_games', 1), 1) * 100) }}%</div>
-        <div>Win Rate</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{ user.get('total_points', 0) }}</div>
-        <div>Total Points</div>
-    </div>
-</div>
-
-<div class="card">
-    <h3 style="color: #ffd700; margin-bottom: 20px;">🎮 Create New Game</h3>
-    <form id="createGameForm" style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
-        <div class="form-group" style="margin-bottom: 0;">
-            <label for="betAmount">Bet Amount (ZAR)</label>
-            <input type="number" id="betAmount" name="betAmount" min="10" max="{{ user.balance }}" value="50" required>
-        </div>
-        <div class="form-group" style="margin-bottom: 0;">
-            <label for="maxPlayers">Players</label>
-            <select id="maxPlayers" name="maxPlayers">
-                <option value="2">2 Players</option>
-                <option value="3" selected>3 Players</option>
-                <option value="4">4 Players</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">🎲 Create Game</button>
-    </form>
-</div>
-
-{% if waiting_games %}
-<div class="card">
-    <h3 style="color: #ffd700; margin-bottom: 20px;">🔍 Join Waiting Games</h3>
-    <div class="waiting-games">
-        {% for game in waiting_games %}
-        <div class="game-card">
-            <h4>{{ game.players }}/{{ game.max_players }} Players</h4>
-            <p>Bet: {{ "R{:,}".format(game.bet_amount) }}</p>
-            <a href="/join_game/{{ game.id }}" class="btn btn-secondary" style="margin-top: 10px;">
-                🎯 Join Game
-            </a>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<script>
-document.getElementById('createGameForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const betAmount = parseInt(document.getElementById('betAmount').value);
-    const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
-    
-    if (betAmount > {{ user.balance }}) {
-        showAlert('Insufficient balance for this bet amount.', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/create_game', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                bet_amount: betAmount,
-                max_players: maxPlayers
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert('Game created successfully! Redirecting...', 'success');
-            setTimeout(() => {
-                window.location.href = '/join_game/' + result.game_id;
-            }, 1000);
-        } else {
-            showAlert(result.message, 'error');
-        }
-    } catch (error) {
-        showAlert('Failed to create game. Please try again.', 'error');
-    }
-});
-</script>
-{% endblock %}
-
-<!-- templates/rules.html -->
-{% extends "base.html" %}
-
-{% block title %}Game Rules - Khasino Casino{% endblock %}
-
-{% block content %}
-<div class="card">
-    <h1 style="color: #ffd700; text-align: center; margin-bottom: 30px;">🃏 Khasino Game Rules</h1>
-    
-    <div style="line-height: 1.6;">
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">📋 Overview</h2>
-        <p>Khasino is the traditional South African Casino card game played with a 40-card pack (standard 52-card pack with all face cards removed). The game can be played by 2, 3, or 4 players.</p>
-        
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">🎯 Objective</h2>
-        <p>The entire objective is to capture as many points as possible during gameplay. Point distribution depends on the number of players:</p>
-        <ul style="margin-left: 20px; margin-bottom: 15px;">
-            <li><strong>2 players:</strong> 11 total points available</li>
-            <li><strong>3 players:</strong> 7 total points available</li>
-            <li><strong>4 players (singles):</strong> 7 total points available</li>
-        </ul>
-        
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">💎 Points System</h2>
-        <ul style="margin-left: 20px; margin-bottom: 15px;">
-            <li><strong>Most cards:</strong> 2 points (1 point each if tied)</li>
-            <li><strong>Most spades:</strong> 2 points (1 point each if tied)</li>
-            <li><strong>Two of spades ("spy two"):</strong> 1 point</li>
-            <li><strong>Ten of diamonds ("mummy"):</strong> 2 points</li>
-            <li><strong>Each Ace:</strong> 1 point</li>
-        </ul>
-        <p><em>Note: In 7-point games, most cards and most spades are not counted.</em></p>
-        
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">🎮 Gameplay</h2>
-        <h3 style="color: #ff8c00; margin: 15px 0 5px 0;">Card Dealing:</h3>
-        <ul style="margin-left: 20px; margin-bottom: 15px;">
-            <li><strong>2 players:</strong> 10 cards each per round</li>
-            <li><strong>3 players:</strong> 13 cards each, 1 card face up on table</li>
-            <li><strong>4 players:</strong> 10 cards each</li>
-        </ul>
-        
-        <h3 style="color: #ff8c00; margin: 15px 0 5px 0;">Actions on Your Turn:</h3>
-        <ul style="margin-left: 20px; margin-bottom: 15px;">
-            <li><strong>Capture:</strong> Play a card to capture single cards or builds</li>
-            <li><strong>Build:</strong> Create a combination of cards with a specific sum</li>
-            <li><strong>Change Build:</strong> Modify an opponent's build (if you can capture the new value)</li>
-            <li><strong>Discard:</strong> Play a card to the table without capturing</li>
-        </ul>
-        
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">🏗️ Building Rules</h2>
-        <p><strong>Simple Build:</strong> A pile of cards whose value equals their sum (max 10). You must have a card in hand that can capture this build.</p>
-        <p><strong>Compound Build:</strong> Multiple sets of cards, each adding to the same value. Cannot be changed once created.</p>
-        
-        <h2 style="color: #ffd700; margin: 20px 0 10px 0;">📧 Contact</h2>
-        <p>Questions or suggestions? Email us at: <a href="mailto:Info@khasino.co.za" style="color: #ffd700;">Info@khasino.co.za</a></p>
-    </div>
-</div>
-{% endblock %}
-
-<!-- templates/game.html -->
-{% extends "base.html" %}
-
-{% block title %}Khasino Game{% endblock %}
-
-{% block content %}
-<div id="gameArea">
-    <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px;">🃏 Khasino Game</h2>
-    
-    <!-- Players Info -->
-    <div class="players-info" id="playersInfo">
-        <!-- Players will be populated by JavaScript -->
-    </div>
-    
-    <!-- Game Status -->
-    <div style="text-align: center; margin: 20px 0;">
-        <div id="gameStatus" class="alert alert-success">Waiting for game to start...</div>
-        <div id="roundInfo" style="color: #ffd700; font-size: 1.2rem; margin-top: 10px;"></div>
-    </div>
-    
-    <!-- Game Area -->
-    <div class="game-area">
-        <h3 style="color: #ffd700; margin-bottom: 15px;">Table Cards</h3>
-        <div class="layout-cards" id="layoutCards">
-            <p style="opacity: 0.7;">Cards on the table will appear here...</p>
-        </div>
-        
-        <!-- Game Controls -->
-        <div class="game-controls" id="gameControls" style="display: none;">
-            <button class="btn btn-primary" onclick="captureCards()">🎯 Capture</button>
-            <button class="btn btn-secondary" onclick="buildCards()">🏗️ Build</button>
-            <button class="btn btn-secondary" onclick="discardCard()">🗑️ Discard</button>
-        </div>
-    </div>
-    
-    <!-- Player Hand -->
-    <div class="hand-area">
-        <h3 style="color: #ffd700; margin-bottom: 15px;">Your Hand</h3>
-        <div id="playerHand" style="display: flex; justify-content: center; flex-wrap: wrap;">
-            <!-- Player's cards will appear here -->
-        </div>
-    </div>
-</div>
-
-<script>
-let gameId = '{{ game_id }}';
-let userId = '{{ user_id }}';
-let selectedCards = [];
-let gameState = null;
-
-// Poll for game updates
-setInterval(updateGameState, 2000);
-
-async function updateGameState() {
-    try {
-        const response = await fetch(`/api/game_state/${gameId}`);
-        const data = await response.json();
-        
-        if (data.error) {
-            showAlert(data.error, 'error');
-            return;
-        }
-        
-        gameState = data;
-        updateUI();
-    } catch (error) {
-        console.error('Error updating game state:', error);
-    }
-}
-
-function updateUI() {
-    if (!gameState) return;
-    
-    // Update players info
-    updatePlayersInfo();
-    
-    // Update game status
-    updateGameStatus();
-    
-    // Update layout cards
-    updateLayoutCards();
-    
-    // Update player hand
-    updatePlayerHand();
-    
-    // Show/hide controls
-    const controls = document.getElementById('gameControls');
-    controls.style.display = gameState.is_my_turn && gameState.status === 'active' ? 'flex' : 'none';
-}
-
-function updatePlayersInfo() {
-    const playersDiv = document.getElementById('playersInfo');
-    playersDiv.innerHTML = '';
-    
-    gameState.players.forEach((playerId, index) => {
-        const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-info';
-        
-        if (index === gameState.current_player) {
-            playerDiv.classList.add('current-turn');
-        }
-        
-        const score = gameState.scores[playerId] || {points: 0, cards_count: 0};
-        
-        playerDiv.innerHTML = `
-            <h4>${playerId === userId ? 'You' : `Player ${index + 1}`}</h4>
-            <div>Points: ${score.points}</div>
-            <div>Cards: ${score.cards_count}</div>
-        `;
-        
-        playersDiv.appendChild(playerDiv);
-    });
-}
-
-function updateGameStatus() {
-    const statusDiv = document.getElementById('gameStatus');
-    const roundDiv = document.getElementById('roundInfo');
-    
-    if (gameState.status === 'waiting') {
-        statusDiv.textContent = 'Waiting for more players to join...';
-        statusDiv.className = 'alert alert-error';
-    } else if (gameState.status === 'active') {
-        if (gameState.is_my_turn) {
-            statusDiv.textContent = "It's your turn!";
-            statusDiv.className = 'alert alert-success';
-        } else {
-            const currentPlayerIndex = gameState.current_player;
-            statusDiv.textContent = `Waiting for Player ${currentPlayerIndex + 1}'s turn...`;
-            statusDiv.className = 'alert alert-success';
-        }
-    } else if (gameState.status === 'finished') {
-        statusDiv.textContent = 'Game finished!';
-        statusDiv.className = 'alert alert-success';
-    }
-    
-    roundDiv.textContent = `Round ${gameState.round}`;
-}
-
-function updateLayoutCards() {
-    const layoutDiv = document.getElementById('layoutCards');
-    
-    if (!gameState.layout || gameState.layout.length === 0) {
-        layoutDiv.innerHTML = '<p style="opacity: 0.7;">No cards on the table</p>';
-        return;
-    }
-    
-    layoutDiv.innerHTML = '';
-    gameState.layout.forEach((card, index) => {
-        const cardDiv = createCardElement(card, index, 'layout');
-        layoutDiv.appendChild(cardDiv);
-    });
-}
-
-function updatePlayerHand() {
-    const handDiv = document.getElementById('playerHand');
-    
-    if (!gameState.hand || gameState.hand.length === 0) {
-        handDiv.innerHTML = '<p style="opacity: 0.7;">No cards in hand</p>';
-        return;
-    }
-    
-    handDiv.innerHTML = '';
-    gameState.hand.forEach((card, index) => {
-        const cardDiv = createCardElement(card, index, 'hand');
-        handDiv.appendChild(cardDiv);
-    });
-}
-
-function createCardElement(card, index, type) {
-    const cardDiv = document.createElement('div');
-    cardDiv.className = `playing-card ${card.suit}`;
-    cardDiv.onclick = () => selectCard(index, type);
-    
-    if (type === 'hand' && selectedCards.includes(index)) {
-        cardDiv.classList.add('selected');
-    }
-    
-    cardDiv.innerHTML = `
-        <div class="card-value">${getCardDisplay(card)}</div>
-        <div class="card-suit">${getSuitSymbol(card.suit)}</div>
-    `;
-    
-    return cardDiv;
-}
-
-function selectCard(index, type) {
-    if (type === 'hand') {
-        const cardIndex = selectedCards.indexOf(index);
-        if (cardIndex > -1) {
-            selectedCards.splice(cardIndex, 1);
-        } else {
-            selectedCards.push(index);
-        }
-        updatePlayerHand();
-    }
-}
-
-async function captureCards() {
-    if (selectedCards.length === 0) {
-        showAlert('Please select a card from your hand', 'error');
-        return;
-    }
-    
-    if (selectedCards.length > 1) {
-        showAlert('Please select only one card for capture', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/play_card', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                game_id: gameId,
-                card_index: selectedCards[0],
-                action: 'capture',
-                target_cards: []
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert(`Captured ${result.captured} cards!`, 'success');
-            selectedCards = [];
-            updateGameState();
-        } else {
-            showAlert(result.message, 'error');
-        }
-    } catch (error) {
-        showAlert('Failed to play card. Please try again.', 'error');
-    }
-}
-
-async function buildCards() {
-    if (selectedCards.length === 0) {
-        showAlert('Please select a card from your hand', 'error');
-        return;
-    }
-    
-    // Simple build implementation
-    showAlert('Build feature coming soon!', 'error');
-}
-
-async function discardCard() {
-    if (selectedCards.length === 0) {
-        showAlert('Please select a card from your hand', 'error');
-        return;
-    }
-    
-    if (selectedCards.length > 1) {
-        showAlert('Please select only one card to discard', 'error');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/play_card', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                game_id: gameId,
-                card_index: selectedCards[0],
-                action: 'discard',
-                target_cards: []
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showAlert('Card discarded', 'success');
-            selectedCards = [];
-            updateGameState();
-        } else {
-            showAlert(result.message, 'error');
-        }
-    } catch (error) {
-        showAlert('Failed to play card. Please try again.', 'error');
-    }
-}
-
-// Initialize game
-updateGameState();
-</script>
-{% endblock %}
