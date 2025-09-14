@@ -418,8 +418,8 @@
             font-style: italic;
         }
 
-        /* Admin Button */
-        .admin-btn {
+        /*  Button */
+        .-btn {
             position: fixed;
             bottom: 30px;
             right: 30px;
@@ -436,7 +436,7 @@
             z-index: 1000;
         }
 
-        .admin-btn:hover {
+        .-btn:hover {
             transform: scale(1.1);
             box-shadow: 0 12px 30px rgba(45,90,39,0.6);
         }
@@ -448,7 +448,7 @@
             .main-title { font-size: 32px; }
             .modal-content { width: 95%; margin: 5% auto; max-height: 90vh; }
             .modal-body { padding: 20px; }
-            .admin-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 20px; }
+            .-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 20px; }
         }
 
         @media (max-height: 600px) {
@@ -457,8 +457,8 @@
     </style>
 </head>
 <body>
-    <!-- Admin Button -->
-    <button class="admin-btn" onclick="window.open('admin.html', '_blank')" title="Admin Access">
+    <!--  Button -->
+    <button class="admin-btn" onclick="window.open('templates/admin.html', '_blank')" title="Admin Access">
         <i class="fas fa-cog"></i>
     </button>
 
