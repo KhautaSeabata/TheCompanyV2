@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Kesfeng Delivery</title>
+    <title>Admin Dashboard - Catch A Ride</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -17,7 +17,7 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f4c75 0%, #3282b8 25%, #bbe1fa 75%, #e8f5e8 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 75%, #533483 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -33,7 +33,7 @@
         }
 
         .admin-header {
-            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 50%, #2e7d32 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -51,17 +51,59 @@
             opacity: 0.9;
         }
 
+        .tabs-container {
+            background: #f8f9fa;
+            padding: 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #ff6b6b;
+            border-bottom-color: #ff6b6b;
+            background: rgba(255,107,107,0.1);
+        }
+
+        .tab:hover {
+            background: rgba(255,107,107,0.05);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         .stats-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            padding: 30px;
-            background: #f8f9fa;
+            margin-bottom: 30px;
         }
 
         .stat-card {
             background: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.1);
             text-align: center;
@@ -73,36 +115,22 @@
         }
 
         .stat-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-            color: #2e7d32;
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #ff6b6b;
         }
 
         .stat-number {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 700;
-            color: #2d5a27;
+            color: #2d3436;
             margin-bottom: 5px;
         }
 
         .stat-label {
-            font-size: 14px;
+            font-size: 12px;
             color: #666;
             font-weight: 500;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 30px;
-            padding: 30px;
-        }
-
-        .requests-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
 
         .section-header {
@@ -110,70 +138,84 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
         }
 
         .section-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 600;
-            color: #2d5a27;
+            color: #2d3436;
         }
 
-        .status-filter {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn {
-            padding: 8px 16px;
-            border: 2px solid #2e7d32;
-            background: white;
-            color: #2e7d32;
-            border-radius: 25px;
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
             transition: all 0.3s ease;
         }
 
-        .filter-btn.active {
-            background: #2e7d32;
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
         }
 
-        .request-item {
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,107,107,0.4);
+        }
+
+        .btn-secondary {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .btn-success {
+            background: #00b894;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e17055;
+            color: white;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
             background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .table-row {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.3s ease;
+        }
+
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+
+        .ride-card, .request-card {
+            background: white;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 15px;
-            border-left: 5px solid #2e7d32;
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 5px solid #ff6b6b;
         }
 
-        .request-item:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transform: translateX(5px);
-        }
-
-        .request-item.pending {
-            border-left-color: #ff9800;
-        }
-
-        .request-item.in-progress {
-            border-left-color: #2196f3;
-        }
-
-        .request-item.completed {
-            border-left-color: #4caf50;
-        }
-
-        .request-item.cancelled {
-            border-left-color: #f44336;
-        }
-
-        .request-header {
+        .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -182,43 +224,53 @@
             gap: 10px;
         }
 
-        .request-customer {
+        .card-title {
             font-size: 18px;
             font-weight: 600;
-            color: #2d5a27;
+            color: #2d3436;
         }
 
-        .request-status {
+        .status-badge {
             padding: 5px 12px;
             border-radius: 15px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
         }
 
-        .status-pending {
-            background: #fff3e0;
-            color: #e65100;
+        .status-available {
+            background: #d1f2eb;
+            color: #00b894;
         }
 
-        .status-in-progress {
-            background: #e3f2fd;
-            color: #0277bd;
+        .status-busy {
+            background: #ffeaa7;
+            color: #fdcb6e;
+        }
+
+        .status-offline {
+            background: #fab1a0;
+            color: #e17055;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-assigned {
+            background: #cce5ff;
+            color: #0066cc;
         }
 
         .status-completed {
-            background: #e8f5e9;
-            color: #2e7d32;
+            background: #d4edda;
+            color: #155724;
         }
 
-        .status-cancelled {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .request-details {
+        .card-details {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
             margin-bottom: 15px;
         }
@@ -238,14 +290,14 @@
             word-break: break-word;
         }
 
-        .request-actions {
+        .card-actions {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
         }
 
         .action-btn {
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -254,176 +306,91 @@
             transition: all 0.3s ease;
         }
 
-        .btn-accept {
-            background: #4caf50;
-            color: white;
-        }
-
-        .btn-progress {
-            background: #2196f3;
-            color: white;
-        }
-
-        .btn-complete {
-            background: #ff9800;
-            color: white;
-        }
-
-        .btn-cancel {
-            background: #f44336;
-            color: white;
-        }
-
-        .btn-message {
-            background: #9c27b0;
-            color: white;
-        }
-
         .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
         }
 
-        .chat-section {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            height: fit-content;
-        }
-
-        .users-list {
-            max-height: 400px;
-            overflow-y: auto;
-            margin-bottom: 20px;
-        }
-
-        .user-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            border-radius: 8px;
-            margin-bottom: 5px;
-        }
-
-        .user-item:hover {
-            background: #f5f5f5;
-        }
-
-        .user-item.active {
-            background: #e8f5e9;
-            border-color: #4caf50;
-        }
-
-        .user-name {
-            font-weight: 600;
-            color: #2d5a27;
-            margin-bottom: 3px;
-        }
-
-        .user-email {
-            font-size: 12px;
-            color: #666;
-            word-break: break-word;
-        }
-
-        .unread-badge {
-            background: #f44336;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 700;
-            margin-left: 10px;
-        }
-
-        .chat-window {
+        /* Modal Styles */
+        .modal {
             display: none;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            height: 400px;
-            overflow: hidden;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
         }
 
-        .chat-header {
-            background: #2e7d32;
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
             color: white;
-            padding: 15px;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+        }
+
+        .modal-title {
+            font-size: 20px;
             font-weight: 600;
+            margin: 0;
         }
 
-        .chat-messages {
-            height: 280px;
-            overflow-y: auto;
-            padding: 15px;
-            background: #fafafa;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: flex-start;
-        }
-
-        .message.admin {
-            justify-content: flex-end;
-        }
-
-        .message-bubble {
-            max-width: 70%;
-            padding: 10px 15px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .message.customer .message-bubble {
-            background: white;
-            color: #333;
-            border-bottom-left-radius: 4px;
-        }
-
-        .message.admin .message-bubble {
-            background: #2e7d32;
+        .close {
             color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message-time {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 5px;
-        }
-
-        .chat-input {
-            display: flex;
-            padding: 15px;
-            border-top: 1px solid #e0e0e0;
-            background: white;
-            gap: 10px;
-        }
-
-        .chat-input input {
-            flex: 1;
-            padding: 10px 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 14px;
-        }
-
-        .chat-input button {
-            padding: 10px 20px;
-            background: #2e7d32;
-            color: white;
-            border: none;
-            border-radius: 25px;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            position: absolute;
+            right: 15px;
+            top: 15px;
             cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
             font-weight: 600;
+            color: #2d3436;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #ff6b6b;
         }
 
         .no-data {
@@ -458,7 +425,7 @@
         .login-title {
             font-size: 24px;
             font-weight: 600;
-            color: #2d5a27;
+            color: #2d3436;
             margin-bottom: 20px;
         }
 
@@ -474,7 +441,7 @@
         .login-btn {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
             border: none;
             border-radius: 10px;
@@ -483,120 +450,22 @@
             cursor: pointer;
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .admin-header {
-                padding: 20px;
-            }
-            
-            .admin-title {
-                font-size: 24px;
-            }
-            
-            .stats-container {
-                grid-template-columns: 1fr;
-                padding: 20px;
-                gap: 15px;
-            }
-            
-            .main-content {
-                grid-template-columns: 1fr;
-                padding: 20px;
-                gap: 20px;
-            }
-            
-            .section-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .section-title {
-                font-size: 20px;
-            }
-            
-            .status-filter {
-                width: 100%;
-                justify-content: flex-start;
-            }
-            
-            .request-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            
-            .request-details {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-            
-            .request-actions {
-                justify-content: flex-start;
-            }
-            
-            .action-btn {
-                font-size: 11px;
-                padding: 6px 12px;
-            }
-            
-            .chat-window {
-                height: 350px;
-            }
-            
-            .chat-messages {
-                height: 230px;
-                padding: 10px;
-            }
-            
-            .message-bubble {
-                max-width: 85%;
-                font-size: 13px;
-                padding: 8px 12px;
-            }
-            
-            .login-form {
-                padding: 30px 20px;
-                margin: 20px;
-            }
+            body { padding: 10px; }
+            .admin-header { padding: 20px; }
+            .admin-title { font-size: 24px; }
+            .tab-content { padding: 20px; }
+            .stats-container { grid-template-columns: 1fr 1fr; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .card-details { grid-template-columns: 1fr; }
+            .tabs { justify-content: flex-start; }
         }
 
         @media (max-width: 480px) {
-            .admin-container {
-                border-radius: 15px;
-            }
-            
-            .stat-card {
-                padding: 20px;
-            }
-            
-            .stat-icon {
-                font-size: 36px;
-            }
-            
-            .stat-number {
-                font-size: 28px;
-            }
-            
-            .requests-section,
-            .chat-section {
-                padding: 20px;
-            }
-            
-            .request-item {
-                padding: 15px;
-            }
-            
-            .request-customer {
-                font-size: 16px;
-            }
-            
-            .filter-btn {
-                font-size: 11px;
-                padding: 6px 12px;
-            }
+            .stats-container { grid-template-columns: 1fr; }
+            .card-header { flex-direction: column; align-items: flex-start; }
+            .card-actions { justify-content: flex-start; }
         }
     </style>
 </head>
@@ -604,8 +473,8 @@
     <!-- Login Modal -->
     <div id="loginModal" class="login-modal">
         <div class="login-form">
-            <h2 class="login-title">🔒 Admin Login</h2>
-            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" value="ericseabata@gmail.com">
+            <h2 class="login-title">Admin Login</h2>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" value="admin@catcharide.com">
             <input type="password" id="adminPassword" class="login-input" placeholder="Password">
             <button onclick="login()" class="login-btn">
                 <i class="fas fa-sign-in-alt"></i> Login
@@ -615,62 +484,168 @@
 
     <div class="admin-container" id="adminContent" style="display: none;">
         <div class="admin-header">
-            <h1 class="admin-title">🚛 Kesfeng Admin Dashboard</h1>
-            <p class="admin-subtitle">Manage delivery requests and customer communications</p>
+            <h1 class="admin-title">Catch A Ride Admin</h1>
+            <p class="admin-subtitle">Manage rides, drivers, and requests</p>
         </div>
 
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                <div class="stat-number" id="pendingCount">0</div>
-                <div class="stat-label">Pending Requests</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-truck"></i></div>
-                <div class="stat-number" id="inProgressCount">0</div>
-                <div class="stat-label">In Progress</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="stat-number" id="completedCount">0</div>
-                <div class="stat-label">Completed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-users"></i></div>
-                <div class="stat-number" id="totalUsers">0</div>
-                <div class="stat-label">Total Users</div>
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </button>
+                <button class="tab" onclick="switchTab('rides')">
+                    <i class="fas fa-car"></i> Manage Rides
+                </button>
+                <button class="tab" onclick="switchTab('ride-requests')">
+                    <i class="fas fa-user-friends"></i> Ride Requests
+                </button>
+                <button class="tab" onclick="switchTab('parcel-requests')">
+                    <i class="fas fa-box"></i> Parcel Requests
+                </button>
             </div>
         </div>
 
-        <div class="main-content">
-            <div class="requests-section">
-                <div class="section-header">
-                    <h2 class="section-title">📦 Delivery Requests</h2>
-                    <div class="status-filter">
-                        <button class="filter-btn active" onclick="filterRequests('all')">All</button>
-                        <button class="filter-btn" onclick="filterRequests('pending')">Pending</button>
-                        <button class="filter-btn" onclick="filterRequests('in-progress')">In Progress</button>
-                        <button class="filter-btn" onclick="filterRequests('completed')">Completed</button>
-                    </div>
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-car"></i></div>
+                    <div class="stat-number" id="totalRides">0</div>
+                    <div class="stat-label">Total Rides</div>
                 </div>
-                <div id="requestsList"></div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-number" id="pendingRequests">0</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check"></i></div>
+                    <div class="stat-number" id="completedToday">0</div>
+                    <div class="stat-label">Completed Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-number" id="activeDrivers">0</div>
+                    <div class="stat-label">Available Drivers</div>
+                </div>
             </div>
 
-            <div class="chat-section">
-                <div class="section-header">
-                    <h2 class="section-title">💬 Customer Chat</h2>
+            <div class="section-header">
+                <h2 class="section-title">Recent Activity</h2>
+            </div>
+            <div id="recentActivity" class="data-table">
+                <div class="no-data">Loading recent activity...</div>
+            </div>
+        </div>
+
+        <!-- Manage Rides Tab -->
+        <div id="rides" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Registered Rides</h2>
+                <button class="btn btn-primary" onclick="openAddRideModal()">
+                    <i class="fas fa-plus"></i> Add New Ride
+                </button>
+            </div>
+            <div id="ridesList"></div>
+        </div>
+
+        <!-- Ride Requests Tab -->
+        <div id="ride-requests" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Ride Requests</h2>
+                <div>
+                    <button class="btn btn-secondary" onclick="filterRequests('ride', 'pending')">Pending</button>
+                    <button class="btn btn-success" onclick="filterRequests('ride', 'assigned')">Assigned</button>
                 </div>
-                <div class="users-list" id="usersList"></div>
-                <div class="chat-window" id="chatWindow">
-                    <div class="chat-header" id="chatHeader">Select a customer</div>
-                    <div class="chat-messages" id="chatMessages"></div>
-                    <div class="chat-input">
-                        <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-                        <button onclick="sendMessage()">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+            </div>
+            <div id="rideRequestsList"></div>
+        </div>
+
+        <!-- Parcel Requests Tab -->
+        <div id="parcel-requests" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Parcel Delivery Requests</h2>
+                <div>
+                    <button class="btn btn-secondary" onclick="filterRequests('parcel', 'pending')">Pending</button>
+                    <button class="btn btn-success" onclick="filterRequests('parcel', 'assigned')">Assigned</button>
+                </div>
+            </div>
+            <div id="parcelRequestsList"></div>
+        </div>
+    </div>
+
+    <!-- Add Ride Modal -->
+    <div id="addRideModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeAddRideModal()">&times;</span>
+                <h2 class="modal-title">Add New Ride</h2>
+            </div>
+            <div class="modal-body">
+                <form id="addRideForm" onsubmit="addRide(event)">
+                    <div class="form-group">
+                        <label class="form-label">Car Number Plate *</label>
+                        <input type="text" class="form-input" id="numberPlate" required placeholder="e.g., ABC 123 LS">
                     </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Driver Full Name *</label>
+                        <input type="text" class="form-input" id="driverName" required placeholder="Enter driver's full name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Primary Contact *</label>
+                        <input type="tel" class="form-input" id="contact1" required placeholder="e.g., +266 5123 4567">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Secondary Contact</label>
+                        <input type="tel" class="form-input" id="contact2" placeholder="Optional secondary contact">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Driver's Home District *</label>
+                        <select class="form-select" id="homeDistrict" required>
+                            <option value="">Select home district</option>
+                            <option value="Maseru">Maseru</option>
+                            <option value="Butha-Buthe">Butha-Buthe</option>
+                            <option value="Leribe">Leribe</option>
+                            <option value="Berea">Berea</option>
+                            <option value="Mafeteng">Mafeteng</option>
+                            <option value="Mohale's Hoek">Mohale's Hoek</option>
+                            <option value="Quthing">Quthing</option>
+                            <option value="Qacha's Nek">Qacha's Nek</option>
+                            <option value="Mokhotlong">Mokhotlong</option>
+                            <option value="Thaba-Tseka">Thaba-Tseka</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-plus"></i> Add Ride
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Request Modal -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeAssignModal()">&times;</span>
+                <h2 class="modal-title">Assign Request to Ride</h2>
+            </div>
+            <div class="modal-body">
+                <div id="assignRequestDetails"></div>
+                <div class="form-group">
+                    <label class="form-label">Select Available Ride *</label>
+                    <select class="form-select" id="assignRideSelect">
+                        <option value="">Choose a ride...</option>
+                    </select>
                 </div>
+                <button onclick="confirmAssignment()" class="btn btn-primary" style="width: 100%;">
+                    <i class="fas fa-check"></i> Assign Request
+                </button>
             </div>
         </div>
     </div>
@@ -691,17 +666,19 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let currentFilter = 'all';
-        let currentChatUser = null;
-        let requests = [];
-        let users = [];
+        // Global variables
+        let rides = [];
+        let rideRequests = [];
+        let parcelRequests = [];
+        let currentAssignRequest = null;
 
-        // Admin authentication
+        // Authentication
         function login() {
             const email = document.getElementById('adminEmail').value;
             const password = document.getElementById('adminPassword').value;
 
-            if (email === 'ericseabata@gmail.com' && password === 'admin123') {
+            // Simple authentication - in production, use proper auth
+            if (email === 'admin@catcharide.com' && password === 'admin123') {
                 document.getElementById('loginModal').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
                 initializeAdmin();
@@ -711,82 +688,163 @@
         }
 
         function initializeAdmin() {
-            loadRequests();
-            loadUsers();
+            loadData();
             setupRealtimeListeners();
         }
 
         function setupRealtimeListeners() {
-            // Listen for new requests
-            database.ref('deliveryRequests').on('value', (snapshot) => {
+            // Listen for rides
+            database.ref('rides').on('value', (snapshot) => {
                 const data = snapshot.val();
-                requests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
-                displayRequests();
+                rides = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayRides();
                 updateStats();
             });
 
-            // Listen for users
-            database.ref('users').on('value', (snapshot) => {
+            // Listen for ride requests
+            database.ref('rideRequests').on('value', (snapshot) => {
                 const data = snapshot.val();
-                users = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
-                displayUsers();
+                rideRequests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayRideRequests();
                 updateStats();
             });
 
-            // Listen for messages
-            database.ref('messages').on('value', (snapshot) => {
-                if (currentChatUser) {
-                    displayMessages(currentChatUser);
-                }
-            });
-        }
-
-        function loadRequests() {
-            database.ref('deliveryRequests').once('value', (snapshot) => {
+            // Listen for parcel requests
+            database.ref('parcelRequests').on('value', (snapshot) => {
                 const data = snapshot.val();
-                requests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
-                displayRequests();
+                parcelRequests = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
+                displayParcelRequests();
                 updateStats();
             });
         }
 
-        function loadUsers() {
-            database.ref('users').once('value', (snapshot) => {
-                const data = snapshot.val();
-                users = data ? Object.keys(data).map(key => ({id: key, ...data[key]})) : [];
-                displayUsers();
+        function loadData() {
+            // Load all data initially
+            Promise.all([
+                database.ref('rides').once('value'),
+                database.ref('rideRequests').once('value'),
+                database.ref('parcelRequests').once('value')
+            ]).then(([ridesSnapshot, rideReqSnapshot, parcelReqSnapshot]) => {
+                const ridesData = ridesSnapshot.val();
+                const rideReqData = rideReqSnapshot.val();
+                const parcelReqData = parcelReqSnapshot.val();
+
+                rides = ridesData ? Object.keys(ridesData).map(key => ({id: key, ...ridesData[key]})) : [];
+                rideRequests = rideReqData ? Object.keys(rideReqData).map(key => ({id: key, ...rideReqData[key]})) : [];
+                parcelRequests = parcelReqData ? Object.keys(parcelReqData).map(key => ({id: key, ...parcelReqData[key]})) : [];
+
+                displayRides();
+                displayRideRequests();
+                displayParcelRequests();
+                displayRecentActivity();
+                updateStats();
             });
         }
 
         function updateStats() {
-            const pending = requests.filter(r => r.status === 'pending').length;
-            const inProgress = requests.filter(r => r.status === 'in-progress').length;
-            const completed = requests.filter(r => r.status === 'completed').length;
+            const totalPending = rideRequests.filter(r => r.status === 'pending').length + 
+                                parcelRequests.filter(r => r.status === 'pending').length;
+            
+            const completedToday = [...rideRequests, ...parcelRequests].filter(r => {
+                if (r.status === 'completed' && r.completedAt) {
+                    const today = new Date().toDateString();
+                    const completedDate = new Date(r.completedAt).toDateString();
+                    return today === completedDate;
+                }
+                return false;
+            }).length;
 
-            document.getElementById('pendingCount').textContent = pending;
-            document.getElementById('inProgressCount').textContent = inProgress;
-            document.getElementById('completedCount').textContent = completed;
-            document.getElementById('totalUsers').textContent = users.length;
+            const availableDrivers = rides.filter(r => r.status === 'available').length;
+
+            document.getElementById('totalRides').textContent = rides.length;
+            document.getElementById('pendingRequests').textContent = totalPending;
+            document.getElementById('completedToday').textContent = completedToday;
+            document.getElementById('activeDrivers').textContent = availableDrivers;
         }
 
-        function displayRequests() {
-            const container = document.getElementById('requestsList');
-            const filteredRequests = currentFilter === 'all' 
-                ? requests 
-                : requests.filter(r => r.status === currentFilter);
+        function displayRecentActivity() {
+            const container = document.getElementById('recentActivity');
+            const allRequests = [...rideRequests, ...parcelRequests]
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .slice(0, 10);
 
-            if (filteredRequests.length === 0) {
-                container.innerHTML = '<div class="no-data">No requests found</div>';
+            if (allRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No recent activity</div>';
                 return;
             }
 
-            container.innerHTML = filteredRequests.map(request => `
-                <div class="request-item ${request.status || 'pending'}">
-                    <div class="request-header">
-                        <div class="request-customer">${request.fullName}</div>
-                        <div class="request-status status-${request.status || 'pending'}">${request.status || 'pending'}</div>
+            container.innerHTML = `
+                <div class="table-header">Recent Requests</div>
+                ${allRequests.map(request => `
+                    <div class="table-row">
+                        <strong>${request.fullName}</strong> - ${request.type || 'ride'} request
+                        <span style="float: right; font-size: 12px; color: #666;">
+                            ${new Date(request.timestamp).toLocaleString()}
+                        </span>
                     </div>
-                    <div class="request-details">
+                `).join('')}
+            `;
+        }
+
+        function displayRides() {
+            const container = document.getElementById('ridesList');
+            
+            if (rides.length === 0) {
+                container.innerHTML = '<div class="no-data">No rides registered yet</div>';
+                return;
+            }
+
+            container.innerHTML = rides.map(ride => `
+                <div class="ride-card">
+                    <div class="card-header">
+                        <div class="card-title">${ride.numberPlate} - ${ride.driverName}</div>
+                        <div class="status-badge status-${ride.status || 'available'}">${ride.status || 'available'}</div>
+                    </div>
+                    <div class="card-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Primary Contact:</div>
+                            <div class="detail-value">${ride.contact1}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Secondary Contact:</div>
+                            <div class="detail-value">${ride.contact2 || 'Not provided'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Home District:</div>
+                            <div class="detail-value">${ride.homeDistrict}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Current Location:</div>
+                            <div class="detail-value">${ride.currentLocation || 'Not updated'}</div>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="action-btn btn-secondary" onclick="updateRideStatus('${ride.id}', '${ride.status === 'available' ? 'offline' : 'available'}')">
+                            <i class="fas fa-power-off"></i> ${ride.status === 'available' ? 'Set Offline' : 'Set Available'}
+                        </button>
+                        <button class="action-btn btn-danger" onclick="deleteRide('${ride.id}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayParcelRequests() {
+            const container = document.getElementById('parcelRequestsList');
+            
+            if (parcelRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No parcel requests yet</div>';
+                return;
+            }
+
+            container.innerHTML = parcelRequests.map(request => `
+                <div class="request-card">
+                    <div class="card-header">
+                        <div class="card-title">${request.fullName}</div>
+                        <div class="status-badge status-${request.status || 'pending'}">${request.status || 'pending'}</div>
+                    </div>
+                    <div class="card-details">
                         <div class="detail-item">
                             <div class="detail-label">Email:</div>
                             <div class="detail-value">${request.email || 'Not provided'}</div>
@@ -796,182 +854,299 @@
                             <div class="detail-value">${request.phoneNumber}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">From:</div>
-                            <div class="detail-value">${request.fromDistrict}</div>
+                            <div class="detail-label">Collection Time:</div>
+                            <div class="detail-value">${new Date(request.collectionTime).toLocaleString()}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">To:</div>
-                            <div class="detail-value">${request.toDistrict}</div>
+                            <div class="detail-label">Destination:</div>
+                            <div class="detail-value">${request.parcelDestination}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">Package:</div>
-                            <div class="detail-value">${request.packageDescription}</div>
+                            <div class="detail-label">Receiver Phone:</div>
+                            <div class="detail-value">${request.receiverPhone}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">Date:</div>
-                            <div class="detail-value">${new Date(request.timestamp).toLocaleDateString()}</div>
+                            <div class="detail-label">Description:</div>
+                            <div class="detail-value">${request.parcelDescription}</div>
                         </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Request Date:</div>
+                            <div class="detail-value">${new Date(request.timestamp).toLocaleString()}</div>
+                        </div>
+                        ${request.assignedRide ? `
+                        <div class="detail-item">
+                            <div class="detail-label">Assigned Ride:</div>
+                            <div class="detail-value">${request.assignedRide}</div>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="request-actions">
-                        ${request.status === 'pending' || !request.status ? `
-                            <button class="action-btn btn-accept" onclick="updateRequestStatus('${request.id}', 'in-progress')">
-                                <i class="fas fa-check"></i> Accept
+                    <div class="card-actions">
+                        ${request.status === 'pending' ? `
+                            <button class="action-btn btn-success" onclick="assignRequest('${request.id}', 'parcel')">
+                                <i class="fas fa-truck"></i> Assign Ride
                             </button>
                         ` : ''}
-                        ${request.status === 'in-progress' ? `
-                            <button class="action-btn btn-complete" onclick="updateRequestStatus('${request.id}', 'completed')">
-                                <i class="fas fa-flag-checkered"></i> Complete
+                        ${request.status === 'assigned' ? `
+                            <button class="action-btn btn-primary" onclick="updateRequestStatus('${request.id}', 'completed', 'parcelRequests')">
+                                <i class="fas fa-check"></i> Complete
                             </button>
                         ` : ''}
-                        ${request.status !== 'completed' && request.status !== 'cancelled' ? `
-                            <button class="action-btn btn-cancel" onclick="updateRequestStatus('${request.id}', 'cancelled')">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                        ` : ''}
-                        <button class="action-btn btn-message" onclick="openChat('${request.email || request.customerId}', '${request.fullName}')">
-                            <i class="fas fa-comment"></i> Message
+                        <button class="action-btn btn-danger" onclick="updateRequestStatus('${request.id}', 'cancelled', 'parcelRequests')">
+                            <i class="fas fa-times"></i> Cancel
                         </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function displayUsers() {
-            const container = document.getElementById('usersList');
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
-            if (users.length === 0) {
-                container.innerHTML = '<div class="no-data">No users found</div>';
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+        }
+
+        // Ride management functions
+        function openAddRideModal() {
+            document.getElementById('addRideModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeAddRideModal() {
+            document.getElementById('addRideModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.getElementById('addRideForm').reset();
+        }
+
+        async function addRide(event) {
+            event.preventDefault();
+            
+            const formData = {
+                numberPlate: document.getElementById('numberPlate').value.trim().toUpperCase(),
+                driverName: document.getElementById('driverName').value.trim(),
+                contact1: document.getElementById('contact1').value.trim(),
+                contact2: document.getElementById('contact2').value.trim(),
+                homeDistrict: document.getElementById('homeDistrict').value,
+                status: 'available',
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                await database.ref('rides').push(formData);
+                alert('Ride added successfully!');
+                closeAddRideModal();
+            } catch (error) {
+                console.error('Error adding ride:', error);
+                alert('Error adding ride. Please try again.');
+            }
+        }
+
+        async function updateRideStatus(rideId, newStatus) {
+            try {
+                await database.ref(`rides/${rideId}`).update({
+                    status: newStatus,
+                    updatedAt: new Date().toISOString()
+                });
+                alert(`Ride status updated to ${newStatus}!`);
+            } catch (error) {
+                console.error('Error updating ride status:', error);
+                alert('Error updating ride status.');
+            }
+        }
+
+        async function deleteRide(rideId) {
+            if (confirm('Are you sure you want to delete this ride?')) {
+                try {
+                    await database.ref(`rides/${rideId}`).remove();
+                    alert('Ride deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting ride:', error);
+                    alert('Error deleting ride.');
+                }
+            }
+        }
+
+        // Request assignment functions
+        function assignRequest(requestId, requestType) {
+            currentAssignRequest = { id: requestId, type: requestType };
+            
+            // Get request details
+            const request = requestType === 'ride' 
+                ? rideRequests.find(r => r.id === requestId)
+                : parcelRequests.find(r => r.id === requestId);
+
+            if (!request) {
+                alert('Request not found');
                 return;
             }
 
-            container.innerHTML = users.map(user => `
-                <div class="user-item" onclick="openChat('${user.email}', '${user.fullName}')">
-                    <div class="user-name">${user.fullName}</div>
-                    <div class="user-email">${user.email}</div>
+            // Populate request details
+            const detailsHtml = `
+                <div class="request-summary">
+                    <h4>Request Details</h4>
+                    <p><strong>Customer:</strong> ${request.fullName}</p>
+                    <p><strong>Phone:</strong> ${request.phoneNumber}</p>
+                    ${requestType === 'ride' ? `
+                        <p><strong>Route:</strong> ${request.currentLocation} → ${request.destination}</p>
+                    ` : `
+                        <p><strong>Collection:</strong> ${new Date(request.collectionTime).toLocaleString()}</p>
+                        <p><strong>Destination:</strong> ${request.parcelDestination}</p>
+                    `}
                 </div>
-            `).join('');
-        }
+            `;
+            document.getElementById('assignRequestDetails').innerHTML = detailsHtml;
 
-        function filterRequests(status) {
-            currentFilter = status;
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            displayRequests();
-        }
-
-        async function updateRequestStatus(requestId, status) {
-            try {
-                await database.ref(`deliveryRequests/${requestId}`).update({
-                    status: status,
-                    updatedAt: new Date().toISOString()
-                });
-                
-                // Send notification message to customer
-                const request = requests.find(r => r.id === requestId);
-                if (request) {
-                    const statusMessage = {
-                        pending: 'Your request is being reviewed',
-                        'in-progress': 'Your delivery is now in progress! 🚛',
-                        completed: 'Your delivery has been completed! ✅',
-                        cancelled: 'Your delivery request has been cancelled. Please contact us for more information.'
-                    };
-
-                    await sendSystemMessage(request.email || request.customerId, statusMessage[status]);
-                }
-
-                alert(`Request ${status} successfully!`);
-            } catch (error) {
-                console.error('Error updating request:', error);
-                alert('Error updating request');
-            }
-        }
-
-        function openChat(userEmail, userName) {
-            currentChatUser = userEmail;
-            document.getElementById('chatWindow').style.display = 'block';
-            document.getElementById('chatHeader').textContent = `💬 Chat with ${userName}`;
-            
-            // Mark user as active
-            document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
-            event.target.closest('.user-item').classList.add('active');
-            
-            displayMessages(userEmail);
-        }
-
-        function displayMessages(userEmail) {
-            database.ref('messages').orderByChild('participants').equalTo(`admin_${userEmail}`).once('value', (snapshot) => {
-                const container = document.getElementById('chatMessages');
-                const data = snapshot.val();
-                const messages = data ? Object.values(data).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) : [];
-
-                if (messages.length === 0) {
-                    container.innerHTML = '<div class="no-data">No messages yet. Start the conversation!</div>';
-                    return;
-                }
-
-                container.innerHTML = messages.map(msg => `
-                    <div class="message ${msg.sender}">
-                        <div class="message-bubble">
-                            ${msg.text}
-                            <div class="message-time">${new Date(msg.timestamp).toLocaleTimeString()}</div>
-                        </div>
-                    </div>
+            // Populate available rides
+            const availableRides = rides.filter(r => r.status === 'available');
+            const selectElement = document.getElementById('assignRideSelect');
+            selectElement.innerHTML = '<option value="">Choose a ride...</option>' +
+                availableRides.map(ride => `
+                    <option value="${ride.id}">${ride.numberPlate} - ${ride.driverName} (${ride.homeDistrict})</option>
                 `).join('');
 
-                container.scrollTop = container.scrollHeight;
-            });
+            document.getElementById('assignModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
         }
 
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const text = input.value.trim();
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            currentAssignRequest = null;
+        }
+
+        async function confirmAssignment() {
+            const selectedRideId = document.getElementById('assignRideSelect').value;
             
-            if (!text || !currentChatUser) return;
+            if (!selectedRideId || !currentAssignRequest) {
+                alert('Please select a ride');
+                return;
+            }
+
+            const selectedRide = rides.find(r => r.id === selectedRideId);
+            if (!selectedRide) {
+                alert('Invalid ride selection');
+                return;
+            }
 
             try {
-                await database.ref('messages').push({
-                    sender: 'admin',
-                    recipient: currentChatUser,
-                    participants: `admin_${currentChatUser}`,
-                    text: text,
-                    timestamp: new Date().toISOString(),
-                    read: false
+                // Update request status and assign ride
+                const requestRef = currentAssignRequest.type === 'ride' 
+                    ? `rideRequests/${currentAssignRequest.id}`
+                    : `parcelRequests/${currentAssignRequest.id}`;
+
+                await database.ref(requestRef).update({
+                    status: 'assigned',
+                    assignedRide: `${selectedRide.numberPlate} - ${selectedRide.driverName}`,
+                    assignedRideId: selectedRideId,
+                    assignedAt: new Date().toISOString()
                 });
 
-                input.value = '';
-                displayMessages(currentChatUser);
+                // Update ride status to busy
+                await database.ref(`rides/${selectedRideId}`).update({
+                    status: 'busy',
+                    currentRequest: currentAssignRequest.id,
+                    requestType: currentAssignRequest.type,
+                    updatedAt: new Date().toISOString()
+                });
+
+                alert('Request assigned successfully!');
+                closeAssignModal();
+
+                // Send notification to driver (could integrate with SMS/WhatsApp API)
+                sendDriverNotification(selectedRide, currentAssignRequest);
+
             } catch (error) {
-                console.error('Error sending message:', error);
-                alert('Error sending message');
+                console.error('Error assigning request:', error);
+                alert('Error assigning request. Please try again.');
             }
         }
 
-        async function sendSystemMessage(userEmail, message) {
+        function sendDriverNotification(ride, assignRequest) {
+            // This would integrate with SMS or WhatsApp API
+            const request = assignRequest.type === 'ride' 
+                ? rideRequests.find(r => r.id === assignRequest.id)
+                : parcelRequests.find(r => r.id === assignRequest.id);
+
+            console.log(`Notification sent to ${ride.driverName} (${ride.contact1})`);
+            console.log(`New ${assignRequest.type} request assigned:`, request);
+        }
+
+        async function updateRequestStatus(requestId, newStatus, requestTable) {
             try {
-                await database.ref('messages').push({
-                    sender: 'system',
-                    recipient: userEmail,
-                    participants: `admin_${userEmail}`,
-                    text: message,
-                    timestamp: new Date().toISOString(),
-                    read: false
-                });
+                const updates = {
+                    status: newStatus,
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (newStatus === 'completed') {
+                    updates.completedAt = new Date().toISOString();
+                }
+
+                await database.ref(`${requestTable}/${requestId}`).update(updates);
+
+                // If completing, also free up the assigned ride
+                if (newStatus === 'completed') {
+                    const request = requestTable === 'rideRequests' 
+                        ? rideRequests.find(r => r.id === requestId)
+                        : parcelRequests.find(r => r.id === requestId);
+
+                    if (request && request.assignedRideId) {
+                        await database.ref(`rides/${request.assignedRideId}`).update({
+                            status: 'available',
+                            currentRequest: null,
+                            requestType: null,
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                }
+
+                alert(`Request ${newStatus} successfully!`);
             } catch (error) {
-                console.error('Error sending system message:', error);
+                console.error('Error updating request:', error);
+                alert('Error updating request.');
             }
         }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
+        function filterRequests(type, status) {
+            // This function can be enhanced to filter requests by status
+            if (type === 'ride') {
+                displayRideRequests();
+            } else {
+                displayParcelRequests();
             }
         }
+
+        // Modal event handlers
+        window.onclick = function(event) {
+            const addModal = document.getElementById('addRideModal');
+            const assignModal = document.getElementById('assignModal');
+            
+            if (event.target === addModal) {
+                closeAddRideModal();
+            } else if (event.target === assignModal) {
+                closeAssignModal();
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAddRideModal();
+                closeAssignModal();
+            }
+        });
 
         // Initialize on page load
         window.addEventListener('load', () => {
-            // Check if already logged in (you can implement session storage here)
-            // For now, always show login
+            // Auto-login for development - remove in production
+            // login(); // Uncomment this line to skip login for testing
         });
-    </script>
-</body>
-</html>
+        }
+
+        function displayRideRequests() {
+            const container = document.getElementById('rideRequestsList');
+            
+            if (rideRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No ride requests yet</div>';
+                return;
