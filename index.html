@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kesfeng 3D Delivery Service</title>
+    <title>Catch A Ride - Your Reliable Transport Solution</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
@@ -18,7 +18,7 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f4c75 0%, #3282b8 25%, #bbe1fa 75%, #e8f5e8 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 75%, #533483 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -28,14 +28,15 @@
             padding: 20px;
         }
 
-        .poster-container {
+        .app-container {
             position: relative;
             perspective: 1000px;
+            max-width: 450px;
+            width: 100%;
         }
 
-        .poster {
-            width: 420px;
-            height: 580px;
+        .main-card {
+            width: 100%;
             background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 25px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1);
@@ -45,32 +46,39 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 50%, #2e7d32 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
             color: white;
             text-align: center;
-            padding: 30px 25px;
+            padding: 40px 25px;
             position: relative;
             overflow: hidden;
         }
 
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            transform: rotate(45deg);
+            animation: shine 4s infinite;
+        }
+
         .main-title {
-            font-size: 38px;
+            font-size: 42px;
             font-weight: 800;
             margin: 0;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
             letter-spacing: -1px;
             position: relative;
             z-index: 2;
-            background: linear-gradient(45deg, #ffffff, #a5d6a7);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            user-select: none;
         }
 
         .subtitle {
             font-size: 16px;
-            margin: 12px 0 0 0;
+            margin: 15px 0 0 0;
             opacity: 0.95;
             font-weight: 400;
             position: relative;
@@ -78,158 +86,103 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
 
-        .price-tag {
+        .admin-tag {
             position: absolute;
             top: -10px;
             right: 25px;
-            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            background: linear-gradient(45deg, #ffa726, #ff9800);
             color: white;
             padding: 12px 20px;
             border-radius: 25px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             transform: rotate(12deg);
-            box-shadow: 0 8px 16px rgba(255,107,53,0.4);
+            box-shadow: 0 8px 16px rgba(255,167,38,0.4);
             z-index: 10;
             cursor: pointer;
             transition: all 0.2s ease;
-            user-select: none;
             text-decoration: none;
         }
 
-        .price-tag:hover {
+        .admin-tag:hover {
             transform: rotate(12deg) scale(1.02);
-            box-shadow: 0 10px 20px rgba(255,107,53,0.5);
+            box-shadow: 0 10px 20px rgba(255,167,38,0.5);
             color: white;
         }
 
         .body {
-            padding: 40px 25px 80px;
+            padding: 30px 25px;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
-            height: 470px;
-            position: relative;
-            overflow: hidden;
+        }
+
+        .service-selection {
+            margin-bottom: 30px;
+        }
+
+        .service-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .service-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .service-btn {
+            padding: 20px 15px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .service-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .service-btn.active {
+            border-color: #ff6b6b;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+        }
+
+        .service-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .service-text {
+            font-size: 14px;
+            font-weight: 600;
         }
 
         .three-container {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: 150px;
+            width: 100%;
+            height: 200px;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-
-        .delivery-info {
-            position: absolute;
-            bottom: 100px;
-            left: 25px;
-            right: 25px;
-            text-align: center;
-        }
-
-        .route-container {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            margin: 20px 0;
-        }
-
-        .cities-route {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: relative;
-            margin: 20px 0;
-        }
-
-        .city {
-            text-align: center;
-            z-index: 3;
-            position: relative;
-        }
-
-        .city-icon {
-            width: 70px;
-            height: 50px;
-            background: linear-gradient(135deg, #1e88e5 0%, #42a5f5 100%);
-            border-radius: 8px 8px 0 0;
-            margin: 0 auto 8px;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(30,136,229,0.3);
-        }
-
-        .city-icon::before {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 12px;
-            width: 16px;
-            height: 16px;
-            background: #81d4fa;
-            border-radius: 3px;
-            box-shadow: 24px 0 0 #81d4fa, 12px 20px 0 #81d4fa, 36px 20px 0 #81d4fa;
-        }
-
-        .city-icon::after {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: 20px;
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 15px solid #1565c0;
-        }
-
-        .city-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: #2e7d32;
-            margin-top: 8px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .animated-road {
-            position: absolute;
-            top: 25px;
-            left: 85px;
-            right: 85px;
-            height: 12px;
-            background: linear-gradient(90deg, #424242 0%, #616161 50%, #424242 100%);
-            border-radius: 6px;
-            z-index: 1;
-            overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .road-lines {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 100%;
-            height: 2px;
-            background: repeating-linear-gradient(to right, white 0px, white 15px, transparent 15px, transparent 25px);
-        }
-
-        .delivery-truck {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 24px;
-            z-index: 5;
+            margin-bottom: 30px;
         }
 
         .features {
             display: flex;
             justify-content: space-around;
-            margin-top: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
 
         .feature {
@@ -239,37 +192,39 @@
 
         .feature-icon {
             font-size: 28px;
-            color: #2e7d32;
+            color: #ff6b6b;
             margin-bottom: 8px;
         }
 
         .feature-text {
-            font-size: 11px;
-            color: #546e7a;
+            font-size: 12px;
+            color: #636e72;
             font-weight: 500;
         }
 
-        .deliver-btn {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(45deg, #4caf50, #66bb6a);
+        .main-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 18px 30px;
             border-radius: 50px;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(76,175,80,0.4);
+            box-shadow: 0 10px 25px rgba(255,107,107,0.4);
             transition: all 0.3s ease;
-            z-index: 20;
+            margin-top: 20px;
         }
 
-        .deliver-btn:hover {
-            transform: translateX(-50%) scale(1.05);
-            box-shadow: 0 15px 35px rgba(76,175,80,0.6);
+        .main-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 35px rgba(255,107,107,0.6);
+        }
+
+        .main-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         /* Modal Styles */
@@ -292,14 +247,14 @@
             border-radius: 20px;
             width: 90%;
             max-width: 500px;
-            max-height: 85vh;
+            max-height: 90vh;
             box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
         }
 
         .modal-header {
-            background: linear-gradient(135deg, #2d5a27 0%, #4a7c59 50%, #2e7d32 100%);
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
             color: white;
             padding: 25px;
             border-radius: 20px 20px 0 0;
@@ -344,7 +299,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #2e7d32;
+            color: #2d3436;
         }
 
         .form-input, .form-select {
@@ -359,13 +314,43 @@
 
         .form-input:focus, .form-select:focus {
             outline: none;
-            border-color: #4caf50;
-            box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255,107,107,0.1);
+        }
+
+        .location-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .location-btn {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .location-btn:hover {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+
+        .location-btn.active {
+            border-color: #ff6b6b;
+            background: #ff6b6b;
+            color: white;
         }
 
         .submit-btn {
             width: 100%;
-            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
             border: none;
             padding: 15px;
@@ -378,7 +363,7 @@
 
         .submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(76,175,80,0.4);
+            box-shadow: 0 10px 25px rgba(255,107,107,0.4);
         }
 
         .submit-btn:disabled {
@@ -386,29 +371,14 @@
             cursor: not-allowed;
         }
 
-        .user-status {
+        .location-display {
             background: #e8f5e9;
             border: 1px solid #4caf50;
             border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .user-status.existing {
-            background: #fff3e0;
-            border-color: #ff9800;
-        }
-
-        .user-status .status-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .user-status .status-text {
+            padding: 10px;
+            margin-top: 10px;
             font-size: 14px;
-            font-weight: 600;
-            margin: 0;
+            color: #2e7d32;
         }
 
         .email-note {
@@ -418,37 +388,58 @@
             font-style: italic;
         }
 
-        /*  Button */
-        .-btn {
+        /* Driver/Admin buttons */
+        .access-buttons {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(45deg, #2d5a27, #4a7c59);
-            border-radius: 50%;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 8px 20px rgba(45,90,39,0.4);
-            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
             z-index: 1000;
         }
 
-        .-btn:hover {
+        .access-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+
+        .admin-access {
+            background: linear-gradient(45deg, #ffa726, #ff9800);
+        }
+
+        .driver-access {
+            background: linear-gradient(45deg, #42a5f5, #2196f3);
+        }
+
+        .access-btn:hover {
             transform: scale(1.1);
-            box-shadow: 0 12px 30px rgba(45,90,39,0.6);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+        }
+
+        /* Animations */
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
         }
 
         /* Responsive */
         @media (max-width: 480px) {
             body { padding: 10px; }
-            .poster { width: 350px; height: 580px; }
-            .main-title { font-size: 32px; }
-            .modal-content { width: 95%; margin: 5% auto; max-height: 90vh; }
+            .app-container { max-width: 100%; }
+            .main-title { font-size: 36px; }
+            .modal-content { width: 95%; margin: 5% auto; }
             .modal-body { padding: 20px; }
-            .-btn { bottom: 20px; right: 20px; width: 50px; height: 50px; font-size: 20px; }
+            .access-buttons { bottom: 20px; right: 20px; }
+            .access-btn { width: 50px; height: 50px; font-size: 18px; }
+            .service-buttons { grid-template-columns: 1fr; }
         }
 
         @media (max-height: 600px) {
@@ -457,134 +448,172 @@
     </style>
 </head>
 <body>
-    <!--  Button -->
-    <button class="admin-btn" onclick="window.open('templates/admin.html', '_blank')" title="Admin Access">
-        <i class="fas fa-cog"></i>
-    </button>
+    <!-- Access buttons -->
+    <div class="access-buttons">
+        <button class="access-btn admin-access" onclick="window.open('templates/admin.html', '_blank')" title="Admin Access">
+            <i class="fas fa-cog"></i>
+        </button>
+        <button class="access-btn driver-access" onclick="window.open('templates/driver.html', '_blank')" title="Driver Access">
+            <i class="fas fa-car"></i>
+        </button>
+    </div>
 
-    <div class="poster-container">
-        <div class="poster">
+    <div class="app-container">
+        <div class="main-card">
             <div class="header">
-                <h1 class="main-title">Kesfeng</h1>
-                <p class="subtitle">Your Trusted Delivery Partner</p>
-                <a href="admin.html" class="price-tag" title="Admin Access">R34.99</a>
+                <h1 class="main-title">Catch A Ride</h1>
+                <p class="subtitle">Your Reliable Transport Solution</p>
+                <a href="templates/admin.html" class="admin-tag" title="Admin Access">ADMIN</a>
             </div>
             
             <div class="body">
-                <div class="three-container" id="threeContainer"></div>
-                
-                <div class="delivery-info">
-                    <div class="route-container">
-                        <div class="cities-route">
-                            <div class="city">
-                                <div class="city-icon"></div>
-                                <div class="city-name">Butha Buthe</div>
-                            </div>
-                            <div class="city">
-                                <div class="city-icon"></div>
-                                <div class="city-name">Maseru</div>
-                            </div>
-                            <div class="animated-road">
-                                <div class="road-lines"></div>
-                                <div class="delivery-truck">🚛</div>
-                            </div>
+                <div class="service-selection">
+                    <h3 class="service-title">What do you need?</h3>
+                    <div class="service-buttons">
+                        <div class="service-btn active" data-service="ride">
+                            <i class="fas fa-car service-icon"></i>
+                            <div class="service-text">Book a Ride</div>
                         </div>
-                        
-                        <div class="features">
-                            <div class="feature">
-                                <div class="feature-icon"><i class="fas fa-clock"></i></div>
-                                <div class="feature-text">Fast</div>
-                            </div>
-                            <div class="feature">
-                                <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
-                                <div class="feature-text">Safe</div>
-                            </div>
-                            <div class="feature">
-                                <div class="feature-icon"><i class="fas fa-thumbs-up"></i></div>
-                                <div class="feature-text">Reliable</div>
-                            </div>
+                        <div class="service-btn" data-service="parcel">
+                            <i class="fas fa-box service-icon"></i>
+                            <div class="service-text">Send Parcel</div>
                         </div>
                     </div>
                 </div>
+
+                <div class="three-container" id="threeContainer"></div>
                 
-                <button class="deliver-btn" onclick="openDeliveryForm()">
-                    <i class="fas fa-truck"></i> Deliver my parcel
+                <div class="features">
+                    <div class="feature">
+                        <div class="feature-icon"><i class="fas fa-clock"></i></div>
+                        <div class="feature-text">Fast Service</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="feature-text">Safe & Secure</div>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="feature-text">Real-time Tracking</div>
+                    </div>
+                </div>
+                
+                <button class="main-btn" onclick="openRequestModal()">
+                    <i class="fas fa-plus"></i> <span id="mainBtnText">Book a Ride</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Delivery Form Modal -->
-    <div id="deliveryModal" class="modal">
+    <!-- Ride Request Modal -->
+    <div id="requestModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <span class="close" onclick="closeDeliveryForm()">&times;</span>
-                <h2 class="modal-title">📦 Request Delivery</h2>
+                <span class="close" onclick="closeRequestModal()">&times;</span>
+                <h2 class="modal-title" id="modalTitle">🚗 Request a Ride</h2>
             </div>
             <div class="modal-body">
-                <div id="userStatus" class="user-status" style="display: none;">
-                    <div class="status-icon">👋</div>
-                    <p class="status-text" id="statusText">Welcome!</p>
-                </div>
-
-                <form id="deliveryForm" onsubmit="submitDeliveryRequest(event)">
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" class="form-input" id="userEmail" placeholder="your@email.com (optional)" onblur="checkExistingUser()">
-                        <div class="email-note">Email is optional but helps us keep you updated and maintain your delivery history</div>
-                    </div>
-
+                <form id="requestForm" onsubmit="submitRequest(event)">
+                    <!-- Personal Info -->
                     <div class="form-group">
                         <label class="form-label">Full Name *</label>
                         <input type="text" class="form-input" id="fullName" required placeholder="Enter your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" class="form-input" id="email" placeholder="your@email.com (optional)">
+                        <div class="email-note">Email is optional but helps us keep you updated</div>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">Phone Number *</label>
                         <input type="tel" class="form-input" id="phoneNumber" required placeholder="e.g., +266 5190 1995">
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">From District *</label>
-                        <select class="form-select" id="fromDistrict" required>
-                            <option value="">Select pickup district</option>
-                            <option value="Maseru">Maseru</option>
-                            <option value="Butha-Buthe">Butha-Buthe</option>
-                            <option value="Leribe">Leribe</option>
-                            <option value="Berea">Berea</option>
-                            <option value="Mafeteng">Mafeteng</option>
-                            <option value="Mohale's Hoek">Mohale's Hoek</option>
-                            <option value="Quthing">Quthing</option>
-                            <option value="Qacha's Nek">Qacha's Nek</option>
-                            <option value="Mokhotlong">Mokhotlong</option>
-                            <option value="Thaba-Tseka">Thaba-Tseka</option>
-                        </select>
+
+                    <!-- Ride-specific fields -->
+                    <div id="rideFields">
+                        <div class="form-group">
+                            <label class="form-label">Current Location *</label>
+                            <select class="form-select" id="currentLocation">
+                                <option value="">Select your current location</option>
+                                <option value="Maseru">Maseru</option>
+                                <option value="Butha-Buthe">Butha-Buthe</option>
+                                <option value="Leribe">Leribe</option>
+                                <option value="Berea">Berea</option>
+                                <option value="Mafeteng">Mafeteng</option>
+                                <option value="Mohale's Hoek">Mohale's Hoek</option>
+                                <option value="Quthing">Quthing</option>
+                                <option value="Qacha's Nek">Qacha's Nek</option>
+                                <option value="Mokhotlong">Mokhotlong</option>
+                                <option value="Thaba-Tseka">Thaba-Tseka</option>
+                            </select>
+                            <div class="location-options">
+                                <button type="button" class="location-btn" onclick="selectLocation('district')">
+                                    <i class="fas fa-map"></i> Select District
+                                </button>
+                                <button type="button" class="location-btn" onclick="getLiveLocation()">
+                                    <i class="fas fa-location-arrow"></i> Use GPS
+                                </button>
+                            </div>
+                            <div id="locationDisplay" class="location-display" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Destination *</label>
+                            <select class="form-select" id="destination" required>
+                                <option value="">Select destination</option>
+                                <option value="Maseru">Maseru</option>
+                                <option value="Butha-Buthe">Butha-Buthe</option>
+                                <option value="Leribe">Leribe</option>
+                                <option value="Berea">Berea</option>
+                                <option value="Mafeteng">Mafeteng</option>
+                                <option value="Mohale's Hoek">Mohale's Hoek</option>
+                                <option value="Quthing">Quthing</option>
+                                <option value="Qacha's Nek">Qacha's Nek</option>
+                                <option value="Mokhotlong">Mokhotlong</option>
+                                <option value="Thaba-Tseka">Thaba-Tseka</option>
+                            </select>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">To District *</label>
-                        <select class="form-select" id="toDistrict" required>
-                            <option value="">Select delivery district</option>
-                            <option value="Maseru">Maseru</option>
-                            <option value="Butha-Buthe">Butha-Buthe</option>
-                            <option value="Leribe">Leribe</option>
-                            <option value="Berea">Berea</option>
-                            <option value="Mafeteng">Mafeteng</option>
-                            <option value="Mohale's Hoek">Mohale's Hoek</option>
-                            <option value="Quthing">Quthing</option>
-                            <option value="Qacha's Nek">Qacha's Nek</option>
-                            <option value="Mokhotlong">Mokhotlong</option>
-                            <option value="Thaba-Tseka">Thaba-Tseka</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Package Description (Optional)</label>
-                        <input type="text" class="form-input" id="packageDescription" placeholder="Brief description of your parcel">
+
+                    <!-- Parcel-specific fields -->
+                    <div id="parcelFields" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">Collection Time *</label>
+                            <input type="datetime-local" class="form-input" id="collectionTime">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Parcel Destination *</label>
+                            <select class="form-select" id="parcelDestination">
+                                <option value="">Where is the parcel going?</option>
+                                <option value="Maseru">Maseru</option>
+                                <option value="Butha-Buthe">Butha-Buthe</option>
+                                <option value="Leribe">Leribe</option>
+                                <option value="Berea">Berea</option>
+                                <option value="Mafeteng">Mafeteng</option>
+                                <option value="Mohale's Hoek">Mohale's Hoek</option>
+                                <option value="Quthing">Quthing</option>
+                                <option value="Qacha's Nek">Qacha's Nek</option>
+                                <option value="Mokhotlong">Mokhotlong</option>
+                                <option value="Thaba-Tseka">Thaba-Tseka</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Receiver's Phone Number *</label>
+                            <input type="tel" class="form-input" id="receiverPhone" placeholder="Parcel receiver's phone number">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Parcel Description</label>
+                            <input type="text" class="form-input" id="parcelDescription" placeholder="Brief description of the parcel">
+                        </div>
                     </div>
                     
                     <button type="submit" class="submit-btn" id="submitBtn">
-                        <i class="fas fa-paper-plane"></i> Submit Request
+                        <i class="fas fa-paper-plane"></i> <span id="submitText">Request Ride</span>
                     </button>
                 </form>
             </div>
@@ -607,8 +636,12 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
+        // Global variables
+        let currentService = 'ride';
+        let currentLocation = null;
+
         // Three.js variables
-        let scene, camera, renderer, deliveryPerson, package;
+        let scene, camera, renderer;
         
         function initThreeJS() {
             const container = document.getElementById('threeContainer');
@@ -619,7 +652,7 @@
             scene.background = new THREE.Color(0x87ceeb);
 
             camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-            camera.position.set(0, 2, 8);
+            camera.position.set(0, 3, 8);
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(width, height);
@@ -634,12 +667,9 @@
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(5, 10, 5);
             directionalLight.castShadow = true;
-            directionalLight.shadow.mapSize.width = 1024;
-            directionalLight.shadow.mapSize.height = 1024;
             scene.add(directionalLight);
 
-            createDeliveryPerson();
-            createPackage();
+            createCar();
 
             const groundGeometry = new THREE.PlaneGeometry(20, 20);
             const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
@@ -649,162 +679,159 @@
             ground.receiveShadow = true;
             scene.add(ground);
 
-            // Render once without animation
             renderer.render(scene, camera);
         }
 
-        function createDeliveryPerson() {
-            const group = new THREE.Group();
+        function createCar() {
+            const carGroup = new THREE.Group();
 
-            const bodyGeometry = new THREE.CylinderGeometry(0.8, 1, 2, 8);
-            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0x4169E1 });
+            // Car body
+            const bodyGeometry = new THREE.BoxGeometry(4, 1.5, 2);
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xff6b6b });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
             body.position.y = 1;
             body.castShadow = true;
-            group.add(body);
+            carGroup.add(body);
 
-            const headGeometry = new THREE.SphereGeometry(0.6, 16, 16);
-            const headMaterial = new THREE.MeshLambertMaterial({ color: 0xDEB887 });
-            const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.position.y = 2.6;
-            head.castShadow = true;
-            group.add(head);
+            // Car roof
+            const roofGeometry = new THREE.BoxGeometry(2.5, 1, 1.8);
+            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0xee5a24 });
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.position.y = 2;
+            roof.castShadow = true;
+            carGroup.add(roof);
 
-            const eyeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
-            const eyeMaterial = new THREE.MeshLambertMaterial({ color: 0x000000 });
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x2d3436 });
             
-            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            leftEye.position.set(-0.2, 2.7, 0.5);
-            group.add(leftEye);
+            const positions = [
+                { x: -1.5, y: 0.4, z: 1.2 },
+                { x: 1.5, y: 0.4, z: 1.2 },
+                { x: -1.5, y: 0.4, z: -1.2 },
+                { x: 1.5, y: 0.4, z: -1.2 }
+            ];
 
-            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            rightEye.position.set(0.2, 2.7, 0.5);
-            group.add(rightEye);
+            positions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.position.set(pos.x, pos.y, pos.z);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.castShadow = true;
+                carGroup.add(wheel);
+            });
 
-            const armGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1.5, 8);
-            const armMaterial = new THREE.MeshLambertMaterial({ color: 0xDEB887 });
-            
-            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-            leftArm.position.set(-1.2, 1.5, 0);
-            leftArm.rotation.z = Math.PI / 6;
-            leftArm.castShadow = true;
-            group.add(leftArm);
-
-            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-            rightArm.position.set(1.2, 1.5, 0);
-            rightArm.rotation.z = -Math.PI / 6;
-            rightArm.castShadow = true;
-            group.add(rightArm);
-
-            const legGeometry = new THREE.CylinderGeometry(0.3, 0.3, 1.8, 8);
-            const legMaterial = new THREE.MeshLambertMaterial({ color: 0x2F4F4F });
-            
-            const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-            leftLeg.position.set(-0.4, -0.9, 0);
-            leftLeg.castShadow = true;
-            group.add(leftLeg);
-
-            const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-            rightLeg.position.set(0.4, -0.9, 0);
-            rightLeg.castShadow = true;
-            group.add(rightLeg);
-
-            deliveryPerson = group;
-            scene.add(deliveryPerson);
+            scene.add(carGroup);
         }
 
-        function createPackage() {
-            const packageGeometry = new THREE.BoxGeometry(1, 1, 1);
-            const packageMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
-            package = new THREE.Mesh(packageGeometry, packageMaterial);
-            package.position.set(2, 3, 0);
-            package.castShadow = true;
+        // Service selection
+        document.addEventListener('DOMContentLoaded', function() {
+            const serviceButtons = document.querySelectorAll('.service-btn');
+            serviceButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    serviceButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentService = this.dataset.service;
+                    
+                    const mainBtnText = document.getElementById('mainBtnText');
+                    if (currentService === 'ride') {
+                        mainBtnText.textContent = 'Book a Ride';
+                    } else {
+                        mainBtnText.textContent = 'Send Parcel';
+                    }
+                });
+            });
+        });
 
-            const tapeGeometry = new THREE.BoxGeometry(1.1, 0.1, 1.1);
-            const tapeMaterial = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
-            const tapeH = new THREE.Mesh(tapeGeometry, tapeMaterial);
-            const tapeV = new THREE.Mesh(tapeGeometry, tapeMaterial);
-            tapeV.rotation.y = Math.PI / 2;
+        // Location functions
+        function selectLocation(type) {
+            document.querySelectorAll('.location-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
             
-            package.add(tapeH);
-            package.add(tapeV);
-            scene.add(package);
-        }
-
-        // User management
-        let currentUserData = null;
-
-        async function checkExistingUser() {
-            const email = document.getElementById('userEmail').value.trim();
-            if (!email) {
-                document.getElementById('userStatus').style.display = 'none';
-                return;
-            }
-
-            try {
-                const userRef = database.ref('users').orderByChild('email').equalTo(email);
-                const snapshot = await userRef.once('value');
-                const userData = snapshot.val();
-
-                if (userData) {
-                    const userKey = Object.keys(userData)[0];
-                    currentUserData = userData[userKey];
-                    
-                    // Pre-fill form with existing data
-                    document.getElementById('fullName').value = currentUserData.fullName;
-                    document.getElementById('phoneNumber').value = currentUserData.phoneNumber;
-                    
-                    // Show welcome back message
-                    const statusDiv = document.getElementById('userStatus');
-                    const statusText = document.getElementById('statusText');
-                    statusDiv.className = 'user-status existing';
-                    statusText.textContent = `Welcome back, ${currentUserData.fullName}!`;
-                    statusDiv.style.display = 'block';
-                } else {
-                    // New user
-                    currentUserData = null;
-                    const statusDiv = document.getElementById('userStatus');
-                    const statusText = document.getElementById('statusText');
-                    statusDiv.className = 'user-status';
-                    statusText.textContent = 'New user - Welcome to Kesfeng!';
-                    statusDiv.style.display = 'block';
-                }
-            } catch (error) {
-                console.error('Error checking user:', error);
+            if (type === 'district') {
+                document.getElementById('currentLocation').style.display = 'block';
+                document.getElementById('locationDisplay').style.display = 'none';
             }
         }
 
-        // WhatsApp notification function
-        function sendWhatsAppNotification(customerData) {
-            const adminNumber = "26651901995";
-            const message = encodeURIComponent(
-                `🚨 NEW DELIVERY REQUEST 🚨\n\n` +
-                `👤 Customer: ${customerData.fullName}\n` +
-                `📧 Email: ${customerData.email || 'Not provided'}\n` +
-                `📱 Phone: ${customerData.phoneNumber}\n` +
-                `📍 Route: ${customerData.fromDistrict} → ${customerData.toDistrict}\n` +
-                `📦 Package: ${customerData.packageDescription || 'No description'}\n` +
-                `⏰ Time: ${new Date(customerData.timestamp).toLocaleString()}\n\n` +
-                `Please respond to this customer promptly! 🚛`
-            );
+        function getLiveLocation() {
+            document.querySelectorAll('.location-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
             
-            const whatsappUrl = `https://wa.me/${adminNumber}?text=${message}`;
-            window.open(whatsappUrl, '_blank');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        currentLocation = { lat, lon };
+                        
+                        document.getElementById('currentLocation').style.display = 'none';
+                        document.getElementById('locationDisplay').style.display = 'block';
+                        document.getElementById('locationDisplay').innerHTML = `
+                            <i class="fas fa-map-marker-alt"></i> 
+                            Live Location: ${lat.toFixed(4)}, ${lon.toFixed(4)}
+                        `;
+                    },
+                    error => {
+                        alert('Unable to get your location. Please select district instead.');
+                        selectLocation('district');
+                    }
+                );
+            } else {
+                alert('Geolocation is not supported by this browser.');
+                selectLocation('district');
+            }
         }
 
         // Modal functions
-        function openDeliveryForm() {
-            document.getElementById('deliveryModal').style.display = 'block';
+        function openRequestModal() {
+            const modal = document.getElementById('requestModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const rideFields = document.getElementById('rideFields');
+            const parcelFields = document.getElementById('parcelFields');
+            const submitText = document.getElementById('submitText');
+
+            if (currentService === 'ride') {
+                modalTitle.innerHTML = '🚗 Request a Ride';
+                rideFields.style.display = 'block';
+                parcelFields.style.display = 'none';
+                submitText.textContent = 'Request Ride';
+                
+                // Make ride fields required
+                document.getElementById('currentLocation').required = false; // Will be handled by location selection
+                document.getElementById('destination').required = true;
+                document.getElementById('collectionTime').required = false;
+                document.getElementById('parcelDestination').required = false;
+                document.getElementById('receiverPhone').required = false;
+            } else {
+                modalTitle.innerHTML = '📦 Send Parcel';
+                rideFields.style.display = 'none';
+                parcelFields.style.display = 'block';
+                submitText.textContent = 'Request Parcel Delivery';
+                
+                // Make parcel fields required
+                document.getElementById('currentLocation').required = false;
+                document.getElementById('destination').required = false;
+                document.getElementById('collectionTime').required = true;
+                document.getElementById('parcelDestination').required = true;
+                document.getElementById('receiverPhone').required = true;
+            }
+
+            modal.style.display = 'block';
             document.body.style.overflow = 'hidden';
         }
 
-        function closeDeliveryForm() {
-            document.getElementById('deliveryModal').style.display = 'none';
+        function closeRequestModal() {
+            document.getElementById('requestModal').style.display = 'none';
             document.body.style.overflow = 'auto';
+            // Reset form
+            document.getElementById('requestForm').reset();
+            document.getElementById('locationDisplay').style.display = 'none';
+            document.querySelectorAll('.location-btn').forEach(btn => btn.classList.remove('active'));
+            currentLocation = null;
         }
 
         // Form submission
-        async function submitDeliveryRequest(event) {
+        async function submitRequest(event) {
             event.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
@@ -812,79 +839,60 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
             submitBtn.disabled = true;
 
-            const email = document.getElementById('userEmail').value.trim() || null;
+            // Get form data
             const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim() || null;
             const phoneNumber = document.getElementById('phoneNumber').value.trim();
 
-            // Generate unique customer ID if no email provided
-            const customerId = email || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-            const formData = {
-                email: email,
-                customerId: customerId,
+            let requestData = {
+                type: currentService,
                 fullName: fullName,
+                email: email,
                 phoneNumber: phoneNumber,
-                fromDistrict: document.getElementById('fromDistrict').value,
-                toDistrict: document.getElementById('toDistrict').value,
-                packageDescription: document.getElementById('packageDescription').value || 'No description provided',
                 timestamp: new Date().toISOString(),
                 status: 'pending'
             };
 
-            try {
-                // Register/Update user only if email is provided
-                if (email) {
-                    const userRef = database.ref('users').orderByChild('email').equalTo(email);
-                    const snapshot = await userRef.once('value');
-                    
-                    if (!snapshot.exists()) {
-                        // New user with email
-                        await database.ref('users').push({
-                            email: email,
-                            fullName: fullName,
-                            phoneNumber: phoneNumber,
-                            registeredAt: new Date().toISOString(),
-                            isSubscribed: true,
-                            customerId: customerId
-                        });
-                    } else {
-                        // Update existing user
-                        const userKey = Object.keys(snapshot.val())[0];
-                        await database.ref(`users/${userKey}`).update({
-                            fullName: fullName,
-                            phoneNumber: phoneNumber,
-                            lastActivity: new Date().toISOString()
-                        });
-                    }
-                } else {
-                    // Create guest user record
-                    await database.ref('guestUsers').push({
-                        customerId: customerId,
-                        fullName: fullName,
-                        phoneNumber: phoneNumber,
-                        registeredAt: new Date().toISOString(),
-                        isGuest: true
-                    });
+            if (currentService === 'ride') {
+                // Validate location selection
+                const selectedLocation = document.getElementById('currentLocation').value;
+                if (!selectedLocation && !currentLocation) {
+                    alert('Please select your current location or use GPS.');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    return;
                 }
 
-                // Submit delivery request
-                const requestRef = database.ref('deliveryRequests');
-                await requestRef.push(formData);
+                requestData = {
+                    ...requestData,
+                    currentLocation: selectedLocation || 'GPS Location',
+                    gpsLocation: currentLocation,
+                    destination: document.getElementById('destination').value
+                };
+            } else {
+                requestData = {
+                    ...requestData,
+                    collectionTime: document.getElementById('collectionTime').value,
+                    parcelDestination: document.getElementById('parcelDestination').value,
+                    receiverPhone: document.getElementById('receiverPhone').value.trim(),
+                    parcelDescription: document.getElementById('parcelDescription').value.trim() || 'No description'
+                };
+            }
+
+            try {
+                // Submit request to Firebase
+                const requestRef = database.ref(currentService === 'ride' ? 'rideRequests' : 'parcelRequests');
+                await requestRef.push(requestData);
                 
                 // Send WhatsApp notification to admin
-                sendWhatsAppNotification(formData);
+                sendWhatsAppNotification(requestData);
                 
-                alert('✅ Delivery request submitted successfully!');
-                closeDeliveryForm();
-                document.getElementById('deliveryForm').reset();
-                document.getElementById('userStatus').style.display = 'none';
+                alert(`✅ ${currentService === 'ride' ? 'Ride' : 'Parcel delivery'} request submitted successfully!`);
+                closeRequestModal();
                 
                 // Redirect to support page
-                if (email) {
-                    window.location.href = 'support.html?email=' + encodeURIComponent(email);
-                } else {
-                    window.location.href = 'support.html?customerId=' + encodeURIComponent(customerId);
-                }
+                const customerId = `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                window.location.href = `templates/support.html?customerId=${encodeURIComponent(customerId)}&type=${currentService}`;
                 
             } catch (error) {
                 console.error('Error submitting request:', error);
@@ -895,14 +903,47 @@
             }
         }
 
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const deliveryModal = document.getElementById('deliveryModal');
+        // WhatsApp notification function
+        function sendWhatsAppNotification(requestData) {
+            const adminNumber = "26651901995";
+            let message = `🚨 NEW ${requestData.type.toUpperCase()} REQUEST 🚨\n\n` +
+                         `👤 Customer: ${requestData.fullName}\n` +
+                         `📧 Email: ${requestData.email || 'Not provided'}\n` +
+                         `📱 Phone: ${requestData.phoneNumber}\n`;
+
+            if (requestData.type === 'ride') {
+                message += `📍 From: ${requestData.currentLocation}\n` +
+                          `🎯 To: ${requestData.destination}\n`;
+                if (requestData.gpsLocation) {
+                    message += `🌐 GPS: ${requestData.gpsLocation.lat}, ${requestData.gpsLocation.lon}\n`;
+                }
+            } else {
+                message += `⏰ Collection: ${new Date(requestData.collectionTime).toLocaleString()}\n` +
+                          `📦 To: ${requestData.parcelDestination}\n` +
+                          `📱 Receiver: ${requestData.receiverPhone}\n` +
+                          `📝 Description: ${requestData.parcelDescription}\n`;
+            }
+
+            message += `⏰ Time: ${new Date(requestData.timestamp).toLocaleString()}\n\n` +
+                      `Please assign a driver promptly! 🚗`;
             
-            if (event.target === deliveryModal) {
-                closeDeliveryForm();
+            const whatsappUrl = `https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        // Event listeners
+        window.onclick = function(event) {
+            const modal = document.getElementById('requestModal');
+            if (event.target === modal) {
+                closeRequestModal();
             }
         }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeRequestModal();
+            }
+        });
 
         // Initialize Three.js when page loads
         window.addEventListener('load', initThreeJS);
@@ -910,18 +951,13 @@
         // Handle window resize for Three.js
         window.addEventListener('resize', () => {
             const container = document.getElementById('threeContainer');
-            const width = container.clientWidth;
-            const height = container.clientHeight;
-            
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
-        });
-
-        // Handle escape key to close modal
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeDeliveryForm();
+            if (container && renderer) {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
             }
         });
     </script>
