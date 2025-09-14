@@ -15,6 +15,978 @@
             box-sizing: border-box;
         }
 
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 75%, #533483 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .admin-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .admin-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .admin-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .tabs-container {
+            background: #f8f9fa;
+            padding: 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #ff6b6b;
+            border-bottom-color: #ff6b6b;
+            background: rgba(255,107,107,0.1);
+        }
+
+        .tab:hover {
+            background: rgba(255,107,107,0.05);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #ff6b6b;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2d3436;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,107,107,0.4);
+        }
+
+        .btn-secondary {
+            background: #6c5ce7;
+            color: white;
+        }
+
+        .btn-success {
+            background: #00b894;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e17055;
+            color: white;
+        }
+
+        .btn-info {
+            background: #0984e3;
+            color: white;
+        }
+
+        .ride-card, .request-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-available {
+            background: #d1f2eb;
+            color: #00b894;
+        }
+
+        .status-busy {
+            background: #ffeaa7;
+            color: #fdcb6e;
+        }
+
+        .status-collecting {
+            background: #a7c6ff;
+            color: #0066cc;
+        }
+
+        .status-full {
+            background: #fab1a0;
+            color: #e17055;
+        }
+
+        .status-offline {
+            background: #ddd;
+            color: #666;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-assigned {
+            background: #cce5ff;
+            color: #0066cc;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-traveling {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .card-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            font-size: 14px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .detail-value {
+            color: #333;
+            word-break: break-word;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .passenger-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .passenger-icons {
+            display: flex;
+            gap: 2px;
+        }
+
+        .passenger-icon {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+
+        .passenger-filled {
+            background: #00b894;
+            color: white;
+        }
+
+        .passenger-empty {
+            background: #ddd;
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 85vh;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close {
+            color: white;
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2d3436;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 20px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #4caf50;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(76,175,80,0.4);
+            z-index: 1001;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .request-summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .request-summary h4 {
+            margin-bottom: 10px;
+            color: #2d3436;
+        }
+
+        .request-summary p {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .admin-header { padding: 20px; }
+            .admin-title { font-size: 24px; }
+            .tab-content { padding: 20px; }
+            .stats-container { grid-template-columns: 1fr 1fr; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .card-details { grid-template-columns: 1fr; }
+            .tabs { justify-content: flex-start; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-container { grid-template-columns: 1fr; }
+            .card-header { flex-direction: column; align-items: flex-start; }
+            .card-actions { justify-content: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i> <span id="notificationText"></span>
+    </div>
+
+    <!-- Audio for notifications -->
+    <audio id="notificationSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwD" type="audio/wav">
+    </audio>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="login-modal">
+        <div class="login-form">
+            <h2 class="login-title">Admin Login</h2>
+            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" value="admin@catcharide.com">
+            <input type="password" id="adminPassword" class="login-input" placeholder="Password">
+            <button onclick="login()" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+            <div style="margin-top: 15px; font-size: 12px; color: #666;">
+                Demo credentials: admin@catcharide.com / admin123
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-container" id="adminContent" style="display: none;">
+        <div class="admin-header">
+            <h1 class="admin-title">Catch A Ride Admin</h1>
+            <p class="admin-subtitle">Manage rides, drivers, passengers, and requests</p>
+        </div>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </button>
+                <button class="tab" onclick="switchTab('rides')">
+                    <i class="fas fa-car"></i> Manage Rides
+                </button>
+                <button class="tab" onclick="switchTab('ride-requests')">
+                    <i class="fas fa-user-friends"></i> Ride Requests
+                </button>
+                <button class="tab" onclick="switchTab('parcel-requests')">
+                    <i class="fas fa-box"></i> Parcel Requests
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-car"></i></div>
+                    <div class="stat-number" id="totalRides">0</div>
+                    <div class="stat-label">Total Rides</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-number" id="collectingRides">0</div>
+                    <div class="stat-label">Collecting Passengers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-number" id="pendingRequests">0</div>
+                    <div class="stat-label">Pending Requests</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-number" id="completedToday">0</div>
+                    <div class="stat-label">Completed Today</div>
+                </div>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">Recent Activity</h2>
+            </div>
+            
+            <div class="ride-card">
+                <div class="card-header">
+                    <div class="card-title">System Status</div>
+                    <div class="status-badge status-available">Online</div>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Server Status:</div>
+                        <div class="detail-value">Running smoothly</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Last Updated:</div>
+                        <div class="detail-value" id="lastUpdated">Loading...</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Active Users:</div>
+                        <div class="detail-value">Demo Mode</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rides Tab -->
+        <div id="rides" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Manage Rides</h2>
+                <button class="btn btn-primary" onclick="openAddRideModal()">
+                    <i class="fas fa-plus"></i> Add New Ride
+                </button>
+            </div>
+            <div id="ridesList" class="no-data">
+                Loading rides...
+            </div>
+        </div>
+
+        <!-- Ride Requests Tab -->
+        <div id="ride-requests" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Ride Requests</h2>
+                <div>
+                    <button class="btn btn-info" onclick="filterRequests('ride', 'all')">All</button>
+                    <button class="btn btn-secondary" onclick="filterRequests('ride', 'pending')">Pending</button>
+                    <button class="btn btn-success" onclick="filterRequests('ride', 'assigned')">Assigned</button>
+                </div>
+            </div>
+            <div id="rideRequestsList" class="no-data">
+                Loading ride requests...
+            </div>
+        </div>
+
+        <!-- Parcel Requests Tab -->
+        <div id="parcel-requests" class="tab-content">
+            <div class="section-header">
+                <h2 class="section-title">Parcel Requests</h2>
+                <div>
+                    <button class="btn btn-info" onclick="filterRequests('parcel', 'all')">All</button>
+                    <button class="btn btn-secondary" onclick="filterRequests('parcel', 'pending')">Pending</button>
+                    <button class="btn btn-success" onclick="filterRequests('parcel', 'assigned')">Assigned</button>
+                </div>
+            </div>
+            <div id="parcelRequestsList" class="no-data">
+                Loading parcel requests...
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Ride Modal -->
+    <div id="addRideModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Ride</h3>
+                <span class="close" onclick="closeAddRideModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addRideForm" onsubmit="addRide(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Number Plate</label>
+                            <input type="text" id="numberPlate" class="form-input" required placeholder="ABC-123">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Driver Name</label>
+                            <input type="text" id="driverName" class="form-input" required placeholder="John Doe">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Car Type</label>
+                            <select id="carType" class="form-select" required>
+                                <option value="">Select Type</option>
+                                <option value="sedan">Sedan</option>
+                                <option value="hatchback">Hatchback</option>
+                                <option value="suv">SUV</option>
+                                <option value="minivan">Minivan</option>
+                                <option value="pickup">Pickup</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Car Model</label>
+                            <input type="text" id="carModel" class="form-input" required placeholder="Toyota Corolla">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Car Color</label>
+                            <input type="text" id="carColor" class="form-input" required placeholder="White">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Passenger Capacity</label>
+                            <input type="number" id="passengerCapacity" class="form-input" min="1" max="8" required placeholder="4">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Primary Contact</label>
+                            <input type="tel" id="contact1" class="form-input" required placeholder="+266 5555 1234">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Secondary Contact</label>
+                            <input type="tel" id="contact2" class="form-input" placeholder="+266 5555 5678">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Home District</label>
+                        <select id="homeDistrict" class="form-select" required>
+                            <option value="">Select District</option>
+                            <option value="Maseru">Maseru</option>
+                            <option value="Berea">Berea</option>
+                            <option value="Leribe">Leribe</option>
+                            <option value="Mafeteng">Mafeteng</option>
+                            <option value="Mohale's Hoek">Mohale's Hoek</option>
+                            <option value="Quthing">Quthing</option>
+                            <option value="Qacha's Nek">Qacha's Nek</option>
+                            <option value="Mokhotlong">Mokhotlong</option>
+                            <option value="Thaba-Tseka">Thaba-Tseka</option>
+                            <option value="Butha-Buthe">Butha-Buthe</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                        <i class="fas fa-save"></i> Add Ride
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collecting Modal -->
+    <div id="collectingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Start Collecting Passengers</h3>
+                <span class="close" onclick="closeCollectingModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="collectingRideDetails" class="request-summary"></div>
+                <form onsubmit="startCollecting(event)">
+                    <div class="form-group">
+                        <label class="form-label">Destination</label>
+                        <input type="text" id="collectingDestination" class="form-input" required placeholder="Roma, NUL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Departure Time</label>
+                        <input type="datetime-local" id="departureTime" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Current Location (Optional)</label>
+                        <input type="text" id="currentLocationInput" class="form-input" placeholder="Pick-up point">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                        <i class="fas fa-users"></i> Start Collecting
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Modal -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Request to Ride</h3>
+                <span class="close" onclick="closeAssignModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="assignRequestDetails" class="request-summary"></div>
+                <div class="form-group">
+                    <label class="form-label">Select Ride</label>
+                    <select id="assignRideSelect" class="form-select" required>
+                        <option value="">Choose a ride...</option>
+                    </select>
+                </div>
+                <button onclick="confirmAssignment()" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                    <i class="fas fa-check"></i> Confirm Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let database;
+        let rides = [];
+        let rideRequests = [];
+        let parcelRequests = [];
+        let currentCollectingRide = null;
+        let currentAssignRequest = null;
+
+        // Authentication
+        function login() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            // Simple authentication - in production, use proper authentication
+            if (email === 'admin@catcharide.com' && password === 'admin123') {
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                initializeApp();
+            } else {
+                alert('Invalid credentials. Use admin@catcharide.com / admin123');
+            }
+        }
+
+        // Initialize Firebase and app
+        function initializeApp() {
+            // Initialize Firebase (replace with your config)
+            const firebaseConfig = {
+                // Add your Firebase config here
+                databaseURL: "https://catch-a-ride-demo-default-rtdb.firebaseio.com/"
+            };
+            
+            // For demo purposes, we'll skip Firebase initialization
+            // if (!firebase.apps.length) {
+            //     firebase.initializeApp(firebaseConfig);
+            // }
+            // database = firebase.database();
+            
+            // Load initial data
+            loadData();
+            
+            // Set up real-time listeners
+            setupRealtimeListeners();
+            
+            // Update last updated time
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // Load all data
+        function loadData() {
+            loadRides();
+            loadRideRequests();
+            loadParcelRequests();
+            updateStats();
+        }
+
+        // Load rides
+        function loadRides() {
+            // Simulated data for demo - replace with Firebase call
+            rides = [
+                {
+                    id: 'ride1',
+                    numberPlate: 'ABC-123',
+                    driverName: 'John Doe',
+                    carType: 'sedan',
+                    carModel: 'Toyota Corolla',
+                    carColor: 'White',
+                    passengerCapacity: 4,
+                    contact1: '+266 5555 1234',
+                    contact2: '+266 5555 5678',
+                    homeDistrict: 'Maseru',
+                    status: 'available',
+                    currentPassengers: 0,
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'ride2',
+                    numberPlate: 'XYZ-456',
+                    driverName: 'Jane Smith',
+                    carType: 'suv',
+                    carModel: 'Honda CRV',
+                    carColor: 'Blue',
+                    passengerCapacity: 7,
+                    contact1: '+266 5555 2345',
+                    contact2: '',
+                    homeDistrict: 'Leribe',
+                    status: 'collecting',
+                    currentPassengers: 2,
+                    collectingDestination: 'Roma University',
+                    departureTime: new Date(Date.now() + 3600000).toISOString(),
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            displayRides();
+        }
+
+        // Load ride requests
+        function loadRideRequests() {
+            // Simulated data for demo - replace with Firebase call
+            rideRequests = [
+                {
+                    id: 'req1',
+                    fullName: 'Alice Johnson',
+                    email: 'alice@email.com',
+                    phoneNumber: '+266 5555 9999',
+                    currentLocation: 'Maseru Central',
+                    destination: 'Roma',
+                    timestamp: new Date().toISOString(),
+                    status: 'pending'
+                },
+                {
+                    id: 'req2',
+                    fullName: 'Bob Wilson',
+                    email: 'bob@email.com',
+                    phoneNumber: '+266 5555 8888',
+                    currentLocation: 'Teyateyaneng',
+                    destination: 'Maseru',
+                    timestamp: new Date(Date.now() - 3600000).toISOString(),
+                    status: 'assigned',
+                    assignedRide: 'ABC-123 - John Doe',
+                    assignedRideId: 'ride1'
+                }
+            ];
+            displayRideRequests();
+        }
+
+        // Load parcel requests
+        function loadParcelRequests() {
+            // Simulated data for demo - replace with Firebase call
+            parcelRequests = [
+                {
+                    id: 'parcel1',
+                    fullName: 'Carol Brown',
+                    email: 'carol@email.com',
+                    phoneNumber: '+266 5555 7777',
+                    collectionTime: new Date(Date.now() + 86400000).toISOString(),
+                    parcelDestination: 'Teyateyaneng',
+                    receiverPhone: '+266 5555 6666',
+                    parcelDescription: 'Important Documents',
+                    timestamp: new Date().toISOString(),
+                    status: 'pending'
+                },
+                {
+                    id: 'parcel2',
+                    fullName: 'David Lee',
+                    email: 'david@email.com',
+                    phoneNumber: '+266 5555 5555',
+                    collectionTime: new Date(Date.now() + 172800000).toISOString(),
+                    parcelDestination: 'Mohale\'s Hoek',
+                    receiverPhone: '+266 5555 4444',
+                    parcelDescription: 'Medical Supplies',
+                    timestamp: new Date(Date.now() - 1800000).toISOString(),
+                    status: 'completed',
+                    completedAt: new Date(Date.now() - 900000).toISOString()
+                }
+            ];
+            displayParcelRequests();
+        }
+
+        // Display functions
         function displayRides() {
             const container = document.getElementById('ridesList');
             
@@ -243,6 +1215,20 @@
             `).join('');
         }
 
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalRides').textContent = rides.length;
+            document.getElementById('collectingRides').textContent = rides.filter(r => r.status === 'collecting').length;
+            document.getElementById('pendingRequests').textContent = 
+                rideRequests.filter(r => r.status === 'pending').length + 
+                parcelRequests.filter(r => r.status === 'pending').length;
+            
+            const today = new Date().toDateString();
+            document.getElementById('completedToday').textContent = 
+                rideRequests.filter(r => r.status === 'completed' && r.completedAt && new Date(r.completedAt).toDateString() === today).length +
+                parcelRequests.filter(r => r.status === 'completed' && r.completedAt && new Date(r.completedAt).toDateString() === today).length;
+        }
+
         // Tab switching
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -250,6 +1236,17 @@
             
             event.target.classList.add('active');
             document.getElementById(tabName).classList.add('active');
+        }
+
+        // Filter requests
+        function filterRequests(type, status) {
+            // In a real implementation, this would filter the display
+            console.log(`Filtering ${type} requests by ${status}`);
+            if (type === 'ride') {
+                displayRideRequests();
+            } else {
+                displayParcelRequests();
+            }
         }
 
         // Ride management functions
@@ -264,10 +1261,11 @@
             document.getElementById('addRideForm').reset();
         }
 
-        async function addRide(event) {
+        function addRide(event) {
             event.preventDefault();
             
             const formData = {
+                id: 'ride' + Date.now(),
                 numberPlate: document.getElementById('numberPlate').value.trim().toUpperCase(),
                 driverName: document.getElementById('driverName').value.trim(),
                 carType: document.getElementById('carType').value,
@@ -282,14 +1280,11 @@
                 createdAt: new Date().toISOString()
             };
 
-            try {
-                await database.ref('rides').push(formData);
-                showNotification('Ride added successfully!');
-                closeAddRideModal();
-            } catch (error) {
-                console.error('Error adding ride:', error);
-                alert('Error adding ride. Please try again.');
-            }
+            rides.push(formData);
+            displayRides();
+            updateStats();
+            showNotification('Ride added successfully!');
+            closeAddRideModal();
         }
 
         // Collecting passengers functions
@@ -323,7 +1318,8 @@
             currentCollectingRide = null;
         }
 
-        async function startCollecting() {
+        function startCollecting(event) {
+            event.preventDefault();
             if (!currentCollectingRide) return;
 
             const destination = document.getElementById('collectingDestination').value;
@@ -335,120 +1331,102 @@
                 return;
             }
 
-            try {
-                await database.ref(`rides/${currentCollectingRide}`).update({
+            const rideIndex = rides.findIndex(r => r.id === currentCollectingRide);
+            if (rideIndex !== -1) {
+                rides[rideIndex] = {
+                    ...rides[rideIndex],
                     status: 'collecting',
                     collectingDestination: destination,
                     departureTime: departureTime,
                     currentLocation: currentLocation || 'Not specified',
                     currentPassengers: 0,
                     updatedAt: new Date().toISOString()
-                });
+                };
 
+                displayRides();
+                updateStats();
                 showNotification('Ride is now collecting passengers!');
                 closeCollectingModal();
 
                 // Send WhatsApp notification about new collecting ride
                 sendCollectingNotification(currentCollectingRide);
-            } catch (error) {
-                console.error('Error starting collecting:', error);
-                alert('Error starting collecting mode.');
             }
         }
 
-        async function addPassenger(rideId) {
-            const ride = rides.find(r => r.id === rideId);
-            if (!ride) return;
+        // Ride status functions
+        function addPassenger(rideId) {
+            const rideIndex = rides.findIndex(r => r.id === rideId);
+            if (rideIndex !== -1) {
+                const ride = rides[rideIndex];
+                if (ride.currentPassengers >= ride.passengerCapacity) {
+                    alert('Ride is already at full capacity!');
+                    return;
+                }
 
-            if (ride.currentPassengers >= ride.passengerCapacity) {
-                alert('Ride is already at full capacity!');
-                return;
-            }
-
-            try {
-                await database.ref(`rides/${rideId}`).update({
-                    currentPassengers: (ride.currentPassengers || 0) + 1,
-                    updatedAt: new Date().toISOString()
-                });
-
+                rides[rideIndex].currentPassengers = (ride.currentPassengers || 0) + 1;
+                rides[rideIndex].updatedAt = new Date().toISOString();
+                
+                displayRides();
                 showNotification('Passenger added successfully!');
-            } catch (error) {
-                console.error('Error adding passenger:', error);
-                alert('Error adding passenger.');
             }
         }
 
-        async function markFull(rideId) {
-            const ride = rides.find(r => r.id === rideId);
-            if (!ride) return;
-
-            try {
-                await database.ref(`rides/${rideId}`).update({
-                    status: 'full',
-                    currentPassengers: ride.passengerCapacity,
-                    updatedAt: new Date().toISOString()
-                });
-
+        function markFull(rideId) {
+            const rideIndex = rides.findIndex(r => r.id === rideId);
+            if (rideIndex !== -1) {
+                const ride = rides[rideIndex];
+                rides[rideIndex].status = 'full';
+                rides[rideIndex].currentPassengers = ride.passengerCapacity;
+                rides[rideIndex].updatedAt = new Date().toISOString();
+                
+                displayRides();
+                updateStats();
                 showNotification('Ride marked as full and ready to depart!');
-            } catch (error) {
-                console.error('Error marking ride as full:', error);
-                alert('Error updating ride status.');
             }
         }
 
-        async function startJourney(rideId) {
-            try {
-                await database.ref(`rides/${rideId}`).update({
-                    status: 'traveling',
-                    journeyStarted: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                });
-
-                showNotification('Journey started!');
-            } catch (error) {
-                console.error('Error starting journey:', error);
-                alert('Error starting journey.');
-            }
+        function startJourney(rideId) {
+            updateRideStatus(rideId, 'traveling');
+            showNotification('Journey started!');
         }
 
-        async function stopCollecting(rideId) {
-            try {
-                await database.ref(`rides/${rideId}`).update({
+        function stopCollecting(rideId) {
+            const rideIndex = rides.findIndex(r => r.id === rideId);
+            if (rideIndex !== -1) {
+                rides[rideIndex] = {
+                    ...rides[rideIndex],
                     status: 'available',
                     collectingDestination: null,
                     departureTime: null,
                     currentPassengers: 0,
                     updatedAt: new Date().toISOString()
-                });
+                };
 
+                displayRides();
+                updateStats();
                 showNotification('Stopped collecting passengers.');
-            } catch (error) {
-                console.error('Error stopping collecting:', error);
-                alert('Error stopping collecting mode.');
             }
         }
 
-        async function updateRideStatus(rideId, newStatus) {
-            try {
-                await database.ref(`rides/${rideId}`).update({
-                    status: newStatus,
-                    updatedAt: new Date().toISOString()
-                });
+        function updateRideStatus(rideId, newStatus) {
+            const rideIndex = rides.findIndex(r => r.id === rideId);
+            if (rideIndex !== -1) {
+                rides[rideIndex].status = newStatus;
+                rides[rideIndex].updatedAt = new Date().toISOString();
+                displayRides();
+                updateStats();
                 showNotification(`Ride status updated to ${newStatus}!`);
-            } catch (error) {
-                console.error('Error updating ride status:', error);
-                alert('Error updating ride status.');
             }
         }
 
-        async function deleteRide(rideId) {
+        function deleteRide(rideId) {
             if (confirm('Are you sure you want to delete this ride?')) {
-                try {
-                    await database.ref(`rides/${rideId}`).remove();
+                const rideIndex = rides.findIndex(r => r.id === rideId);
+                if (rideIndex !== -1) {
+                    rides.splice(rideIndex, 1);
+                    displayRides();
+                    updateStats();
                     showNotification('Ride deleted successfully!');
-                } catch (error) {
-                    console.error('Error deleting ride:', error);
-                    alert('Error deleting ride.');
                 }
             }
         }
@@ -501,7 +1479,7 @@
             currentAssignRequest = null;
         }
 
-        async function confirmAssignment() {
+        function confirmAssignment() {
             const selectedRideId = document.getElementById('assignRideSelect').value;
             
             if (!selectedRideId || !currentAssignRequest) {
@@ -515,41 +1493,55 @@
                 return;
             }
 
-            try {
-                const requestRef = currentAssignRequest.type === 'ride' 
-                    ? `rideRequests/${currentAssignRequest.id}`
-                    : `parcelRequests/${currentAssignRequest.id}`;
-
-                await database.ref(requestRef).update({
+            // Update request status
+            const requests = currentAssignRequest.type === 'ride' ? rideRequests : parcelRequests;
+            const requestIndex = requests.findIndex(r => r.id === currentAssignRequest.id);
+            
+            if (requestIndex !== -1) {
+                requests[requestIndex] = {
+                    ...requests[requestIndex],
                     status: 'assigned',
                     assignedRide: `${selectedRide.numberPlate} - ${selectedRide.driverName}`,
                     assignedRideId: selectedRideId,
                     assignedAt: new Date().toISOString()
-                });
+                };
 
+                // Update ride status if it was available
                 if (selectedRide.status === 'available') {
-                    await database.ref(`rides/${selectedRideId}`).update({
-                        status: 'busy',
-                        currentRequest: currentAssignRequest.id,
-                        requestType: currentAssignRequest.type,
-                        updatedAt: new Date().toISOString()
-                    });
+                    const rideIndex = rides.findIndex(r => r.id === selectedRideId);
+                    if (rideIndex !== -1) {
+                        rides[rideIndex] = {
+                            ...rides[rideIndex],
+                            status: 'busy',
+                            currentRequest: currentAssignRequest.id,
+                            requestType: currentAssignRequest.type,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
                 }
+
+                // Update displays
+                if (currentAssignRequest.type === 'ride') {
+                    displayRideRequests();
+                } else {
+                    displayParcelRequests();
+                }
+                displayRides();
+                updateStats();
 
                 showNotification('Request assigned successfully!');
                 closeAssignModal();
 
                 // Send notification to customer and driver
                 sendAssignmentNotification(selectedRide, currentAssignRequest);
-
-            } catch (error) {
-                console.error('Error assigning request:', error);
-                alert('Error assigning request. Please try again.');
             }
         }
 
-        async function updateRequestStatus(requestId, newStatus, requestTable) {
-            try {
+        function updateRequestStatus(requestId, newStatus, requestTable) {
+            const requests = requestTable === 'rideRequests' ? rideRequests : parcelRequests;
+            const requestIndex = requests.findIndex(r => r.id === requestId);
+            
+            if (requestIndex !== -1) {
                 const updates = {
                     status: newStatus,
                     updatedAt: new Date().toISOString()
@@ -559,758 +1551,25 @@
                     updates.completedAt = new Date().toISOString();
                 }
 
-                await database.ref(`${requestTable}/${requestId}`).update(updates);
+                requests[requestIndex] = { ...requests[requestIndex], ...updates };
 
                 if (newStatus === 'completed') {
-                    const request = requestTable === 'rideRequests' 
-                        ? rideRequests.find(r => r.id === requestId)
-                        : parcelRequests.find(r => r.id === requestId);
-
-                    if (request && request.assignedRideId) {
-                        await database.ref(`rides/${request.assignedRideId}`).update({
-                            status: 'available',
-                            currentRequest: null,
-                            requestType: null,
-                            updatedAt: new Date().toISOString()
-                        });
+                    const request = requests[requestIndex];
+                    if (request.assignedRideId) {
+                        const rideIndex = rides.findIndex(r => r.id === request.assignedRideId);
+                        if (rideIndex !== -1) {
+                            rides[rideIndex] = {
+                                ...rides[rideIndex],
+                                status: 'available',
+                                currentRequest: null,
+                                requestType: null,
+                                updatedAt: new Date().toISOString()
+                            };
+                        }
                     }
                 }
 
-                showNotification(`Request ${newStatus} successfully!`);
-                
-                // Send WhatsApp update
-                sendStatusUpdateNotification(requestId, requestTable, newStatus);
-
-            } catch (error) {
-                console.error('Error updating request:', error);
-                alert('Error updating request.');
-            }
-        }
-
-        // WhatsApp notification functions
-        function sendCollectingNotification(rideId) {
-            const ride = rides.find(r => r.id === rideId);
-            if (!ride) return;
-
-            const message = `🚐 NEW RIDE COLLECTING PASSENGERS! 🚐\n\n` +
-                          `🚗 Driver: ${ride.driverName}\n` +
-                          `🚙 Car: ${ride.carColor} ${ride.carModel} (${ride.numberPlate})\n` +
-                          `🎯 Destination: ${ride.collectingDestination}\n` +
-                          `⏰ Departure: ${new Date(ride.departureTime).toLocaleString()}\n` +
-                          `👥 Capacity: ${ride.passengerCapacity} passengers\n` +
-                          `📱 Contact: ${ride.contact1}\n\n` +
-                          `Book your seat now! 🎫`;
-
-            const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-        }
-
-        function sendAssignmentNotification(ride, assignRequest) {
-            const request = assignRequest.type === 'ride' 
-                ? rideRequests.find(r => r.id === assignRequest.id)
-                : parcelRequests.find(r => r.id === assignRequest.id);
-
-            if (!request) return;
-
-            // Customer notification
-            const customerMessage = `✅ YOUR ${assignRequest.type.toUpperCase()} REQUEST HAS BEEN ASSIGNED! ✅\n\n` +
-                                   `👤 Customer: ${request.fullName}\n` +
-                                   `🚗 Driver: ${ride.driverName}\n` +
-                                   `🚙 Car: ${ride.carColor} ${ride.carModel} (${ride.numberPlate})\n` +
-                                   `📱 Driver Contact: ${ride.contact1}\n` +
-                                   ${assignRequest.type === 'ride' ? 
-                                       `📍 Route: ${request.currentLocation} → ${request.destination}\n` :
-                                       `📦 Parcel: ${request.parcelDescription}\n📍 To: ${request.parcelDestination}\n`
-                                   } +
-                                   `\nYour driver will contact you shortly! 📞`;
-
-            const customerWhatsApp = `https://wa.me/${request.phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(customerMessage)}`;
-            
-            // Driver notification
-            const driverMessage = `🚨 NEW ${assignRequest.type.toUpperCase()} ASSIGNMENT! 🚨\n\n` +
-                                 `👤 Customer: ${request.fullName}\n` +
-                                 `📱 Customer Phone: ${request.phoneNumber}\n` +
-                                 ${assignRequest.type === 'ride' ? 
-                                     `📍 Route: ${request.currentLocation} → ${request.destination}\n` :
-                                     `📦 Parcel: ${request.parcelDescription}\n⏰ Collection: ${new Date(request.collectionTime).toLocaleString()}\n📍 To: ${request.parcelDestination}\n📱 Receiver: ${request.receiverPhone}\n`
-                                 } +
-                                 `\nPlease contact the customer immediately! 📞`;
-
-            const driverWhatsApp = `https://wa.me/${ride.contact1.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(driverMessage)}`;
-
-            // Open both WhatsApp links
-            window.open(customerWhatsApp, '_blank');
-            setTimeout(() => window.open(driverWhatsApp, '_blank'), 1000);
-        }
-
-        function sendWhatsAppUpdate(requestId, requestType) {
-            const request = requestType === 'ride' 
-                ? rideRequests.find(r => r.id === requestId)
-                : parcelRequests.find(r => r.id === requestId);
-
-            if (!request) return;
-
-            const message = `📋 REQUEST STATUS UPDATE 📋\n\n` +
-                          `👤 Customer: ${request.fullName}\n` +
-                          `📊 Status: ${request.status || 'pending'}\n` +
-                          `🕐 Request Date: ${new Date(request.timestamp).toLocaleString()}\n` +
-                          ${request.assignedRide ? `🚗 Assigned Driver: ${request.assignedRide}\n` : ''} +
-                          `\nFor more details, check your status page.`;
-
-            const whatsappUrl = `https://wa.me/${request.phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-        }
-
-        function sendStatusUpdateNotification(requestId, requestTable, newStatus) {
-            const request = requestTable === 'rideRequests' 
-                ? rideRequests.find(r => r.id === requestId)
-                : parcelRequests.find(r => r.id === requestId);
-
-            if (!request) return;
-
-            const statusEmoji = {
-                'assigned': '✅',
-                'completed': '🎉',
-                'cancelled': '❌'
-            };
-
-            const message = `${statusEmoji[newStatus] || '📋'} STATUS UPDATE ${statusEmoji[newStatus] || '📋'}\n\n` +
-                          `👤 ${request.fullName}\n` +
-                          `📊 Your ${request.type || 'ride'} request is now: ${newStatus.toUpperCase()}\n` +
-                          `⏰ Updated: ${new Date().toLocaleString()}\n\n` +
-                          `Check your request details: ${window.location.origin}/status.html`;
-
-            const whatsappUrl = `https://wa.me/${request.phoneNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-            window.open(whatsappUrl, '_blank');
-        }
-
-        function filterRequests(type, status) {
-            if (type === 'ride') {
-                displayRideRequests();
-            } else {
-                displayParcelRequests();
-            }
-        }
-
-        // Modal event handlers
-        window.onclick = function(event) {
-            const addModal = document.getElementById('addRideModal');
-            const assignModal = document.getElementById('assignModal');
-            const collectingModal = document.getElementById('collectingModal');
-            
-            if (event.target === addModal) {
-                closeAddRideModal();
-            } else if (event.target === assignModal) {
-                closeAssignModal();
-            } else if (event.target === collectingModal) {
-                closeCollectingModal();
-            }
-        }
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape') {
-                closeAddRideModal();
-                closeAssignModal();
-                closeCollectingModal();
-            }
-        });
-    </script>
-</body>
-</html>
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 75%, #533483 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .admin-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: rgba(255,255,255,0.95);
-            border-radius: 20px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-        }
-
-        .admin-header {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            position: relative;
-        }
-
-        .admin-title {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .admin-subtitle {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .tabs-container {
-            background: #f8f9fa;
-            padding: 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .tabs {
-            display: flex;
-            overflow-x: auto;
-        }
-
-        .tab {
-            padding: 15px 25px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            color: #666;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab.active {
-            color: #ff6b6b;
-            border-bottom-color: #ff6b6b;
-            background: rgba(255,107,107,0.1);
-        }
-
-        .tab:hover {
-            background: rgba(255,107,107,0.05);
-        }
-
-        .tab-content {
-            display: none;
-            padding: 30px;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-icon {
-            font-size: 36px;
-            margin-bottom: 10px;
-            color: #ff6b6b;
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: 700;
-            color: #2d3436;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            font-weight: 500;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .section-title {
-            font-size: 22px;
-            font-weight: 600;
-            color: #2d3436;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255,107,107,0.4);
-        }
-
-        .btn-secondary {
-            background: #6c5ce7;
-            color: white;
-        }
-
-        .btn-success {
-            background: #00b894;
-            color: white;
-        }
-
-        .btn-danger {
-            background: #e17055;
-            color: white;
-        }
-
-        .btn-info {
-            background: #0984e3;
-            color: white;
-        }
-
-        .data-table {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-
-        .table-header {
-            background: #f8f9fa;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 600;
-            color: #2d3436;
-        }
-
-        .table-row {
-            padding: 15px 20px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background 0.3s ease;
-        }
-
-        .table-row:hover {
-            background: #f8f9fa;
-        }
-
-        .ride-card, .request-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border-left: 5px solid #ff6b6b;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2d3436;
-        }
-
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 15px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-available {
-            background: #d1f2eb;
-            color: #00b894;
-        }
-
-        .status-busy {
-            background: #ffeaa7;
-            color: #fdcb6e;
-        }
-
-        .status-collecting {
-            background: #a7c6ff;
-            color: #0066cc;
-        }
-
-        .status-full {
-            background: #fab1a0;
-            color: #e17055;
-        }
-
-        .status-offline {
-            background: #ddd;
-            color: #666;
-        }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-assigned {
-            background: #cce5ff;
-            color: #0066cc;
-        }
-
-        .status-completed {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .card-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .detail-item {
-            font-size: 14px;
-        }
-
-        .detail-label {
-            font-weight: 600;
-            color: #666;
-            margin-bottom: 3px;
-        }
-
-        .detail-value {
-            color: #333;
-            word-break: break-word;
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .action-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .action-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-        }
-
-        /* Passenger count display */
-        .passenger-count {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #f8f9fa;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .passenger-icons {
-            display: flex;
-            gap: 2px;
-        }
-
-        .passenger-icon {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-        }
-
-        .passenger-filled {
-            background: #00b894;
-            color: white;
-        }
-
-        .passenger-empty {
-            background: #ddd;
-            color: #666;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: white;
-            margin: 5% auto;
-            padding: 0;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 85vh;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #ff3742 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 20px 20px 0 0;
-            position: relative;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .close {
-            color: white;
-            float: right;
-            font-size: 24px;
-            font-weight: bold;
-            position: absolute;
-            right: 15px;
-            top: 15px;
-            cursor: pointer;
-        }
-
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            flex: 1;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: #2d3436;
-        }
-
-        .form-input, .form-select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-input:focus, .form-select:focus {
-            outline: none;
-            border-color: #ff6b6b;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-
-        /* Login Modal */
-        .login-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .login-form {
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-        }
-
-        .login-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #2d3436;
-            margin-bottom: 20px;
-        }
-
-        .login-input {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            background: #4caf50;
-            color: white;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(76,175,80,0.4);
-            z-index: 1001;
-            display: none;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .admin-header { padding: 20px; }
-            .admin-title { font-size: 24px; }
-            .tab-content { padding: 20px; }
-            .stats-container { grid-template-columns: 1fr 1fr; }
-            .section-header { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .card-details { grid-template-columns: 1fr; }
-            .tabs { justify-content: flex-start; }
-            .form-row { grid-template-columns: 1fr; }
-        }
-
-        @media (max-width: 480px) {
-            .stats-container { grid-template-columns: 1fr; }
-            .card-header { flex-direction: column; align-items: flex-start; }
-            .card-actions { justify-content: flex-start; }
-        }
-    </style>
-</head>
-<body>
-    <!-- Notification -->
-    <div id="notification" class="notification">
-        <i class="fas fa-check-circle"></i> <span id="notificationText"></span>
-    </div>
-
-    <!-- Audio for notifications -->
-    <audio id="notificationSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwDOYzJ8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAaATCG0fPTgSwD" type="audio/wav">
-    </audio>
-
-    <!-- Login Modal -->
-    <div id="loginModal" class="login-modal">
-        <div class="login-form">
-            <h2 class="login-title">Admin Login</h2>
-            <input type="email" id="adminEmail" class="login-input" placeholder="Admin Email" value="admin@catcharide.com">
-            <input type="password" id="adminPassword" class="login-input" placeholder="Password">
-            <button onclick="login()" class="login-btn">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-        </div>
-    </div>
-
-    <div class="admin-container" id="adminContent" style="display: none;">
-        <div class="admin-header">
-            <h1 class="admin-title">Catch A Ride Admin</h1>
-            <p class="admin-subtitle">Manage rides, drivers, passengers, and requests</p>
-        </div>
-
-        <div class="tabs-container">
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('dashboard')">
-                    <i class="fas fa-chart-bar"></i> Dashboard
-                </button>
-                <button class="tab" onclick="switchTab('rides')">
-                    <i class="fas fa-car"></i> Manage Rides
-                </button>
-                <button class="tab" onclick="switchTab('ride-requests')">
-                    <i class="fas fa-user-friends"></i> Ride Requests
-                </button>
-                <button class="tab" onclick="switchTab('parcel-requests')">
-                    <i class="fas fa-box"></i> Parcel Requests
-                </button>
-            </div>
-        </div>
-
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <div class="stats-container">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-car"></i></div>
-                    <div class="stat-number" id="totalRides">0</div>
-                    <div class="stat-label">Total Rides</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-number" id="collectingRides">0</div>
-                    <div class="stat-label">Collecting Passengers</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-number" id="pendingRequests">0</div>
-                    <div class="stat-label">Pending Requests</div>
+                if (requestTable === 'rideRequests') {
+                    displayRideRequests();
+                } else {
+                    displayParcel
