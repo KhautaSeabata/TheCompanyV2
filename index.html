@@ -86,30 +86,6 @@
             text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
 
-        .admin-tag {
-            position: absolute;
-            top: -10px;
-            right: 25px;
-            background: linear-gradient(45deg, #ffa726, #ff9800);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            transform: rotate(12deg);
-            box-shadow: 0 8px 16px rgba(255,167,38,0.4);
-            z-index: 10;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-decoration: none;
-        }
-
-        .admin-tag:hover {
-            transform: rotate(12deg) scale(1.02);
-            box-shadow: 0 10px 20px rgba(255,167,38,0.5);
-            color: white;
-        }
-
         .body {
             padding: 30px 25px;
             background: linear-gradient(to bottom, #f8f9fa 0%, #e9ecef 100%);
@@ -166,9 +142,154 @@
             font-weight: 600;
         }
 
+        .available-rides {
+            margin-bottom: 30px;
+        }
+
+        .rides-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2d3436;
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+        }
+
+        .rides-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .ride-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border-left: 5px solid #ff6b6b;
+            transition: transform 0.3s ease;
+        }
+
+        .ride-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+        }
+
+        .ride-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .ride-plate {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3436;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-collecting {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .ride-details {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .ride-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .ride-info i {
+            color: #ff6b6b;
+            width: 16px;
+        }
+
+        .passenger-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .passenger-icons {
+            display: flex;
+            gap: 2px;
+        }
+
+        .passenger-icon {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+        }
+
+        .passenger-filled {
+            background: #00b894;
+            color: white;
+        }
+
+        .passenger-empty {
+            background: #ddd;
+            color: #666;
+        }
+
+        .no-rides {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .no-rides i {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
         .three-container {
             width: 100%;
-            height: 200px;
+            height: 150px;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
@@ -227,7 +348,6 @@
             cursor: not-allowed;
         }
 
-        /* Status Button */
         .status-btn {
             width: 100%;
             background: linear-gradient(45deg, #6c5ce7, #a29bfe);
@@ -251,7 +371,6 @@
             box-shadow: 0 12px 30px rgba(108,92,231,0.6);
         }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -412,7 +531,6 @@
             font-style: italic;
         }
 
-        /* Driver/Admin buttons */
         .access-buttons {
             position: fixed;
             bottom: 30px;
@@ -448,13 +566,44 @@
             box-shadow: 0 12px 30px rgba(0,0,0,0.6);
         }
 
-        /* Animations */
         @keyframes shine {
             0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
             100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
         }
 
-        /* Responsive */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        .rides-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .rides-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .rides-container::-webkit-scrollbar-thumb {
+            background: #ff6b6b;
+            border-radius: 10px;
+        }
+
+        .rides-container::-webkit-scrollbar-thumb:hover {
+            background: #ee5a24;
+        }
+
         @media (max-width: 480px) {
             body { padding: 10px; }
             .app-container { max-width: 100%; }
@@ -464,10 +613,12 @@
             .access-buttons { bottom: 20px; right: 20px; }
             .access-btn { width: 50px; height: 50px; font-size: 18px; }
             .service-buttons { grid-template-columns: 1fr; }
+            .three-container { height: 120px; }
         }
 
         @media (max-height: 600px) {
             .modal-content { max-height: 95vh; margin: 2.5% auto; }
+            .rides-container { max-height: 200px; }
         }
     </style>
 </head>
@@ -487,7 +638,6 @@
             <div class="header">
                 <h1 class="main-title">Catch A Ride</h1>
                 <p class="subtitle">Your Reliable Transport Solution</p>
-                <a href="admin.html" class="admin-tag" title="Admin Access">ADMIN</a>
             </div>
             
             <div class="body">
@@ -501,6 +651,21 @@
                         <div class="service-btn" data-service="parcel">
                             <i class="fas fa-box service-icon"></i>
                             <div class="service-text">Send Parcel</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Rides Section -->
+                <div class="available-rides">
+                    <h3 class="rides-title">
+                        Available Rides
+                        <button class="refresh-btn" onclick="loadAvailableRides()" title="Refresh rides">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </h3>
+                    <div class="rides-container" id="availableRides">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i> Loading available rides...
                         </div>
                     </div>
                 </div>
@@ -538,7 +703,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <span class="close" onclick="closeRequestModal()">&times;</span>
-                <h2 class="modal-title" id="modalTitle">🚗 Request a Ride</h2>
+                <h2 class="modal-title" id="modalTitle">Request a Ride</h2>
             </div>
             <div class="modal-body">
                 <form id="requestForm" onsubmit="submitRequest(event)">
@@ -651,13 +816,7 @@
     <script>
         // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyCYour-api-key-here",
-            authDomain: "casino-93903.firebaseapp.com",
-            databaseURL: "https://casino-93903-default-rtdb.firebaseio.com/",
-            projectId: "casino-93903",
-            storageBucket: "casino-93903.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:your-app-id-here"
+            databaseURL: "https://casino-93903-default-rtdb.firebaseio.com/"
         };
 
         // Initialize Firebase
@@ -667,6 +826,7 @@
         // Global variables
         let currentService = 'ride';
         let currentLocation = null;
+        let availableRides = [];
 
         // Three.js variables
         let scene, camera, renderer;
@@ -707,7 +867,7 @@
             ground.receiveShadow = true;
             scene.add(ground);
 
-            renderer.render(scene, camera);
+            animate();
         }
 
         function createCar() {
@@ -749,6 +909,113 @@
             });
 
             scene.add(carGroup);
+            carGroup.name = 'car';
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate the car slowly
+            const car = scene.getObjectByName('car');
+            if (car) {
+                car.rotation.y += 0.005;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Load and display available rides
+        function loadAvailableRides() {
+            const container = document.getElementById('availableRides');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i> Loading available rides...</div>';
+
+            database.ref('rides').once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+                    availableRides = data ? Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    })) : [];
+
+                    // Filter only collecting rides
+                    const collectingRides = availableRides.filter(ride => ride.status === 'collecting');
+                    displayAvailableRides(collectingRides);
+                })
+                .catch(error => {
+                    console.error('Error loading rides:', error);
+                    container.innerHTML = '<div class="no-rides"><i class="fas fa-exclamation-triangle"></i><div>Error loading rides</div></div>';
+                });
+        }
+
+        function displayAvailableRides(rides) {
+            const container = document.getElementById('availableRides');
+            
+            if (rides.length === 0) {
+                container.innerHTML = `
+                    <div class="no-rides">
+                        <i class="fas fa-car"></i>
+                        <div>No rides collecting passengers at the moment</div>
+                        <div style="font-size: 12px; margin-top: 10px;">Check back later or request a new ride</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = rides.map(ride => {
+                const passengerCount = ride.currentPassengers || 0;
+                const capacity = ride.passengerCapacity || 0;
+                const departureTime = ride.departureTime ? new Date(ride.departureTime) : null;
+                
+                return `
+                    <div class="ride-card">
+                        <div class="ride-header">
+                            <div class="ride-plate">${ride.numberPlate}</div>
+                            <div class="status-badge status-collecting">Collecting</div>
+                        </div>
+                        <div class="ride-details">
+                            <div class="ride-info">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span><strong>Location:</strong> ${ride.currentLocation || ride.homeDistrict}</span>
+                            </div>
+                            <div class="ride-info">
+                                <i class="fas fa-route"></i>
+                                <span><strong>Going to:</strong> ${ride.collectingDestination}</span>
+                            </div>
+                            ${departureTime ? `
+                            <div class="ride-info">
+                                <i class="fas fa-clock"></i>
+                                <span><strong>Departure:</strong> ${departureTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            ` : ''}
+                            <div class="passenger-count">
+                                <span>${passengerCount}/${capacity} passengers</span>
+                                <div class="passenger-icons">
+                                    ${Array.from({length: capacity}, (_, i) => 
+                                        `<div class="passenger-icon ${i < passengerCount ? 'passenger-filled' : 'passenger-empty'}">
+                                            <i class="fas fa-user"></i>
+                                        </div>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Setup real-time listener for rides
+        function setupRidesListener() {
+            database.ref('rides').on('value', (snapshot) => {
+                const data = snapshot.val();
+                availableRides = data ? Object.entries(data).map(([key, value]) => ({
+                    ...value,
+                    id: key
+                })) : [];
+
+                // Filter and display only collecting rides
+                const collectingRides = availableRides.filter(ride => ride.status === 'collecting');
+                displayAvailableRides(collectingRides);
+            });
         }
 
         // Service selection
@@ -768,6 +1035,10 @@
                     }
                 });
             });
+
+            // Load available rides on page load
+            loadAvailableRides();
+            setupRidesListener();
         });
 
         // Location functions
@@ -916,7 +1187,7 @@
                 // Send WhatsApp notification to admin
                 sendWhatsAppNotification(requestData);
                 
-                alert(`✅ ${currentService === 'ride' ? 'Ride' : 'Parcel delivery'} request submitted successfully!`);
+                alert(`Request submitted successfully! Please save your request ID: ${requestId}`);
                 closeRequestModal();
                 
                 // Redirect to status page with request details
@@ -932,7 +1203,7 @@
                 
             } catch (error) {
                 console.error('Error submitting request:', error);
-                alert('❌ Error submitting request. Please try again.');
+                alert('Error submitting request. Please try again.');
             } finally {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
@@ -942,26 +1213,26 @@
         // WhatsApp notification function
         function sendWhatsAppNotification(requestData) {
             const adminNumber = "26651901995";
-            let message = `🚨 NEW ${requestData.type.toUpperCase()} REQUEST 🚨\n\n` +
-                         `👤 Customer: ${requestData.fullName}\n` +
-                         `📧 Email: ${requestData.email || 'Not provided'}\n` +
-                         `📱 Phone: ${requestData.phoneNumber}\n`;
+            let message = `NEW ${requestData.type.toUpperCase()} REQUEST\n\n` +
+                         `Customer: ${requestData.fullName}\n` +
+                         `Email: ${requestData.email || 'Not provided'}\n` +
+                         `Phone: ${requestData.phoneNumber}\n`;
 
             if (requestData.type === 'ride') {
-                message += `📍 From: ${requestData.currentLocation}\n` +
-                          `🎯 To: ${requestData.destination}\n`;
+                message += `From: ${requestData.currentLocation}\n` +
+                          `To: ${requestData.destination}\n`;
                 if (requestData.gpsLocation) {
-                    message += `🌐 GPS: ${requestData.gpsLocation.lat}, ${requestData.gpsLocation.lon}\n`;
+                    message += `GPS: ${requestData.gpsLocation.lat}, ${requestData.gpsLocation.lon}\n`;
                 }
             } else {
-                message += `⏰ Collection: ${new Date(requestData.collectionTime).toLocaleString()}\n` +
-                          `📦 To: ${requestData.parcelDestination}\n` +
-                          `📱 Receiver: ${requestData.receiverPhone}\n` +
-                          `📝 Description: ${requestData.parcelDescription}\n`;
+                message += `Collection: ${new Date(requestData.collectionTime).toLocaleString()}\n` +
+                          `To: ${requestData.parcelDestination}\n` +
+                          `Receiver: ${requestData.receiverPhone}\n` +
+                          `Description: ${requestData.parcelDescription}\n`;
             }
 
-            message += `⏰ Time: ${new Date(requestData.timestamp).toLocaleString()}\n\n` +
-                      `Please assign a driver promptly! 🚗`;
+            message += `Time: ${new Date(requestData.timestamp).toLocaleString()}\n\n` +
+                      `Please assign a driver promptly!`;
             
             const whatsappUrl = `https://wa.me/${adminNumber}?text=${encodeURIComponent(message)}`;
             window.open(whatsappUrl, '_blank');
