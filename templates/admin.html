@@ -505,6 +505,10 @@
             animation: slideIn 0.3s ease;
         }
 
+        .notification.error {
+            background: #f44336;
+        }
+
         @keyframes slideIn {
             from { transform: translateX(100%); }
             to { transform: translateX(0); }
@@ -525,6 +529,12 @@
         .request-summary p {
             margin-bottom: 5px;
             font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
         }
 
         @media (max-width: 768px) {
@@ -566,9 +576,6 @@
             <button onclick="login()" class="login-btn">
                 <i class="fas fa-sign-in-alt"></i> Login
             </button>
-            <div style="margin-top: 15px; font-size: 12px; color: #666;">
-                Demo credentials: admin@catcharide.com / admin123
-            </div>
         </div>
     </div>
 
@@ -631,16 +638,16 @@
                 </div>
                 <div class="card-details">
                     <div class="detail-item">
-                        <div class="detail-label">Server Status:</div>
-                        <div class="detail-value">Running smoothly</div>
+                        <div class="detail-label">Database Status:</div>
+                        <div class="detail-value" id="dbStatus">Connected</div>
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Last Updated:</div>
                         <div class="detail-value" id="lastUpdated">Loading...</div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">Active Users:</div>
-                        <div class="detail-value">Demo Mode</div>
+                        <div class="detail-label">Environment:</div>
+                        <div class="detail-value">Production</div>
                     </div>
                 </div>
             </div>
@@ -654,8 +661,8 @@
                     <i class="fas fa-plus"></i> Add New Ride
                 </button>
             </div>
-            <div id="ridesList" class="no-data">
-                Loading rides...
+            <div id="ridesList" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading rides...
             </div>
         </div>
 
@@ -669,8 +676,8 @@
                     <button class="btn btn-success" onclick="filterRequests('ride', 'assigned')">Assigned</button>
                 </div>
             </div>
-            <div id="rideRequestsList" class="no-data">
-                Loading ride requests...
+            <div id="rideRequestsList" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading ride requests...
             </div>
         </div>
 
@@ -684,8 +691,8 @@
                     <button class="btn btn-success" onclick="filterRequests('parcel', 'assigned')">Assigned</button>
                 </div>
             </div>
-            <div id="parcelRequestsList" class="no-data">
-                Loading parcel requests...
+            <div id="parcelRequestsList" class="loading">
+                <i class="fas fa-spinner fa-spin"></i> Loading parcel requests...
             </div>
         </div>
     </div>
@@ -828,13 +835,22 @@
     </div>
 
     <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            databaseURL: "https://casino-93903-default-rtdb.firebaseio.com/"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         // Global variables
-        let database;
         let rides = [];
         let rideRequests = [];
         let parcelRequests = [];
         let currentCollectingRide = null;
         let currentAssignRequest = null;
+        let currentFilter = { ride: 'all', parcel: 'all' };
 
         // Authentication
         function login() {
@@ -845,34 +861,21 @@
             if (email === 'admin@catcharide.com' && password === 'admin123') {
                 document.getElementById('loginModal').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
+                saveLoginState();
                 initializeApp();
+                addLogoutButton();
             } else {
-                alert('Invalid credentials. Use admin@catcharide.com / admin123');
+                showNotification('Invalid credentials', 'error');
             }
         }
 
-        // Initialize Firebase and app
+        // Initialize app
         function initializeApp() {
-            // Initialize Firebase (replace with your config)
-            const firebaseConfig = {
-                // Add your Firebase config here
-                databaseURL: "https://catch-a-ride-demo-default-rtdb.firebaseio.com/"
-            };
-            
-            // For demo purposes, we'll skip Firebase initialization
-            // if (!firebase.apps.length) {
-            //     firebase.initializeApp(firebaseConfig);
-            // }
-            // database = firebase.database();
-            
-            // Load initial data
+            document.getElementById('dbStatus').textContent = 'Connected';
             loadData();
-            
-            // Set up real-time listeners
             setupRealtimeListeners();
-            
-            // Update last updated time
-            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            updateLastUpdated();
+            setInterval(updateLastUpdated, 60000); // Update every minute
         }
 
         // Load all data
@@ -880,110 +883,63 @@
             loadRides();
             loadRideRequests();
             loadParcelRequests();
-            updateStats();
         }
 
-        // Load rides
+        // Load rides from Firebase
         function loadRides() {
-            // Simulated data for demo - replace with Firebase call
-            rides = [
-                {
-                    id: 'ride1',
-                    numberPlate: 'ABC-123',
-                    driverName: 'John Doe',
-                    carType: 'sedan',
-                    carModel: 'Toyota Corolla',
-                    carColor: 'White',
-                    passengerCapacity: 4,
-                    contact1: '+266 5555 1234',
-                    contact2: '+266 5555 5678',
-                    homeDistrict: 'Maseru',
-                    status: 'available',
-                    currentPassengers: 0,
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 'ride2',
-                    numberPlate: 'XYZ-456',
-                    driverName: 'Jane Smith',
-                    carType: 'suv',
-                    carModel: 'Honda CRV',
-                    carColor: 'Blue',
-                    passengerCapacity: 7,
-                    contact1: '+266 5555 2345',
-                    contact2: '',
-                    homeDistrict: 'Leribe',
-                    status: 'collecting',
-                    currentPassengers: 2,
-                    collectingDestination: 'Roma University',
-                    departureTime: new Date(Date.now() + 3600000).toISOString(),
-                    createdAt: new Date().toISOString()
-                }
-            ];
-            displayRides();
+            database.ref('rides').once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+                    rides = data ? Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    })) : [];
+                    displayRides();
+                    updateStats();
+                })
+                .catch(error => {
+                    console.error('Error loading rides:', error);
+                    document.getElementById('ridesList').innerHTML = '<div class="no-data">Error loading rides</div>';
+                    showNotification('Error loading rides', 'error');
+                });
         }
 
-        // Load ride requests
+        // Load ride requests from Firebase
         function loadRideRequests() {
-            // Simulated data for demo - replace with Firebase call
-            rideRequests = [
-                {
-                    id: 'req1',
-                    fullName: 'Alice Johnson',
-                    email: 'alice@email.com',
-                    phoneNumber: '+266 5555 9999',
-                    currentLocation: 'Maseru Central',
-                    destination: 'Roma',
-                    timestamp: new Date().toISOString(),
-                    status: 'pending'
-                },
-                {
-                    id: 'req2',
-                    fullName: 'Bob Wilson',
-                    email: 'bob@email.com',
-                    phoneNumber: '+266 5555 8888',
-                    currentLocation: 'Teyateyaneng',
-                    destination: 'Maseru',
-                    timestamp: new Date(Date.now() - 3600000).toISOString(),
-                    status: 'assigned',
-                    assignedRide: 'ABC-123 - John Doe',
-                    assignedRideId: 'ride1'
-                }
-            ];
-            displayRideRequests();
+            database.ref('rideRequests').once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+                    rideRequests = data ? Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    })) : [];
+                    displayRideRequests();
+                    updateStats();
+                })
+                .catch(error => {
+                    console.error('Error loading ride requests:', error);
+                    document.getElementById('rideRequestsList').innerHTML = '<div class="no-data">Error loading ride requests</div>';
+                    showNotification('Error loading ride requests', 'error');
+                });
         }
 
-        // Load parcel requests
+        // Load parcel requests from Firebase
         function loadParcelRequests() {
-            // Simulated data for demo - replace with Firebase call
-            parcelRequests = [
-                {
-                    id: 'parcel1',
-                    fullName: 'Carol Brown',
-                    email: 'carol@email.com',
-                    phoneNumber: '+266 5555 7777',
-                    collectionTime: new Date(Date.now() + 86400000).toISOString(),
-                    parcelDestination: 'Teyateyaneng',
-                    receiverPhone: '+266 5555 6666',
-                    parcelDescription: 'Important Documents',
-                    timestamp: new Date().toISOString(),
-                    status: 'pending'
-                },
-                {
-                    id: 'parcel2',
-                    fullName: 'David Lee',
-                    email: 'david@email.com',
-                    phoneNumber: '+266 5555 5555',
-                    collectionTime: new Date(Date.now() + 172800000).toISOString(),
-                    parcelDestination: 'Mohale\'s Hoek',
-                    receiverPhone: '+266 5555 4444',
-                    parcelDescription: 'Medical Supplies',
-                    timestamp: new Date(Date.now() - 1800000).toISOString(),
-                    status: 'completed',
-                    completedAt: new Date(Date.now() - 900000).toISOString()
-                }
-            ];
-            displayParcelRequests();
+            database.ref('parcelRequests').once('value')
+                .then(snapshot => {
+                    const data = snapshot.val();
+                    parcelRequests = data ? Object.entries(data).map(([key, value]) => ({
+                        ...value,
+                        id: key
+                    })) : [];
+                    displayParcelRequests();
+                    updateStats();
+                })
+                .catch(error => {
+                    console.error('Error loading parcel requests:', error);
+                    document.getElementById('parcelRequestsList').innerHTML = '<div class="no-data">Error loading parcel requests</div>';
+                    showNotification('Error loading parcel requests', 'error');
+                });
         }
 
         // Display functions
@@ -1085,13 +1041,18 @@
 
         function displayRideRequests() {
             const container = document.getElementById('rideRequestsList');
+            let filteredRequests = rideRequests;
+
+            if (currentFilter.ride !== 'all') {
+                filteredRequests = rideRequests.filter(r => r.status === currentFilter.ride);
+            }
             
-            if (rideRequests.length === 0) {
-                container.innerHTML = '<div class="no-data">No ride requests yet</div>';
+            if (filteredRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No ride requests found</div>';
                 return;
             }
 
-            container.innerHTML = rideRequests.map(request => `
+            container.innerHTML = filteredRequests.map(request => `
                 <div class="request-card">
                     <div class="card-header">
                         <div class="card-title">${request.fullName}</div>
@@ -1124,6 +1085,12 @@
                             <div class="detail-value">${request.assignedRide}</div>
                         </div>
                         ` : ''}
+                        ${request.gpsLocation ? `
+                        <div class="detail-item">
+                            <div class="detail-label">GPS Location:</div>
+                            <div class="detail-value">${request.gpsLocation.lat.toFixed(4)}, ${request.gpsLocation.lon.toFixed(4)}</div>
+                        </div>
+                        ` : ''}
                     </div>
                     <div class="card-actions">
                         ${request.status === 'pending' ? `
@@ -1149,13 +1116,18 @@
 
         function displayParcelRequests() {
             const container = document.getElementById('parcelRequestsList');
+            let filteredRequests = parcelRequests;
+
+            if (currentFilter.parcel !== 'all') {
+                filteredRequests = parcelRequests.filter(r => r.status === currentFilter.parcel);
+            }
             
-            if (parcelRequests.length === 0) {
-                container.innerHTML = '<div class="no-data">No parcel requests yet</div>';
+            if (filteredRequests.length === 0) {
+                container.innerHTML = '<div class="no-data">No parcel requests found</div>';
                 return;
             }
 
-            container.innerHTML = parcelRequests.map(request => `
+            container.innerHTML = filteredRequests.map(request => `
                 <div class="request-card">
                     <div class="card-header">
                         <div class="card-title">${request.fullName}</div>
@@ -1240,8 +1212,7 @@
 
         // Filter requests
         function filterRequests(type, status) {
-            // In a real implementation, this would filter the display
-            console.log(`Filtering ${type} requests by ${status}`);
+            currentFilter[type] = status;
             if (type === 'ride') {
                 displayRideRequests();
             } else {
@@ -1261,11 +1232,15 @@
             document.getElementById('addRideForm').reset();
         }
 
-        function addRide(event) {
+        async function addRide(event) {
             event.preventDefault();
             
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+            submitBtn.disabled = true;
+
             const formData = {
-                id: 'ride' + Date.now(),
                 numberPlate: document.getElementById('numberPlate').value.trim().toUpperCase(),
                 driverName: document.getElementById('driverName').value.trim(),
                 carType: document.getElementById('carType').value,
@@ -1280,11 +1255,18 @@
                 createdAt: new Date().toISOString()
             };
 
-            rides.push(formData);
-            displayRides();
-            updateStats();
-            showNotification('Ride added successfully!');
-            closeAddRideModal();
+            try {
+                await database.ref('rides').push(formData);
+                showNotification('Ride added successfully!');
+                closeAddRideModal();
+                loadRides();
+            } catch (error) {
+                console.error('Error adding ride:', error);
+                showNotification('Error adding ride', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
         }
 
         // Collecting passengers functions
@@ -1318,7 +1300,7 @@
             currentCollectingRide = null;
         }
 
-        function startCollecting(event) {
+        async function startCollecting(event) {
             event.preventDefault();
             if (!currentCollectingRide) return;
 
@@ -1327,14 +1309,17 @@
             const currentLocation = document.getElementById('currentLocationInput').value.trim();
 
             if (!destination || !departureTime) {
-                alert('Please fill in all required fields');
+                showNotification('Please fill in all required fields', 'error');
                 return;
             }
 
-            const rideIndex = rides.findIndex(r => r.id === currentCollectingRide);
-            if (rideIndex !== -1) {
-                rides[rideIndex] = {
-                    ...rides[rideIndex],
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            submitBtn.disabled = true;
+
+            try {
+                const updateData = {
                     status: 'collecting',
                     collectingDestination: destination,
                     departureTime: departureTime,
@@ -1343,91 +1328,106 @@
                     updatedAt: new Date().toISOString()
                 };
 
-                displayRides();
-                updateStats();
+                await database.ref(`rides/${currentCollectingRide}`).update(updateData);
                 showNotification('Ride is now collecting passengers!');
                 closeCollectingModal();
-
-                // Send WhatsApp notification about new collecting ride
-                sendCollectingNotification(currentCollectingRide);
+                loadRides();
+            } catch (error) {
+                console.error('Error starting collecting:', error);
+                showNotification('Error starting collecting', 'error');
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         }
 
         // Ride status functions
-        function addPassenger(rideId) {
-            const rideIndex = rides.findIndex(r => r.id === rideId);
-            if (rideIndex !== -1) {
-                const ride = rides[rideIndex];
-                if (ride.currentPassengers >= ride.passengerCapacity) {
-                    alert('Ride is already at full capacity!');
-                    return;
-                }
+        async function addPassenger(rideId) {
+            const ride = rides.find(r => r.id === rideId);
+            if (!ride) return;
 
-                rides[rideIndex].currentPassengers = (ride.currentPassengers || 0) + 1;
-                rides[rideIndex].updatedAt = new Date().toISOString();
-                
-                displayRides();
+            if (ride.currentPassengers >= ride.passengerCapacity) {
+                showNotification('Ride is already at full capacity!', 'error');
+                return;
+            }
+
+            try {
+                await database.ref(`rides/${rideId}`).update({
+                    currentPassengers: (ride.currentPassengers || 0) + 1,
+                    updatedAt: new Date().toISOString()
+                });
                 showNotification('Passenger added successfully!');
+                loadRides();
+            } catch (error) {
+                console.error('Error adding passenger:', error);
+                showNotification('Error adding passenger', 'error');
             }
         }
 
-        function markFull(rideId) {
-            const rideIndex = rides.findIndex(r => r.id === rideId);
-            if (rideIndex !== -1) {
-                const ride = rides[rideIndex];
-                rides[rideIndex].status = 'full';
-                rides[rideIndex].currentPassengers = ride.passengerCapacity;
-                rides[rideIndex].updatedAt = new Date().toISOString();
-                
-                displayRides();
-                updateStats();
+        async function markFull(rideId) {
+            const ride = rides.find(r => r.id === rideId);
+            if (!ride) return;
+
+            try {
+                await database.ref(`rides/${rideId}`).update({
+                    status: 'full',
+                    currentPassengers: ride.passengerCapacity,
+                    updatedAt: new Date().toISOString()
+                });
                 showNotification('Ride marked as full and ready to depart!');
+                loadRides();
+            } catch (error) {
+                console.error('Error marking full:', error);
+                showNotification('Error marking ride as full', 'error');
             }
         }
 
         function startJourney(rideId) {
             updateRideStatus(rideId, 'traveling');
-            showNotification('Journey started!');
         }
 
-        function stopCollecting(rideId) {
-            const rideIndex = rides.findIndex(r => r.id === rideId);
-            if (rideIndex !== -1) {
-                rides[rideIndex] = {
-                    ...rides[rideIndex],
+        async function stopCollecting(rideId) {
+            try {
+                await database.ref(`rides/${rideId}`).update({
                     status: 'available',
                     collectingDestination: null,
                     departureTime: null,
                     currentPassengers: 0,
+                    currentLocation: null,
                     updatedAt: new Date().toISOString()
-                };
-
-                displayRides();
-                updateStats();
+                });
                 showNotification('Stopped collecting passengers.');
+                loadRides();
+            } catch (error) {
+                console.error('Error stopping collecting:', error);
+                showNotification('Error stopping collecting', 'error');
             }
         }
 
-        function updateRideStatus(rideId, newStatus) {
-            const rideIndex = rides.findIndex(r => r.id === rideId);
-            if (rideIndex !== -1) {
-                rides[rideIndex].status = newStatus;
-                rides[rideIndex].updatedAt = new Date().toISOString();
-                displayRides();
-                updateStats();
+        async function updateRideStatus(rideId, newStatus) {
+            try {
+                await database.ref(`rides/${rideId}`).update({
+                    status: newStatus,
+                    updatedAt: new Date().toISOString()
+                });
                 showNotification(`Ride status updated to ${newStatus}!`);
+                loadRides();
+            } catch (error) {
+                console.error('Error updating ride status:', error);
+                showNotification('Error updating ride status', 'error');
             }
         }
 
-        function deleteRide(rideId) {
-            if (confirm('Are you sure you want to delete this ride?')) {
-                const rideIndex = rides.findIndex(r => r.id === rideId);
-                if (rideIndex !== -1) {
-                    rides.splice(rideIndex, 1);
-                    displayRides();
-                    updateStats();
-                    showNotification('Ride deleted successfully!');
-                }
+        async function deleteRide(rideId) {
+            if (!confirm('Are you sure you want to delete this ride?')) return;
+
+            try {
+                await database.ref(`rides/${rideId}`).remove();
+                showNotification('Ride deleted successfully!');
+                loadRides();
+            } catch (error) {
+                console.error('Error deleting ride:', error);
+                showNotification('Error deleting ride', 'error');
             }
         }
 
@@ -1440,7 +1440,7 @@
                 : parcelRequests.find(r => r.id === requestId);
 
             if (!request) {
-                alert('Request not found');
+                showNotification('Request not found', 'error');
                 return;
             }
 
@@ -1479,69 +1479,60 @@
             currentAssignRequest = null;
         }
 
-        function confirmAssignment() {
+        async function confirmAssignment() {
             const selectedRideId = document.getElementById('assignRideSelect').value;
             
             if (!selectedRideId || !currentAssignRequest) {
-                alert('Please select a ride');
+                showNotification('Please select a ride', 'error');
                 return;
             }
 
             const selectedRide = rides.find(r => r.id === selectedRideId);
             if (!selectedRide) {
-                alert('Invalid ride selection');
+                showNotification('Invalid ride selection', 'error');
                 return;
             }
 
-            // Update request status
-            const requests = currentAssignRequest.type === 'ride' ? rideRequests : parcelRequests;
-            const requestIndex = requests.findIndex(r => r.id === currentAssignRequest.id);
-            
-            if (requestIndex !== -1) {
-                requests[requestIndex] = {
-                    ...requests[requestIndex],
+            try {
+                const requestPath = currentAssignRequest.type === 'ride' ? 'rideRequests' : 'parcelRequests';
+                
+                // Update request status
+                await database.ref(`${requestPath}/${currentAssignRequest.id}`).update({
                     status: 'assigned',
                     assignedRide: `${selectedRide.numberPlate} - ${selectedRide.driverName}`,
                     assignedRideId: selectedRideId,
                     assignedAt: new Date().toISOString()
-                };
+                });
 
                 // Update ride status if it was available
                 if (selectedRide.status === 'available') {
-                    const rideIndex = rides.findIndex(r => r.id === selectedRideId);
-                    if (rideIndex !== -1) {
-                        rides[rideIndex] = {
-                            ...rides[rideIndex],
-                            status: 'busy',
-                            currentRequest: currentAssignRequest.id,
-                            requestType: currentAssignRequest.type,
-                            updatedAt: new Date().toISOString()
-                        };
-                    }
+                    await database.ref(`rides/${selectedRideId}`).update({
+                        status: 'busy',
+                        currentRequest: currentAssignRequest.id,
+                        requestType: currentAssignRequest.type,
+                        updatedAt: new Date().toISOString()
+                    });
                 }
-
-                // Update displays
-                if (currentAssignRequest.type === 'ride') {
-                    displayRideRequests();
-                } else {
-                    displayParcelRequests();
-                }
-                displayRides();
-                updateStats();
 
                 showNotification('Request assigned successfully!');
                 closeAssignModal();
-
-                // Send notification to customer and driver
-                sendAssignmentNotification(selectedRide, currentAssignRequest);
+                
+                // Reload data
+                if (currentAssignRequest.type === 'ride') {
+                    loadRideRequests();
+                } else {
+                    loadParcelRequests();
+                }
+                loadRides();
+                
+            } catch (error) {
+                console.error('Error assigning request:', error);
+                showNotification('Error assigning request', 'error');
             }
         }
 
-        function updateRequestStatus(requestId, newStatus, requestTable) {
-            const requests = requestTable === 'rideRequests' ? rideRequests : parcelRequests;
-            const requestIndex = requests.findIndex(r => r.id === requestId);
-            
-            if (requestIndex !== -1) {
+        async function updateRequestStatus(requestId, newStatus, requestTable) {
+            try {
                 const updates = {
                     status: newStatus,
                     updatedAt: new Date().toISOString()
@@ -1551,32 +1542,36 @@
                     updates.completedAt = new Date().toISOString();
                 }
 
-                requests[requestIndex] = { ...requests[requestIndex], ...updates };
+                await database.ref(`${requestTable}/${requestId}`).update(updates);
 
+                // If completing a request, free up the assigned ride
                 if (newStatus === 'completed') {
-                    const request = requests[requestIndex];
-                    if (request.assignedRideId) {
-                        const rideIndex = rides.findIndex(r => r.id === request.assignedRideId);
-                        if (rideIndex !== -1) {
-                            rides[rideIndex] = {
-                                ...rides[rideIndex],
-                                status: 'available',
-                                currentRequest: null,
-                                requestType: null,
-                                updatedAt: new Date().toISOString()
-                            };
-                        }
+                    const requests = requestTable === 'rideRequests' ? rideRequests : parcelRequests;
+                    const request = requests.find(r => r.id === requestId);
+                    
+                    if (request && request.assignedRideId) {
+                        await database.ref(`rides/${request.assignedRideId}`).update({
+                            status: 'available',
+                            currentRequest: null,
+                            requestType: null,
+                            updatedAt: new Date().toISOString()
+                        });
                     }
                 }
 
-                if (requestTable === 'rideRequests') {
-                    displayRideRequests();
-                } else {
-                    displayParcelRequests();
-                }
-                displayRides();
-                updateStats();
                 showNotification(`Request ${newStatus} successfully!`);
+                
+                // Reload data
+                if (requestTable === 'rideRequests') {
+                    loadRideRequests();
+                } else {
+                    loadParcelRequests();
+                }
+                loadRides();
+                
+            } catch (error) {
+                console.error('Error updating request status:', error);
+                showNotification('Error updating request status', 'error');
             }
         }
 
@@ -1586,7 +1581,7 @@
             const request = requests.find(r => r.id === requestId);
             
             if (!request) {
-                alert('Request not found');
+                showNotification('Request not found', 'error');
                 return;
             }
 
@@ -1608,112 +1603,58 @@
             showNotification('WhatsApp opened for customer communication');
         }
 
-        function sendAssignmentNotification(ride, request) {
-            console.log(`Assignment notification sent for request ${request.id} to ride ${ride.id}`);
-            // In a real implementation, this would send SMS/WhatsApp notifications
-            showNotification('Assignment notifications sent to customer and driver');
-        }
-
-        function sendCollectingNotification(rideId) {
-            const ride = rides.find(r => r.id === rideId);
-            if (ride && ride.status === 'collecting') {
-                console.log(`Collecting notification sent for ride ${rideId}`);
-                // In a real implementation, this would notify users about the new collecting ride
-                showNotification('Collecting ride notification sent to users');
-            }
-        }
-
-        // Real-time listeners setup (for Firebase integration)
+        // Real-time listeners setup
         function setupRealtimeListeners() {
-            // In a real Firebase implementation, you would set up listeners like:
-            /*
+            // Listen for ride changes
             database.ref('rides').on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    rides = Object.entries(data).map(([key, value]) => ({
-                        ...value,
-                        id: key
-                    }));
-                    displayRides();
-                    updateStats();
-                }
+                rides = data ? Object.entries(data).map(([key, value]) => ({
+                    ...value,
+                    id: key
+                })) : [];
+                displayRides();
+                updateStats();
             });
 
+            // Listen for ride request changes
             database.ref('rideRequests').on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    rideRequests = Object.entries(data).map(([key, value]) => ({
-                        ...value,
-                        id: key
-                    }));
-                    displayRideRequests();
-                    updateStats();
+                const newRequests = data ? Object.entries(data).map(([key, value]) => ({
+                    ...value,
+                    id: key
+                })) : [];
+                
+                // Check for new requests
+                const newRequestsCount = newRequests.length - rideRequests.length;
+                if (newRequestsCount > 0 && rideRequests.length > 0) {
                     playNotificationSound();
+                    showNotification(`${newRequestsCount} new ride request${newRequestsCount > 1 ? 's' : ''} received!`);
                 }
+                
+                rideRequests = newRequests;
+                displayRideRequests();
+                updateStats();
             });
 
+            // Listen for parcel request changes
             database.ref('parcelRequests').on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data) {
-                    parcelRequests = Object.entries(data).map(([key, value]) => ({
-                        ...value,
-                        id: key
-                    }));
-                    displayParcelRequests();
-                    updateStats();
-                    playNotificationSound();
-                }
-            });
-            */
-
-            // For demo purposes, we'll simulate real-time updates
-            setInterval(() => {
-                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+                const newRequests = data ? Object.entries(data).map(([key, value]) => ({
+                    ...value,
+                    id: key
+                })) : [];
                 
-                // Simulate occasional new requests
-                if (Math.random() < 0.1) { // 10% chance every 30 seconds
-                    simulateNewRequest();
+                // Check for new requests
+                const newRequestsCount = newRequests.length - parcelRequests.length;
+                if (newRequestsCount > 0 && parcelRequests.length > 0) {
+                    playNotificationSound();
+                    showNotification(`${newRequestsCount} new parcel request${newRequestsCount > 1 ? 's' : ''} received!`);
                 }
-            }, 30000); // Update every 30 seconds
-        }
-
-        // Simulate new requests for demo
-        function simulateNewRequest() {
-            if (Math.random() < 0.5) {
-                // Add a new ride request
-                const newRequest = {
-                    id: 'req' + Date.now(),
-                    fullName: ['John Smith', 'Sarah Johnson', 'Mike Brown', 'Lisa Davis'][Math.floor(Math.random() * 4)],
-                    email: 'demo@email.com',
-                    phoneNumber: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
-                    currentLocation: ['Maseru Central', 'Teyateyaneng', 'Maputsoe', 'Butha-Buthe'][Math.floor(Math.random() * 4)],
-                    destination: ['Roma', 'NUL', 'Thaba-Tseka', 'Mohale\'s Hoek'][Math.floor(Math.random() * 4)],
-                    timestamp: new Date().toISOString(),
-                    status: 'pending'
-                };
-                rideRequests.push(newRequest);
-                displayRideRequests();
-            } else {
-                // Add a new parcel request
-                const newRequest = {
-                    id: 'parcel' + Date.now(),
-                    fullName: ['Emma Wilson', 'Tom Clark', 'Amy Taylor', 'Jack White'][Math.floor(Math.random() * 4)],
-                    email: 'demo@email.com',
-                    phoneNumber: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
-                    collectionTime: new Date(Date.now() + 86400000).toISOString(),
-                    parcelDestination: ['Maseru', 'Leribe', 'Mafeteng', 'Quthing'][Math.floor(Math.random() * 4)],
-                    receiverPhone: '+266 5555 ' + Math.floor(1000 + Math.random() * 9000),
-                    parcelDescription: ['Documents', 'Electronics', 'Clothing', 'Books'][Math.floor(Math.random() * 4)],
-                    timestamp: new Date().toISOString(),
-                    status: 'pending'
-                };
-                parcelRequests.push(newRequest);
+                
+                parcelRequests = newRequests;
                 displayParcelRequests();
-            }
-            
-            updateStats();
-            playNotificationSound();
-            showNotification('New request received!');
+                updateStats();
+            });
         }
 
         // Utility functions
@@ -1738,6 +1679,34 @@
                 }
             } catch (error) {
                 console.log('Notification sound not available');
+            }
+        }
+
+        function updateLastUpdated() {
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // Session management
+        function saveLoginState() {
+            sessionStorage.setItem('adminLoggedIn', 'true');
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('adminLoggedIn');
+                location.reload();
+            }
+        }
+
+        function addLogoutButton() {
+            const header = document.querySelector('.admin-header');
+            if (header && !header.querySelector('.logout-btn')) {
+                const logoutBtn = document.createElement('button');
+                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+                logoutBtn.className = 'btn btn-secondary logout-btn';
+                logoutBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; padding: 8px 15px; font-size: 12px;';
+                logoutBtn.onclick = logout;
+                header.appendChild(logoutBtn);
             }
         }
 
@@ -1809,65 +1778,32 @@
             document.addEventListener(event, resetInactivityTimer, { passive: true });
         });
 
-        // Initialize the inactivity timer when app starts
+        // Check if user is already logged in on page load
         document.addEventListener('DOMContentLoaded', function() {
             resetInactivityTimer();
-        });
-
-        // Check if user is already logged in
-        document.addEventListener('DOMContentLoaded', function() {
+            
             const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
             if (isLoggedIn) {
                 document.getElementById('loginModal').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
+                addLogoutButton();
                 initializeApp();
             }
         });
 
-        // Save login state
-        function saveLoginState() {
-            sessionStorage.setItem('adminLoggedIn', 'true');
-        }
-
-        // Update login function to save state
-        const originalLogin = login;
-        login = function() {
-            const email = document.getElementById('adminEmail').value;
-            const password = document.getElementById('adminPassword').value;
-            
-            if (email === 'admin@catcharide.com' && password === 'admin123') {
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('adminContent').style.display = 'block';
-                saveLoginState();
-                initializeApp();
-                addLogoutButton();
+        // Connection monitoring
+        database.ref('.info/connected').on('value', function(snapshot) {
+            if (snapshot.val() === true) {
+                document.getElementById('dbStatus').textContent = 'Connected';
+                document.getElementById('dbStatus').style.color = '#00b894';
             } else {
-                alert('Invalid credentials. Use admin@catcharide.com / admin123');
+                document.getElementById('dbStatus').textContent = 'Disconnected';
+                document.getElementById('dbStatus').style.color = '#e17055';
+                showNotification('Database connection lost', 'error');
             }
-        };
+        });
 
-        // Logout function
-        function logout() {
-            if (confirm('Are you sure you want to logout?')) {
-                sessionStorage.removeItem('adminLoggedIn');
-                location.reload();
-            }
-        }
-
-        // Add logout button to header
-        function addLogoutButton() {
-            const header = document.querySelector('.admin-header');
-            if (header && !header.querySelector('.logout-btn')) {
-                const logoutBtn = document.createElement('button');
-                logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
-                logoutBtn.className = 'btn btn-secondary logout-btn';
-                logoutBtn.style.cssText = 'position: absolute; top: 15px; right: 15px; padding: 8px 15px; font-size: 12px;';
-                logoutBtn.onclick = logout;
-                header.appendChild(logoutBtn);
-            }
-        }
-
-        console.log('Catch A Ride Admin Dashboard initialized');
+        console.log('Catch A Ride Admin Dashboard initialized with Firebase integration');
     </script>
 </body>
 </html>
